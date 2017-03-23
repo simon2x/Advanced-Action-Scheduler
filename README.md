@@ -1,2 +1,2 @@
-# Advanced-Action-Automator
-Automate tasks
+# Serial-Sequence-Creator
+pySerial sequence creator
