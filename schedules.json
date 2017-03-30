@@ -1,0 +1,23 @@
+{
+ "0": {
+  "name": "sem",
+  "schedules": {
+   "0": {
+    "checked": 1,
+    "data": {
+     "0": "s \u27a1 [('h', '0'), ('s', '0')]"
+    },
+    "expanded": true,
+    "selected": false
+   },
+   "0,0": {
+    "checked": 1,
+    "data": {
+     "0": "Delay \u27a1 [('delay', '0.0s')]"
+    },
+    "expanded": false,
+    "selected": true
+   }
+  }
+ }
+}

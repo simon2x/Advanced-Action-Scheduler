@@ -1,6 +1,6 @@
 import wx
 import wx.dataview
-from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
+from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin, CheckListCtrlMixin
 
 class TreeListCtrl(wx.dataview.TreeListCtrl):
     
@@ -24,6 +24,25 @@ class ToolTip(wx.ToolTip):
         self.Enable(True)
         # self.SetDelay
 
+class CheckList(wx.ListCtrl, ListCtrlAutoWidthMixin, CheckListCtrlMixin):
+    
+    def __init__(self, parent, style=wx.LC_REPORT|wx.LC_HRULES|wx.LC_VRULES|wx.LC_SINGLE_SEL):
+        
+        wx.ListCtrl.__init__(self, parent, style=style)
+        ListCtrlAutoWidthMixin.__init__(self)
+        CheckListCtrlMixin.__init__(self)
+    
+    def DeselectAll(self):
+        first = self.GetFirstSelected()
+        if first == -1:
+            return
+            
+        self.Select(first, on=0)
+        item = first
+        while self.GetNextSelected(item) != -1:
+            item = self.GetNextSelected(item)
+            self.Select(self.GetNextSelected(item), on=0)
+            
 class BaseList(wx.ListCtrl, ListCtrlAutoWidthMixin):
     
     def __init__(self, parent, style=wx.LC_REPORT|wx.LC_HRULES|wx.LC_VRULES|wx.LC_SINGLE_SEL):
