@@ -47,6 +47,14 @@ from wx.lib.pubsub import pub
 
 import base
 
+import platform
+
+PLATFORM = platform.system()
+if PLATFORM == "Windows":
+    pass
+elif PLATFORM == "Linux":
+    pass
+
 #----- logging -----#
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -166,13 +174,6 @@ class Main(wx.Frame):
         self.sched_list.AppendColumn("Schedule")
         schedsizer.Add(self.sched_list, 1, wx.ALL|wx.EXPAND, 0)
         
-        hsizer_controls = wx.BoxSizer(wx.HORIZONTAL)
-        btn = wx.Button(schedpanel, label="Enable", size=(-1, 24))
-        btn.Bind(wx.EVT_BUTTON, self.OnEnable)
-        hsizer_controls.AddStretchSpacer()
-        hsizer_controls.Add(btn, 0, wx.ALL|wx.EXPAND, 2)
-        schedsizer.Add(hsizer_controls, 0, wx.ALL|wx.EXPAND, 0)
-        
         schedpanel.SetSizer(schedsizer)        
         
         # the schedule manager panel/tab page 
@@ -200,17 +201,19 @@ class Main(wx.Frame):
         self.Show()       
         
         #load settings
-        # try:
-        with open("schedules.json", 'r') as file: 
-            self._data = json.load(file)
+        try:
+            with open("schedules.json", 'r') as file: 
+                self._data = json.load(file)
+                
+            for k,v in self._data.items():
+                name = self._data[k]["name"]
+                self.group_list.InsertItem(int(k), name)
             
-        for k,v in self._data.items():
-            name = self._data[k]["name"]
-            self.group_list.InsertItem(int(k), name)
-            
-        file.close()
-        # except:             
-            # pass
+            file.close()
+        except FileNotFoundError:    
+            logging.info("FileNotFoundError: creating new schedules file")
+            with open("schedules.json", 'w') as file: 
+                pass
         
         # tree.Select(tree.GetFirstItem())
         
@@ -235,7 +238,7 @@ class Main(wx.Frame):
                 parent = items[parent]
                 
             value = data[key]["data"]
-            
+            print( " data ", data )
             item = tree.AppendItem(parent, value["0"])
             # tree.SetItemText(item, 1, value["1"])
             # tree.SetItemText(item, 2, value["2"])
@@ -264,14 +267,8 @@ class Main(wx.Frame):
         toolbar.SetBackgroundColour("white")
         for label, help, icon in [
             ("Add Group", "Add Group", "new"),
-            ("Open", "Open File", "open"), 
-            ("Save", "Save File", "save"), 
-            # ("Save As", "Save File As...", "save"), 
-            ("Import", "Import Image", "import_image"),
-            ("Prev", "Select previous image on list", "previous"), 
-            ("Next", "Select next image on list", "next"), 
-            ("Fullscreen", "Fullscreen image preview", "fullscreen"), 
-            ("Transfer", "Transfer images to another file", "transfer")]:
+            ("Remove Group", "Remove Selected Group", "remove"),
+            ("Enable/Disable", "Enable Schedule Manager", "start")]:
             
             try:
                 bmp = theme.GetBitmap(icon, 48,48)  
@@ -282,11 +279,9 @@ class Main(wx.Frame):
                 tool = toolbar.AddTool(wx.ID_ANY, label=label, bitmap=bmp, shortHelp=help)
             self.Bind(wx.EVT_TOOL, self.OnToolBar, tool)
             
-            if label == "Save":
+            if label == "Remove Group":
                 toolbar.AddSeparator()
-            elif label == "Save As":
-                toolbar.AddSeparator()
-            elif label == "Fullscreen":
+                toolbar.AddStretchableSpace()
                 toolbar.AddSeparator()
             
         toolbar.Realize()
@@ -315,8 +310,8 @@ class Main(wx.Frame):
             name = dlg.GetValue()
             newitem = self.group_list.Append([name])
             
-            self._data[newitem] = {"name": name,
-                                   "schedules": {}}
+            self._data[str(newitem)] = {"name": name,
+                                        "schedules": {}}
             self.WriteData()
             
             self.group_list.Select(newitem)
@@ -324,10 +319,22 @@ class Main(wx.Frame):
                         
             self.group_list.SetFocus()            
             
-     
-        elif label == "Delete":
-            self.group_list.DeleteItem(self.group_list.GetSelection())
+        elif label == "Remove Group":
+            g_index = self.group_list.GetFirstSelected()
+            if g_index == -1:
+                return
+                
+            self.group_list.DeleteItem(g_index)
+            del self._data[str(g_index)]
             
+            new_data = {}
+            count = 0
+            for k in sorted(self._data.keys()):                
+                new_data[str(count)] = self._data[k]
+                count += 1
+            
+            self._data = new_data
+            self.WriteData()
             
         elif label == "new": 
             self.CreateNewEditor()            
@@ -454,10 +461,9 @@ class Main(wx.Frame):
             item = tree.GetItemParent(item)
         return depth - 1
             
-    def GetTreeData(self):
-        """ used for saving data """
+    def GetScheduleTree(self):
+        """ retrieve tree structure, used for saving data """
         tree = self.sched_list
-        # root = tree.GetRootItem()
         
         item = tree.GetFirstItem()
         if not item.IsOk():
@@ -507,7 +513,7 @@ class Main(wx.Frame):
             print( index )
             depth = d  
             item_data = {}
-            item_data["data"] = {col:tree.GetItemText(item, col) for col in range(count)}
+            item_data["data"] = {str(col):tree.GetItemText(item, col) for col in range(count)}
             item_data["checked"] = tree.GetCheckedState(item)
             item_data["expanded"] = tree.IsExpanded(item)
             item_data["selected"] = tree.IsSelected(item)
@@ -532,7 +538,7 @@ class Main(wx.Frame):
         params["name"] = name
             
         if selection == -1:
-            logging.info("no item selected")
+            logging.info("No item selected. Nothing to edit")
             return
        
         if self.GetItemDepth(selection) == 0:
@@ -544,8 +550,7 @@ class Main(wx.Frame):
             if dlg.ShowModal() == wx.ID_OK:
                 name, value = dlg.GetValue()
                 value = name + DELIMITER + value
-                tree.SetItemText(selection, 0, value)
-                return
+                tree.SetItemText(selection, 0, value)                
         
         else:
             dlg = self.OpenDialog(name)
@@ -554,7 +559,15 @@ class Main(wx.Frame):
                 value = dlg.GetValue()
                 value = name + DELIMITER + value
                 tree.SetItemText(selection, 0, value)
-                
+        
+        # save tree to data
+        schedules = self.GetScheduleTree()
+        g_index = self.group_list.GetFocusedItem()
+        self._data[str(g_index)]["schedules"] = schedules
+        
+        # write changes to file
+        self.WriteData()        
+        
         self.sched_list.SetFocus()
                 
 #end OnEdit def           
@@ -565,38 +578,14 @@ class Main(wx.Frame):
         
         self.sched_list.DeleteAllItems()
         # update schedule list
-        g_index = self.group_list.GetFocusedItem()
+        g_index = self.group_list.GetFirstSelected()
         if g_index == -1:
             return
          
         schedules = self._data[str(g_index)]["schedules"] 
         self.SetScheduleList(schedules)
     
-#end OnGroupItemSelected def 
-
-    def OnGroupButtons(self, event):
-        e = event.GetEventObject()
-        label = e.GetLabel()
-        
-        if label == "New Group":
-            dlg = dialogs.groups.AddGroup(self)
-           
-            ret = dlg.ShowModal()
-            if ret == wx.ID_CANCEL:
-                return
-                                
-            name = dlg.GetValue()
-            newitem = self.group_list.Append([name])
-            
-            self.group_list.Select(newitem)
-            self.group_list.CheckItem(newitem)
-            
-            self.group_list.SetFocus()
-     
-        elif label == "Delete":
-            self.group_list.DeleteItem(self.group_list.GetSelection())
-    
-#end OnGroupButtons def           
+#end OnGroupItemSelected def
 
     def OnButton(self, event):
         e = event.GetEventObject()
@@ -618,6 +607,11 @@ class Main(wx.Frame):
             self.sched_list.CheckItem(newitem)
             self.sched_list.Expand(self.sched_list.GetSelection())
             self.sched_list.SetFocus()
+            
+            g_index = self.group_list.GetFirstSelected()
+            schedules = self.GetScheduleTree()
+            self._data[str(g_index)]["schedules"] = schedules
+            self.WriteData()
      
         elif label == "Delete":
             self.sched_list.DeleteItem(self.sched_list.GetSelection())
@@ -705,7 +699,7 @@ class Main(wx.Frame):
         self.sched_list.SetFocus()
         
         # save tree to data
-        schedules = self.GetTreeData()
+        schedules = self.GetScheduleTree()
         g_index = self.group_list.GetFocusedItem()
         self._data[str(g_index)]["schedules"] = schedules
         
@@ -760,7 +754,7 @@ class Main(wx.Frame):
 #end Main class
 
     def OnClose(self, event):        
-        # data = self.GetTreeData()
+        # data = self.GetScheduleTree()
         logging.info("data: %s" % str(self._data))
        
         with open("schedules.json", 'w') as file: 

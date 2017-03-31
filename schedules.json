@@ -1,22 +1,35 @@
 {
  "0": {
-  "name": "sem",
+  "name": "s",
   "schedules": {
    "0": {
     "checked": 1,
     "data": {
-     "0": "s \u27a1 [('h', '0'), ('s', '0')]"
-    },
-    "expanded": true,
-    "selected": false
-   },
-   "0,0": {
-    "checked": 1,
-    "data": {
-     "0": "Delay \u27a1 [('delay', '0.0s')]"
+     "0": "e \u27a1 [('h', '0'), ('s', '0')]"
     },
     "expanded": false,
     "selected": true
+   }
+  }
+ },
+ "1": {
+  "name": "nd",
+  "schedules": {
+   "0": {
+    "checked": 1,
+    "data": {
+     "0": "another one \u27a1 [('h', ['0']), ('s', ['0'])]"
+    },
+    "expanded": false,
+    "selected": true
+   },
+   "1": {
+    "checked": 1,
+    "data": {
+     "0": "testing \u27a1 [('h', ['0']), ('s', ['0'])]"
+    },
+    "expanded": false,
+    "selected": false
    }
   }
  }
