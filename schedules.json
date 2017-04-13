@@ -20,13 +20,21 @@
     "data": {
      "0": "another one \u27a1 [('h', ['0']), ('s', ['0'])]"
     },
-    "expanded": false,
+    "expanded": true,
     "selected": true
+   },
+   "0,0": {
+    "checked": 1,
+    "data": {
+     "0": "Delay \u27a1 [('delay', '1.0s')]"
+    },
+    "expanded": false,
+    "selected": false
    },
    "1": {
     "checked": 1,
     "data": {
-     "0": "testing \u27a1 [('h', ['0']), ('s', ['0'])]"
+     "0": "testing \u27a1 [('h', ['0']), ('m', ['28']), ('s', ['0'])]"
     },
     "expanded": false,
     "selected": false

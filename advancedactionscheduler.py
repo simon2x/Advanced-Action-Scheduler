@@ -42,6 +42,8 @@ import subprocess
 import schedulemanager
 import wx.dataview #for TreeListCtrl
 import wx.lib.agw.aui as aui 
+
+from wx.lib.scrolledpanel import ScrolledPanel
 from wx.lib.pubsub import setuparg1
 from wx.lib.pubsub import pub
 
@@ -102,6 +104,8 @@ class Main(wx.Frame):
          
         self._data = {} 
         self._menus = {}
+        self._redo_stack = {}
+        self._undo_stack = {}
         
         self._schedmgr = schedulemanager.Manager(self)
          
@@ -112,24 +116,15 @@ class Main(wx.Frame):
         
         leftpanel = wx.Panel(self.splitter)   
         leftsizer = wx.BoxSizer(wx.VERTICAL)
-        
-        # sizer for group buttons
-        # lefthsizer = wx.WrapSizer(wx.HORIZONTAL)
-        # for label in ["New Group","Up","Down","Edit","Delete"]:
-            # btn = wx.Button(leftpanel, label=label, size=(-1, 24))
-            # lefthsizer.Add(btn, 0, wx.ALL|wx.EXPAND, 2)
-            # btn.Bind(wx.EVT_BUTTON, self.OnGroupButtons)
             
         self.group_list = base.CheckList(leftpanel)
         self.group_list.InsertColumn(0, "Group")
         self.group_list.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnGroupItemSelected)
         
-        # leftsizer.Add(lefthsizer, 0, wx.ALL|wx.EXPAND, 0)
-        leftsizer.Add(self.group_list, 1, wx.ALL|wx.EXPAND, 0)
-        leftpanel.SetSizer(leftsizer)
+        leftsizer.Add(self.group_list, 1, wx.ALL|wx.EXPAND, 5)
+        leftpanel.SetSizer(leftsizer)        
         
-        
-        # rhs layout
+        # ----- rhs layout -----
         
         nbpanel = wx.Panel(self.splitter)   
         self.notebook = wx.Notebook(nbpanel)
@@ -142,8 +137,8 @@ class Main(wx.Frame):
         
         # -----
         hsizer_functions = wx.WrapSizer(wx.HORIZONTAL)
-        for label in ["New Schedule","Up","Down","Edit","Toggle","Delete"]:
-            if label == "New Schedule":
+        for label in ["Add Schedule","Up","Down","Edit","Toggle","Delete"]:
+            if label == "Add Schedule":
                 btn = wx.Button(schedpanel, label=label, size=(-1, -1))
             else:
                 btn = wx.Button(schedpanel, label=label, size=(-1, -1))
@@ -156,24 +151,45 @@ class Main(wx.Frame):
             hsizer_functions.Add(btn, 0, wx.ALL|wx.EXPAND, 2)
         schedsizer.Add(hsizer_functions, 0, wx.ALL|wx.EXPAND, 2)
         
-        hsizer_functions2 = wx.BoxSizer(wx.HORIZONTAL)
-        self.cbox_functions = wx.ComboBox(schedpanel, style=wx.CB_READONLY, choices=FUNCTIONS)  
-        self.cbox_functions.SetSelection(0)
-        btn = wx.Button(schedpanel, label="Add Function", size=(-1, -1))
-        btn.Bind(wx.EVT_BUTTON, self.OnAddFunction)
+        schedsizer.Add(wx.StaticLine(schedpanel), 0, wx.ALL|wx.EXPAND, 2)
         
-        hsizer_functions2.Add(self.cbox_functions, 0, wx.ALL|wx.CENTRE, 2)
-        hsizer_functions2.Add(btn, 0, wx.ALL, 5)
+        # -----
+        hsizer_functions2 = wx.BoxSizer(wx.HORIZONTAL)
+        
+        self.cbox_functions = wx.ComboBox(schedpanel, style=wx.CB_READONLY, choices=FUNCTIONS)          
+        self.cbox_functions.SetSelection(0)
+        self.cbox_functions.Bind(wx.EVT_COMBOBOX, self.OnComboboxFunction)
+        
+        btn_addfn = wx.Button(schedpanel, label="Add Function", size=(-1, -1))
+        btn_addfn.Bind(wx.EVT_BUTTON, self.OnButton)
+        
+        hsizer_functions2.Add(self.cbox_functions, 0, wx.ALL|wx.CENTRE, 5)
+        hsizer_functions2.Add(btn_addfn, 0, wx.ALL|wx.CENTRE, 5)
+        
         schedsizer.Add(hsizer_functions2, 0, wx.ALL, 0)
         
         # schedsizer.Add(wx.StaticLine(schedpanel), 0, wx.ALL|wx.EXPAND, 0)
                 
         # -----
-                      
-        self.sched_list = wx.dataview.TreeListCtrl(schedpanel, style=wx.dataview.TL_CHECKBOX)        
-        self.sched_list.AppendColumn("Schedule")
-        schedsizer.Add(self.sched_list, 1, wx.ALL|wx.EXPAND, 0)
         
+        self.splitter2 = wx.SplitterWindow(schedpanel)
+                      
+        self.sched_list = wx.dataview.TreeListCtrl(self.splitter2, style=wx.dataview.TL_CHECKBOX)
+        self.sched_list.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self.OnScheduleTreeActivated)
+        self.sched_list.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnScheduleTreeSelectionChanged)
+        self.sched_list.AppendColumn("Schedule")
+        
+        infopanel = wx.Panel(self.splitter2)
+        infopanelsizer = wx.BoxSizer(wx.VERTICAL)
+        self.info_sched = wx.TextCtrl(infopanel, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH)
+        
+        infopanelsizer.Add(self.info_sched, 1, wx.ALL|wx.EXPAND, 0)
+        infopanel.SetSizer(infopanelsizer)        
+        
+        self.splitter2.SplitHorizontally(self.sched_list, infopanel)
+        self.splitter2.SetSashGravity(0.8)
+        
+        schedsizer.Add(self.splitter2, 1, wx.ALL|wx.EXPAND, 5)
         schedpanel.SetSizer(schedsizer)        
         
         # the schedule manager panel/tab page 
@@ -187,7 +203,7 @@ class Main(wx.Frame):
         nbpanel.SetSizer(nbsizer)
         
         self.splitter.SplitVertically(leftpanel, nbpanel)
-        self.splitter.SetSashGravity(0.4)
+        self.splitter.SetSashGravity(0.2)
         
         self.SetMinSize((700, 600))
         self.SetSize((700, 600))
@@ -216,185 +232,7 @@ class Main(wx.Frame):
                 pass
         
         # tree.Select(tree.GetFirstItem())
-        
-#end __init__ def
-    
-    def SetScheduleList(self, data):
-        """ set the schedule list tree """  
-        self.sched_list.DeleteAllItems()
-        if not data:
-            return
-        
-        items = {}  
-        expanded_items = []
-        tree = self.sched_list
-        root = self.sched_list.GetRootItem()
-        for key in sorted(data.keys()):            
-            parent = key.split(",")[:-1]
-            parent = ",".join(parent)
-            if not parent:
-                parent = root
-            else:
-                parent = items[parent]
-                
-            value = data[key]["data"]
-            print( " data ", data )
-            item = tree.AppendItem(parent, value["0"])
-            # tree.SetItemText(item, 1, value["1"])
-            # tree.SetItemText(item, 2, value["2"])
             
-            checked = data[key]["checked"]
-            if checked == 1:
-                tree.CheckItem(item)
-            selected = data[key]["selected"]
-            if selected is True:
-                tree.Select(item)
-            expanded = data[key]["expanded"] 
-            if expanded is True:
-                expanded_items.append(item) 
-            items[key] = item
-        
-        for item in expanded_items:
-            tree.Expand(item)
-    
-    def CreateToolbar(self):
-        # toolbar = wx.ToolBar(self, style=wx.TB_TEXT|wx.TB_FLAT)
-        # toolbar = wx.ToolBar(self, style=wx.TB_TEXT)
-        toolbar = wx.ToolBar(self, style=wx.TB_FLAT)
-        # toolbar.AddTool(wx.ID _ANY, "t")#,  wx.BitmapFromBuffer(wx.ART_FILE_OPEN))
-        toolbar.SetToolBitmapSize((48,48))
-        # toolbar.SetToolBitmapSize((48,48))
-        toolbar.SetBackgroundColour("white")
-        for label, help, icon in [
-            ("Add Group", "Add Group", "new"),
-            ("Remove Group", "Remove Selected Group", "remove"),
-            ("Enable/Disable", "Enable Schedule Manager", "start")]:
-            
-            try:
-                bmp = theme.GetBitmap(icon, 48,48)  
-                # bmp = theme.GetBitmap(icon, 24,24)            
-                tool = toolbar.AddTool(wx.ID_ANY, label=label, bitmap=bmp, shortHelp=help)
-            except:
-                bmp = wx.Bitmap(24,24)            
-                tool = toolbar.AddTool(wx.ID_ANY, label=label, bitmap=bmp, shortHelp=help)
-            self.Bind(wx.EVT_TOOL, self.OnToolBar, tool)
-            
-            if label == "Remove Group":
-                toolbar.AddSeparator()
-                toolbar.AddStretchableSpace()
-                toolbar.AddSeparator()
-            
-        toolbar.Realize()
-        self.SetToolBar(toolbar)
-     
-#end CreateToolbar def
-            
-    def WriteData(self):
-        """ write changes to data file """
-        
-        return
-            
-    def OnToolBar(self, event):
-        e = event.GetEventObject()
-        id = event.GetId()
-        tool = e.FindById(id) 
-        label = tool.GetLabel()
-        
-        if label == "Add Group":
-            dlg = dialogs.groups.AddGroup(self)
-           
-            ret = dlg.ShowModal()
-            if ret == wx.ID_CANCEL:
-                return
-                                
-            name = dlg.GetValue()
-            newitem = self.group_list.Append([name])
-            
-            self._data[str(newitem)] = {"name": name,
-                                        "schedules": {}}
-            self.WriteData()
-            
-            self.group_list.Select(newitem)
-            self.group_list.CheckItem(newitem)
-                        
-            self.group_list.SetFocus()            
-            
-        elif label == "Remove Group":
-            g_index = self.group_list.GetFirstSelected()
-            if g_index == -1:
-                return
-                
-            self.group_list.DeleteItem(g_index)
-            del self._data[str(g_index)]
-            
-            new_data = {}
-            count = 0
-            for k in sorted(self._data.keys()):                
-                new_data[str(count)] = self._data[k]
-                count += 1
-            
-            self._data = new_data
-            self.WriteData()
-            
-        elif label == "new": 
-            self.CreateNewEditor()            
-        elif label == "open":
-            self.OpenFile()            
-        elif label == "save": 
-            self.SaveFile()            
-        elif label == "save as...": 
-            self.SaveFileAs()            
-        elif label == "import":  
-            self.ImportFile()
-        elif label == "fullscreen": 
-            pub.sendMessage("CloseFullscreenViewer", True)                  
-            fsv = FullscreenViewer(self)     
-            
-            page = self.notebook.GetCurrentPage()
-            if page == -1:
-                return
-                
-            image_list = page.image_list
-            
-            bitmap = None
-            selected = image_list.GetFirstSelected()
-            if selected == -1:
-                if image_list.GetItemCount() > 0:
-                   bitmap = image_list.GetItem(0).GetText()
-                   bitmap = page.GetBitmap(bitmap)
-            else:
-                bitmap = image_list.GetItem(selected).GetText()
-                bitmap = page.GetBitmap(bitmap)
-                
-            fsv.SetBitmap(bitmap)            
-            fsv.Show()
-            fsv.SetFocus()
-            
-#end OnToolBar def
-
-    def CreateNewEditor(self):
-        """ create a new file without a path specified """
-        
-        title = "untitled"
-        ext = ".py"
-        new_file = title + ext
-        index = 1
-        page_count = self.notebook.GetPageCount()
-        editors = [self.notebook.GetPage(pg) for pg in range(page_count)]
-        pages = [editor._name for editor in editors]
-        
-        # is new filename unique?
-        while new_file in pages:
-            new_file = title + str(index) + ext
-            index += 1
-        
-        new_page = FileEditor(self.notebook, None, new_file)
-        
-        self.notebook.AddPage(new_page, new_file)
-        self.notebook.SetSelection(page_count)
-   
-#end CreateNewEditor def
-
     def CreateMenu(self):
         menubar = wx.MenuBar()
         
@@ -431,26 +269,70 @@ class Main(wx.Frame):
         
         self.SetMenuBar(menubar)
     
-    def OnMenu(self, event):
-        e = event.GetEventObject()
-        id = event.GetId()
-        label = e.GetLabel(id).lower()
-         
-        if label == "new": 
-            self.CreateNewEditor()            
-        elif label == "open...":
-            self.OpenFile()            
-        elif label == "save": 
-            self.SaveFile()            
-        elif label == "save as...": 
-            self.SaveFileAs()            
-        elif label == "import":  
-            self.ImportFile()
-        elif label == "about":
-            AboutDialog(self)
+    def CreateToolbar(self):
+        # toolbar = wx.ToolBar(self, style=wx.TB_TEXT|wx.TB_FLAT)
+        # toolbar = wx.ToolBar(self, style=wx.TB_TEXT)
+        toolbar = wx.ToolBar(self, style=wx.TB_FLAT)
+        # toolbar.AddTool(wx.ID _ANY, "t")#,  wx.BitmapFromBuffer(wx.ART_FILE_OPEN))
+        toolbar.SetToolBitmapSize((48,48))
+        # toolbar.SetToolBitmapSize((48,48))
+        toolbar.SetBackgroundColour("white")
+        for label, help, icon in [
+            ("Add Group", "Add Group", "new"),
+            ("Remove Group", "Remove Selected Group", "remove"),
+            ("Undo", "Undo", "undo"),
+            ("Redo", "Redo", "redo"),
+            ("Enable/Disable", "Enable Schedule Manager", "start")]:
+            
+            try:
+                bmp = theme.GetBitmap(icon, 48,48)  
+                # bmp = theme.GetBitmap(icon, 24,24)            
+                tool = toolbar.AddTool(wx.ID_ANY, label=label, bitmap=bmp, shortHelp=help)
+            except:
+                bmp = wx.Bitmap(24,24)            
+                tool = toolbar.AddTool(wx.ID_ANY, label=label, bitmap=bmp, shortHelp=help)
+            self.Bind(wx.EVT_TOOL, self.OnToolBar, tool)
+            
+            if label == "Redo":
+                toolbar.AddSeparator()
+                toolbar.AddStretchableSpace()
+                toolbar.AddSeparator()
+            
+        toolbar.Realize()
+        self.SetToolBar(toolbar)
+          
+    def GetDialog(self, label, value=None):
         
-#end OnMenu def
-
+        if label == "CloseWindow":
+            dlg = dialogs.window.WindowDialog(self, title="Close Window")
+        elif label == "Delay":
+            dlg = dialogs.delay.AddDelay(self)
+        elif label == "IfWindowNotOpen":
+            dlg = dialogs.window.WindowDialog(self, title="If Window Open")
+        elif label == "IfWindowOpen":
+            dlg = dialogs.window.WindowDialog(self, title="If Window Not Open")
+        elif label == "KillProcess":
+            dlg = dialogs.window.WindowDialog(self, title="Kill Process")
+        elif label == "SwitchWindow":
+            dlg = dialogs.window.WindowDialog(self, title="Switch Window")
+        elif label == "MouseClickAbsolute":
+            dlg = dialogs.mouseabsolute.MouseClickAbsolute(self)
+        elif label == "MouseClickRelative":
+            dlg = dialogs.mouserelative.MouseClickRelative(self)
+        elif label == "OpenURL":
+            dlg = dialogs.browser.OpenURL(self)
+        elif label == "Power":
+            dlg = power.AddPower(self)
+        elif label == "StartSchedule":
+            dlg = dialogs.schedule.StartSchedule(self)
+        elif label == "StopSchedule":
+            dlg = dialogs.schedule.StopSchedule(self)
+         
+        if value:
+            dlg.SetValue(value)
+            
+        return dlg
+        
     def GetItemDepth(self, item):
         """  backwards """
         tree = self.sched_list
@@ -460,7 +342,20 @@ class Main(wx.Frame):
             depth += 1 
             item = tree.GetItemParent(item)
         return depth - 1
+    
+    def GetScheduleList(self):
+        """ return toplevel items"""
+        tree = self.sched_list
+        
+        schedules = []        
+        item = self.sched_list.GetFirstItem()
+        while item.IsOk():
+            if tree.GetCheckedState(item) == 1:
+                schedules.append(tree.GetItemText(item, 0))           
+            item = tree.GetNextSibling(item)
             
+        return schedules
+        
     def GetScheduleTree(self):
         """ retrieve tree structure, used for saving data """
         tree = self.sched_list
@@ -523,9 +418,292 @@ class Main(wx.Frame):
             item = tree.GetNextItem(item)
         
         return data
+   
+    def GetTopLevel(self):
+        """ return sequence tree top-level """
+        try:
+            selection = item = self.sched_list.GetSelection()
+        except:
+            return False
         
-    def GetTree(self):
-        return self.sched_list
+        if not selection.IsOk():    
+            return False
+            
+        text = self.sched_list.GetItemText(selection)
+      
+        # root = self.sched_list.GetRootItem()
+        # parent = self.sched_list.GetItemParent(selection)
+        
+        parents = [item]
+        # get item parents
+        while self.sched_list.GetItemParent(item).IsOk():            
+            parent = self.sched_list.GetItemParent(item)     
+            parents.append(parent)
+            item = parent
+            
+        parents = [self.sched_list.GetItemText(itm) for itm in parents if itm.IsOk()]
+        print( parents )
+        return parents[-2]
+        
+    def SetScheduleList(self, data):
+        """ set the schedule list tree """  
+        self.sched_list.DeleteAllItems()
+        if not data:
+            return
+        
+        items = {}  
+        expanded_items = []
+        tree = self.sched_list
+        root = self.sched_list.GetRootItem()
+        for key in sorted(data.keys()):            
+            parent = key.split(",")[:-1]
+            parent = ",".join(parent)
+            if not parent:
+                parent = root
+            else:
+                parent = items[parent]
+                
+            value = data[key]["data"]
+            print( " data ", data )
+            item = tree.AppendItem(parent, value["0"])
+            # tree.SetItemText(item, 1, value["1"])
+            # tree.SetItemText(item, 2, value["2"])
+            
+            checked = data[key]["checked"]
+            if checked == 1:
+                tree.CheckItem(item)
+            selected = data[key]["selected"]
+            if selected is True:
+                tree.Select(item)
+            expanded = data[key]["expanded"] 
+            if expanded is True:
+                expanded_items.append(item) 
+            items[key] = item
+        
+        for item in expanded_items:
+            tree.Expand(item)
+
+    def SetStatusBar(self, event=None):
+        """ update status bar when selecting a tree item on sequence"""
+        selection = self.sched_list.GetSelection()
+        status = self.sched_list.GetItemText(selection)
+        print( status )
+        self.GetTopLevelParent().SetStatusText(status)
+       
+        if event:
+            event.Skip()
+            
+    # ----- event methods -----
+    
+    def OnButton(self, event):
+        e = event.GetEventObject()
+        label = e.GetLabel()
+        
+        if label == "Add Function":
+            self.OnComboboxFunction()
+                    
+        elif label == "Add Schedule":
+            dlg = dialogs.schedule.AddSchedule(self)
+           
+            ret = dlg.ShowModal()
+            if ret == wx.ID_CANCEL:
+                return
+                
+            root = self.sched_list.GetRootItem()
+                
+            name, value = dlg.GetValue()
+            newitem = self.sched_list.AppendItem(root, name + DELIMITER + value)
+            
+            self.sched_list.Select(newitem)
+            self.sched_list.CheckItem(newitem)
+            self.sched_list.Expand(self.sched_list.GetSelection())
+            self.sched_list.SetFocus()
+            
+            g_index = self.group_list.GetFirstSelected()
+            schedules = self.GetScheduleTree()
+            self._data[str(g_index)]["schedules"] = schedules
+            self.WriteData()
+    
+        elif label == "Delete":
+            self.sched_list.DeleteItem(self.sched_list.GetSelection())
+            
+            g_index = self.group_list.GetFirstSelected()
+            schedules = self.GetScheduleTree()
+            self._data[str(g_index)]["schedules"] = schedules
+            self.WriteData()
+            
+        elif label == "Toggle":
+            selection = self.sched_list.GetSelection()
+            
+            if self.sched_list.GetCheckedState(selection) is True:
+                    self.sched_list.UncheckItem(selection)
+            else:
+                self.sched_list.CheckItem(selection)
+            try:
+            
+                if self.sched_list.GetCheckedState(selection) is True:
+                    self.sched_list.UncheckItem(selection)
+                else:
+                    self.sched_list.CheckItem(selection)
+            except:
+                pass
+                
+        elif label == "Up":
+            selection = self.sched_list.GetSelection()
+            
+            if selection == -1:
+                return
+            
+        elif label == "Down":
+        
+            # valid item selection?
+            selection = self.sched_list.GetSelection()             
+            if not selection.IsOk():
+                return
+            
+            # can item the moved down?
+            next = self.sched_list.GetNextSibling(selection)
+            if not next.IsOk():
+                return
+            
+            subtree = self.GetScheduleSubTree(selection)
+            self.sched_list.DeleteItem(selection)
+            self.InsertSubTree(next, subtree)
+        
+    def InsertSubTree(self, previous, data):        
+        """ insert sub tree after previous item """        
+        
+        items = {}  
+        expanded_items = []
+        tree = self.sched_list
+        for key in sorted(data.keys()):
+            
+            
+            if key == "0":
+                parent = None
+            else:
+                parent = key.split(",")[:-1]
+                parent = ",".join(parent)
+                parent = items[parent]
+            
+            value = data[key]["data"]
+            
+            if not parent:
+                parent = tree.GetItemParent(previous) 
+                item = tree.InsertItem(parent, previous, value["0"])
+            else:    
+                item = tree.AppendItem(parent, value["0"])
+            # tree.SetItemText(item, 1, value["1"])
+            # tree.SetItemText(item, 2, value["2"])
+            
+            checked = data[key]["checked"]
+            if checked == 1:
+                tree.CheckItem(item)
+            selected = data[key]["selected"]
+            if selected is True:
+                tree.Select(item)
+            expanded = data[key]["expanded"] 
+            if expanded is True:
+                expanded_items.append(item) 
+            items[key] = item
+        
+        for item in expanded_items:
+            tree.Expand(item)
+        
+    def GetScheduleSubTree(self, item):
+        """ return the sub tree of schedule item """
+        tree = self.sched_list
+        
+        selection = item
+        
+        # we stop when item depth is the same as the selected item
+        # i.e. a sibling
+        selected_depth = self.GetItemDepth(item)                
+            
+        data = {}
+        count = tree.GetColumnCount()       
+        depth = selected_depth 
+        index = "0"
+        
+        while item.IsOk():
+                        
+            d = self.GetItemDepth(item)
+            
+            # have we reached sibling
+            if selected_depth == d and "0" in data:
+                break
+            
+            # selected item is first item
+            if d == selected_depth:             
+                pass
+                
+            # sibling of previous item   
+            elif d == depth:             
+                next = int(index[-1]) + 1
+                del index[-1]
+                index.append(str(next))
+                index = ",".join(index)
+                
+            # a child of previous item    
+            elif d > depth:
+                index += ",0"                
+                
+            # sibling of parent  
+            elif d < depth:
+                index = index.split(",")[:depth]
+                # increment last element
+                next = int(index[-1]) + 1
+                del index[-1]
+                index.append(str(next))
+                index = ",".join(index)
+            
+            print( index )
+            depth = d  
+            item_data = {}
+            item_data["data"] = {str(col):tree.GetItemText(item, col) for col in range(count)}
+            item_data["checked"] = tree.GetCheckedState(item)
+            item_data["expanded"] = tree.IsExpanded(item)
+            item_data["selected"] = tree.IsSelected(item)
+            
+            data[index] = item_data
+            
+            item = tree.GetNextItem(item)
+            
+        return data
+        
+    def OnComboboxFunction(self, event=None):
+        
+        index = self.cbox_functions.GetSelection()
+        if index == -1:
+            return
+        label = self.cbox_functions.GetStringSelection()
+        print( label )
+        selection = self.sched_list.GetSelection()
+        if not selection.IsOk():
+            return
+            
+        dlg = self.GetDialog(label)
+        
+        # ret = dlg.Show()
+        ret = dlg.ShowModal()
+        if ret == wx.ID_CANCEL:
+            return
+        
+        value = dlg.GetValue()
+        newitem = self.sched_list.AppendItem(selection, label + DELIMITER + value)
+        
+        self.sched_list.Select(newitem)
+        self.sched_list.CheckItem(newitem)
+        self.sched_list.Expand(self.sched_list.GetSelection())
+        self.sched_list.SetFocus()
+        
+        # save tree to data
+        schedules = self.GetScheduleTree()
+        g_index = self.group_list.GetFocusedItem()
+        self._data[str(g_index)]["schedules"] = schedules
+        
+        # write changes to file
+        self.WriteData()
         
     def OnEdit(self, event):
         tree = self.sched_list
@@ -553,7 +731,7 @@ class Main(wx.Frame):
                 tree.SetItemText(selection, 0, value)                
         
         else:
-            dlg = self.OpenDialog(name)
+            dlg = self.GetDialog(name)
             dlg.SetValue(params)
             if dlg.ShowModal() == wx.ID_OK:
                 value = dlg.GetValue()
@@ -569,9 +747,10 @@ class Main(wx.Frame):
         self.WriteData()        
         
         self.sched_list.SetFocus()
-                
-#end OnEdit def           
-    
+        
+        # updated information
+        self.info_sched.SetValue(value)
+        
     def OnGroupItemSelected(self, event):
         index = event.Index        
         logging.info("Group item selected: %s" % index)
@@ -584,187 +763,111 @@ class Main(wx.Frame):
          
         schedules = self._data[str(g_index)]["schedules"] 
         self.SetScheduleList(schedules)
-    
-#end OnGroupItemSelected def
-
-    def OnButton(self, event):
-        e = event.GetEventObject()
-        label = e.GetLabel()
         
-        if label == "New Schedule":
-            dlg = dialogs.schedule.AddSchedule(self)
+        # click the information text
+        self.info_sched.SetValue("")
+    
+    def OnListItemActivated(self, event):
+        self.OnAddFunction()
+        
+    def OnMenu(self, event):
+        e = event.GetEventObject()
+        id = event.GetId()
+        label = e.GetLabel(id).lower()
+         
+        if label == "new": 
+            self.CreateNewEditor()            
+        elif label == "open...":
+            self.OpenFile()            
+        elif label == "save": 
+            self.SaveFile()            
+        elif label == "save as...": 
+            self.SaveFileAs()            
+        elif label == "import":  
+            self.ImportFile()
+        elif label == "about":
+            AboutDialog(self)
+            
+    def OnScheduleTreeActivated(self, event):
+        e = event.GetEventObject()
+        print(1)
+        
+    def OnScheduleTreeSelectionChanged(self, event):
+        selection = self.sched_list.GetSelection()
+        
+        try:
+            text = self.sched_list.GetItemText(selection)
+            self.info_sched.SetValue(text)        
+        except:
+            self.info_sched.SetValue("")        
+        
+    def OnToolBar(self, event):
+        e = event.GetEventObject()
+        id = event.GetId()
+        tool = e.FindById(id) 
+        label = tool.GetLabel()
+        
+        if label == "Add Group":
+            dlg = dialogs.groups.AddGroup(self)
            
             ret = dlg.ShowModal()
             if ret == wx.ID_CANCEL:
                 return
-                
-            root = self.sched_list.GetRootItem()
-                
-            name, value = dlg.GetValue()
-            newitem = self.sched_list.AppendItem(root, name + DELIMITER + value)
+                                
+            name = dlg.GetValue()
+            newitem = self.group_list.Append([name])
             
-            self.sched_list.Select(newitem)
-            self.sched_list.CheckItem(newitem)
-            self.sched_list.Expand(self.sched_list.GetSelection())
-            self.sched_list.SetFocus()
-            
-            g_index = self.group_list.GetFirstSelected()
-            schedules = self.GetScheduleTree()
-            self._data[str(g_index)]["schedules"] = schedules
+            self._data[str(newitem)] = {"name": name,
+                                        "schedules": {}}
             self.WriteData()
-     
-        elif label == "Delete":
-            self.sched_list.DeleteItem(self.sched_list.GetSelection())
-        
-    def GetScheduleList(self):
-        """ return toplevel items"""
-        tree = self.sched_list
-        
-        schedules = []        
-        item = self.sched_list.GetFirstItem()
-        while item.IsOk():
-            if tree.GetCheckedState(item) == 1:
-                schedules.append(tree.GetItemText(item, 0))           
-            item = tree.GetNextSibling(item)
             
-        return schedules
-        
-    def OnEnable(self, event):
-        e = event.GetEventObject()
-        label = e.GetLabel()
-        if label == "Enable":
-            schedules = self.GetScheduleList()
-            self._schedmgr.SetSchedules(schedules)
-            self._schedmgr.Start()
-            e.SetLabel("Disable")                        
-        else:
-            e.SetLabel("Enable")
-            self._schedmgr.Stop()
-        
-    def OpenDialog(self, label, value=None):
-        
-        if label == "CloseWindow":
-            dlg = dialogs.window.WindowDialog(self, title="Close Window")
-        elif label == "Delay":
-            dlg = dialogs.delay.AddDelay(self)
-        elif label == "IfWindowNotOpen":
-            dlg = dialogs.window.WindowDialog(self, title="If Window Open")
-        elif label == "IfWindowOpen":
-            dlg = dialogs.window.WindowDialog(self, title="If Window Not Open")
-        elif label == "KillProcess":
-            dlg = dialogs.window.WindowDialog(self, title="Kill Process")
-        elif label == "SwitchWindow":
-            dlg = dialogs.window.WindowDialog(self, title="Switch Window")
-        elif label == "MouseClickAbsolute":
-            dlg = dialogs.mouseabsolute.MouseClickAbsolute(self)
-        elif label == "MouseClickRelative":
-            dlg = dialogs.mouserelative.MouseClickRelative(self)
-        elif label == "OpenURL":
-            dlg = dialogs.browser.OpenURL(self)
-        elif label == "Power":
-            dlg = power.AddPower(self)
-        elif label == "StartSchedule":
-            dlg = dialogs.schedule.StartSchedule(self)
-        elif label == "StopSchedule":
-            dlg = dialogs.schedule.StopSchedule(self)
-         
-        if value:
-            dlg.SetValue(value)
+            self.group_list.Select(newitem)
+            self.group_list.CheckItem(newitem)
+                        
+            self.group_list.SetFocus()            
             
-        return dlg
-        
-    def OnAddFunction(self, event=None):
-        index = self.cbox_functions.GetSelection()
-        if index == -1:
-            return
-        label = self.cbox_functions.GetStringSelection()
-        print( label )
-        selection = self.sched_list.GetSelection()
-        if not selection.IsOk():
-            return
-            
-        dlg = self.OpenDialog(label)
-        
-        # ret = dlg.Show()
-        ret = dlg.ShowModal()
-        if ret == wx.ID_CANCEL:
-            return
-        
-        value = dlg.GetValue()
-        newitem = self.sched_list.AppendItem(selection, label + DELIMITER + value)
-        
-        self.sched_list.Select(newitem)
-        self.sched_list.CheckItem(newitem)
-        self.sched_list.Expand(self.sched_list.GetSelection())
-        self.sched_list.SetFocus()
-        
-        # save tree to data
-        schedules = self.GetScheduleTree()
-        g_index = self.group_list.GetFocusedItem()
-        self._data[str(g_index)]["schedules"] = schedules
-        
-        # write changes to file
-        self.WriteData()        
-        
-#end OnButton def
-    
-    def GetTopLevel(self):
-        """ return sequence tree top-level """
-        try:
-            selection = item = self.sched_list.GetSelection()
-        except:
-            return False
-        
-        if not selection.IsOk():    
-            return False
-            
-        text = self.sched_list.GetItemText(selection)
-      
-        # root = self.sched_list.GetRootItem()
-        # parent = self.sched_list.GetItemParent(selection)
-        
-        parents = [item]
-        # get item parents
-        while self.sched_list.GetItemParent(item).IsOk():            
-            parent = self.sched_list.GetItemParent(item)     
-            parents.append(parent)
-            item = parent
-            
-        parents = [self.sched_list.GetItemText(itm) for itm in parents if itm.IsOk()]
-        print( parents )
-        return parents[-2]
-        
-#end GetTopLevel def
-        
-    def OnListItemActivated(self, event):
-        self.OnAddFunction()
+        elif label == "Remove Group":
+            g_index = self.group_list.GetFirstSelected()
+            if g_index == -1:
+                return
                 
-#end OnListItemActivated def
-
-    def UpdateStatusBar(self, event=None):
-        """ update status bar when selecting a tree item on sequence"""
-        selection = self.sched_list.GetSelection()
-        status = self.sched_list.GetItemText(selection)
-        print( status )
-        self.GetTopLevelParent().SetStatusText(status)
-       
-        if event:
-            event.Skip()
+            self.group_list.DeleteItem(g_index)
+            del self._data[str(g_index)]
             
-#end Main class
-
-    def OnClose(self, event):        
-        # data = self.GetScheduleTree()
+            new_data = {}
+            count = 0
+            for k in sorted(self._data.keys()):                
+                new_data[str(count)] = self._data[k]
+                count += 1
+            
+            self._data = new_data
+            self.WriteData()
+        
+        elif label == "":   
+            def OnEnable(self, event):
+                e = event.GetEventObject()
+                label = e.GetLabel()
+                if label == "Enable":
+                    schedules = self.GetScheduleList()
+                    self._schedmgr.SetSchedules(schedules)
+                    self._schedmgr.Start()
+                    e.SetLabel("Disable")                        
+                else:
+                    e.SetLabel("Enable")
+                    self._schedmgr.Stop()
+     
+    def WriteData(self):
+        """ write changes to data file """
         logging.info("data: %s" % str(self._data))
        
         with open("schedules.json", 'w') as file: 
             json.dump(self._data, file, sort_keys=True, indent=1)
             
-        # continue to exit program
+    def OnClose(self, event):   
+        # save data before exiting
+        self.WriteData()
         event.Skip()
-
-#end OnClose def
-
+        
 if __name__ == "__main__":
     app = wx.App()    
     Main()
