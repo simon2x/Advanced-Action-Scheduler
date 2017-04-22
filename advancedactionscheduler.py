@@ -355,6 +355,33 @@ class Main(wx.Frame):
             item = tree.GetNextSibling(item)
             
         return schedules
+    
+    def GetSchedulePreviousSibling(self, item):
+        """ get previous sibling of argument item """
+        
+        tree = self.sched_list
+        tree.SetItemData(item, True)
+        
+        # iterate through items until item data returns True
+        parent = tree.GetItemParent(item)
+        sibling = tree.GetFirstChild(parent)
+        item_data = tree.GetItemData(sibling)
+        # already first child, then return None
+        if item_data:
+            tree.SetItemData(item, None)        
+            return None
+            
+        while not item_data:
+            next = tree.GetNextSibling(sibling)            
+            item_data = tree.GetItemData(next)
+            if item_data:            
+                break
+            sibling = next
+                    
+        previous = sibling
+        tree.SetItemData(item, None)    
+        
+        return previous
         
     def GetScheduleTree(self):
         """ retrieve tree structure, used for saving data """
@@ -549,11 +576,23 @@ class Main(wx.Frame):
                 pass
                 
         elif label == "Up":
-            selection = self.sched_list.GetSelection()
+            """ move then item up by moving the previous item down """
             
-            if selection == -1:
+            # valid item selection?
+            selection = self.sched_list.GetSelection()             
+            if not selection.IsOk():
                 return
             
+            # can item the moved up?
+            previous = self.GetSchedulePreviousSibling(selection)
+            if not previous:
+                logging.info("previous item is not OK. selection already at the top?")
+                return
+            
+            subtree = self.GetScheduleSubTree(previous)
+            self.sched_list.DeleteItem(previous)
+            self.InsertSubTree(selection, subtree)
+                        
         elif label == "Down":
         
             # valid item selection?
@@ -568,7 +607,7 @@ class Main(wx.Frame):
             
             subtree = self.GetScheduleSubTree(selection)
             self.sched_list.DeleteItem(selection)
-            self.InsertSubTree(next, subtree)
+            self.InsertSubTree(next, subtree)        
         
     def InsertSubTree(self, previous, data):        
         """ insert sub tree after previous item """        
@@ -576,9 +615,8 @@ class Main(wx.Frame):
         items = {}  
         expanded_items = []
         tree = self.sched_list
+        
         for key in sorted(data.keys()):
-            
-            
             if key == "0":
                 parent = None
             else:
@@ -609,6 +647,48 @@ class Main(wx.Frame):
         
         for item in expanded_items:
             tree.Expand(item)
+            
+    def PrependSubTree(self, previous, data):        
+        """ insert sub tree before item """        
+        
+        items = {}  
+        expanded_items = []
+        tree = self.sched_list
+        for key in sorted(data.keys()):
+            
+            
+            if key == "0":
+                parent = None
+            else:
+                parent = key.split(",")[:-1]
+                parent = ",".join(parent)
+                parent = items[parent]
+            
+            value = data[key]["data"]
+            
+            if not parent:
+                # parent = tree.GetItemParent(previous) 
+                # parenti 
+                item = tree.PrependItem(previous, value["0"])
+            else:    
+                item = tree.AppendItem(parent, value["0"])
+            # tree.SetItemText(item, 1, value["1"])
+            # tree.SetItemText(item, 2, value["2"])
+            
+            checked = data[key]["checked"]
+            if checked == 1:
+                tree.CheckItem(item)
+            selected = data[key]["selected"]
+            if selected is True:
+                tree.Select(item)
+            expanded = data[key]["expanded"] 
+            if expanded is True:
+                expanded_items.append(item) 
+            items[key] = item
+        
+        for item in expanded_items:
+            tree.Expand(item)
+            
         
     def GetScheduleSubTree(self, item):
         """ return the sub tree of schedule item """
