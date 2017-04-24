@@ -106,7 +106,7 @@ class Main(wx.Frame):
         self._menus = {}
         self._redo_stack = {}
         self._undo_stack = {}
-        
+        self._tooltip = wx.ToolTip("s")
         self._schedmgr = schedulemanager.Manager(self)
          
         self.Bind(wx.EVT_CLOSE, self.OnClose)
@@ -137,14 +137,22 @@ class Main(wx.Frame):
         
         # -----
         hsizer_functions = wx.WrapSizer(wx.HORIZONTAL)
-        for label in ["Add Schedule","Up","Down","Edit","Toggle","Delete"]:
-            btn = wx.Button(schedpanel, label=label, size=(-1, -1))
+        for label, art in [("Add Schedule", wx.ART_NEW),
+                           ("Up", wx.ART_GO_UP),
+                           ("Down", wx.ART_GO_DOWN),
+                           ("Edit", wx.ART_REPORT_VIEW),
+                           ("Toggle", wx.ART_LIST_VIEW),
+                           ("Delete", wx.ART_MINUS)]:
+            btn = wx.Button(schedpanel, label=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
+            bmp = wx.ArtProvider().GetBitmap(art)
             if label == "Edit":
                 btn.Bind(wx.EVT_BUTTON, self.OnEdit)
             else:
                 btn.Bind(wx.EVT_BUTTON, self.OnButton)
             if label in ["Delete"]:
                 hsizer_functions.AddStretchSpacer()
+            btn.Bind(wx.EVT_ENTER_WINDOW, self.OnButtonEnterWindow)
+            btn.SetBitmap(bmp)    
             hsizer_functions.Add(btn, 0, wx.ALL|wx.EXPAND, 2)
         schedsizer.Add(hsizer_functions, 0, wx.ALL|wx.EXPAND, 2)
         
@@ -275,16 +283,17 @@ class Main(wx.Frame):
         toolbar.SetToolBitmapSize((48,48))
         # toolbar.SetToolBitmapSize((48,48))
         toolbar.SetBackgroundColour("white")
-        for label, help, icon in [
-            ("Add Group", "Add Group", "new"),
-            ("Remove Group", "Remove Selected Group", "remove"),
-            ("Undo", "Undo", "undo"),
-            ("Redo", "Redo", "redo"),
-            ("Enable/Disable", "Enable Schedule Manager", "start")]:
+        for label, help, art in [
+            ("Add Group", "Add Group", wx.ART_NEW),
+            ("Remove Group", "Remove Selected Group", wx.ART_MINUS),
+            ("Undo", "Undo", wx.ART_UNDO),
+            ("Redo", "Redo", wx.ART_REDO),
+            ("Enable", "Enable Schedule Manager", wx.ART_TICK_MARK)]:
             
             try:
-                bmp = theme.GetBitmap(icon, 48,48)  
-                # bmp = theme.GetBitmap(icon, 24,24)            
+                # bmp = theme.GetBitmap(icon, 48,48)  
+                # bmp = theme.GetBitmap(icon, 24,24)  
+                bmp = wx.ArtProvider.GetBitmap(art)
                 tool = toolbar.AddTool(wx.ID_ANY, label=label, bitmap=bmp, shortHelp=help)
             except:
                 bmp = wx.Bitmap(24,24)            
@@ -603,6 +612,13 @@ class Main(wx.Frame):
             self.InsertSubTree(next, subtree) 
 
             self.GetScheduleTreeAndWriteData()
+    
+    def OnButtonEnterWindow(self, event):
+        e = event.GetEventObject()
+        label = e.GetLabel()
+        
+        self._tooltip.SetTip(label)
+        e.SetToolTip(self._tooltip)
         
     def InsertSubTree(self, previous, data):        
         """ insert sub tree after previous item """        
@@ -885,6 +901,7 @@ class Main(wx.Frame):
         id = event.GetId()
         tool = e.FindById(id) 
         label = tool.GetLabel()
+        logging.info("Toolbar button clicked: %s" % label)
         
         if label == "Add Group":
             dlg = dialogs.groups.AddGroup(self)
@@ -922,18 +939,27 @@ class Main(wx.Frame):
             self._data = new_data
             self.WriteData()
         
-        elif label == "":   
-            def OnEnable(self, event):
-                e = event.GetEventObject()
-                label = e.GetLabel()
-                if label == "Enable":
-                    schedules = self.GetScheduleList()
-                    self._schedmgr.SetSchedules(schedules)
-                    self._schedmgr.Start()
-                    e.SetLabel("Disable")                        
-                else:
-                    e.SetLabel("Enable")
-                    self._schedmgr.Stop()
+        elif label == "Enable": 
+            tool = e.FindById(id)
+            tool.SetLabel("Disable")
+            e.SetToolShortHelp(id, "Disable Schedule Manager")
+            
+            art = wx.ArtProvider.GetBitmap(wx.ART_CROSS_MARK)
+            e.SetToolNormalBitmap(id, art)
+                        
+            schedules = self.GetScheduleList()
+            self._schedmgr.SetSchedules(schedules)
+            self._schedmgr.Start()    
+            
+        elif label == "Disable":
+            tool = e.FindById(id)
+            tool.SetLabel("Enable")
+            e.SetToolShortHelp(id, "Enable Schedule Manager")
+            
+            art = wx.ArtProvider.GetBitmap(wx.ART_TICK_MARK)
+            e.SetToolNormalBitmap(id, art)
+            
+            self._schedmgr.Stop()
     
     def GetScheduleTreeAndWriteData(self):
         # save tree to data
