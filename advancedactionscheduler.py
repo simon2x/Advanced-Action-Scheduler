@@ -138,10 +138,7 @@ class Main(wx.Frame):
         # -----
         hsizer_functions = wx.WrapSizer(wx.HORIZONTAL)
         for label in ["Add Schedule","Up","Down","Edit","Toggle","Delete"]:
-            if label == "Add Schedule":
-                btn = wx.Button(schedpanel, label=label, size=(-1, -1))
-            else:
-                btn = wx.Button(schedpanel, label=label, size=(-1, -1))
+            btn = wx.Button(schedpanel, label=label, size=(-1, -1))
             if label == "Edit":
                 btn.Bind(wx.EVT_BUTTON, self.OnEdit)
             else:
@@ -177,6 +174,7 @@ class Main(wx.Frame):
         self.sched_list = wx.dataview.TreeListCtrl(self.splitter2, style=wx.dataview.TL_CHECKBOX)
         self.sched_list.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self.OnScheduleTreeActivated)
         self.sched_list.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnScheduleTreeSelectionChanged)
+        self.sched_list.Bind(wx.dataview.EVT_TREELIST_ITEM_CHECKED, self.OnScheduleTreeItemChecked)        
         self.sched_list.AppendColumn("Schedule")
         
         infopanel = wx.Panel(self.splitter2)
@@ -499,6 +497,8 @@ class Main(wx.Frame):
             checked = data[key]["checked"]
             if checked == 1:
                 tree.CheckItem(item)
+            else:
+                tree.UncheckItem(item)
             selected = data[key]["selected"]
             if selected is True:
                 tree.Select(item)
@@ -554,27 +554,18 @@ class Main(wx.Frame):
         elif label == "Delete":
             self.sched_list.DeleteItem(self.sched_list.GetSelection())
             
-            g_index = self.group_list.GetFirstSelected()
-            schedules = self.GetScheduleTree()
-            self._data[str(g_index)]["schedules"] = schedules
-            self.WriteData()
+            self.GetScheduleTreeAndWriteData()
             
         elif label == "Toggle":
             selection = self.sched_list.GetSelection()
-            
-            if self.sched_list.GetCheckedState(selection) is True:
-                    self.sched_list.UncheckItem(selection)
+            checked = self.sched_list.GetCheckedState(selection)
+            if checked == 1:
+                self.sched_list.UncheckItem(selection)
             else:
-                self.sched_list.CheckItem(selection)
-            try:
-            
-                if self.sched_list.GetCheckedState(selection) is True:
-                    self.sched_list.UncheckItem(selection)
-                else:
-                    self.sched_list.CheckItem(selection)
-            except:
-                pass
+                self.sched_list.CheckItem(selection)  
                 
+            self.GetScheduleTreeAndWriteData()
+            
         elif label == "Up":
             """ move then item up by moving the previous item down """
             
@@ -592,7 +583,9 @@ class Main(wx.Frame):
             subtree = self.GetScheduleSubTree(previous)
             self.sched_list.DeleteItem(previous)
             self.InsertSubTree(selection, subtree)
-                        
+            
+            self.GetScheduleTreeAndWriteData()
+        
         elif label == "Down":
         
             # valid item selection?
@@ -607,7 +600,9 @@ class Main(wx.Frame):
             
             subtree = self.GetScheduleSubTree(selection)
             self.sched_list.DeleteItem(selection)
-            self.InsertSubTree(next, subtree)        
+            self.InsertSubTree(next, subtree) 
+
+            self.GetScheduleTreeAndWriteData()
         
     def InsertSubTree(self, previous, data):        
         """ insert sub tree after previous item """        
@@ -881,6 +876,10 @@ class Main(wx.Frame):
         except:
             self.info_sched.SetValue("")        
         
+    def OnScheduleTreeItemChecked(self, event):
+        """ here we just save the new tree """
+        self.GetScheduleTreeAndWriteData()
+            
     def OnToolBar(self, event):
         e = event.GetEventObject()
         id = event.GetId()
@@ -935,7 +934,13 @@ class Main(wx.Frame):
                 else:
                     e.SetLabel("Enable")
                     self._schedmgr.Stop()
-     
+    
+    def GetScheduleTreeAndWriteData(self):
+        # save tree to data
+        schedules = self.GetScheduleTree()
+        g_index = self.group_list.GetFocusedItem()
+        self._data[str(g_index)]["schedules"] = schedules
+            
     def WriteData(self):
         """ write changes to data file """
         logging.info("data: %s" % str(self._data))
