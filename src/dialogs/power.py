@@ -3,7 +3,6 @@ import logging
 import sys
 import time
 import wx
-import theme
 import base
 
 class AddPower(wx.Dialog):
@@ -96,7 +95,7 @@ class AddPower(wx.Dialog):
         
     def GetValue(self):        
         data = []
-        data.append(("aaction", self.cbox_power.GetValue()))
+        data.append(("action", self.cbox_power.GetValue()))
         try:
             #check whether value is integer as well as nonzero value
             if int(self.cbox_power.GetValue()) == 0:

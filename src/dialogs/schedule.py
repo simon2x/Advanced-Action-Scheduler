@@ -3,7 +3,6 @@ import logging
 import sys
 import time
 import wx
-import theme
 import base
 
 class AddSchedule(wx.Dialog):

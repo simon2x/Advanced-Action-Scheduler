@@ -912,7 +912,6 @@ class Main(wx.Frame):
             
     def OnScheduleTreeActivated(self, event):
         e = event.GetEventObject()
-        print(1)
         
     def OnScheduleTreeSelectionChanged(self, event):
         selection = self.sched_list.GetSelection()

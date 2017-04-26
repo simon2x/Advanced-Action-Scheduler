@@ -1,0 +1,37 @@
+{
+ "0": {
+  "checked": "True",
+  "name": "s",
+  "schedules": {
+   "0": {
+    "checked": 1,
+    "data": {
+     "0": "e \u27a1 [('h', ['0']), ('s', ['0', '32'])]"
+    },
+    "expanded": true,
+    "selected": false
+   },
+   "0,0": {
+    "checked": 1,
+    "data": {
+     "0": "Delay \u27a1 [('delay', '0.0s')]"
+    },
+    "expanded": false,
+    "selected": false
+   },
+   "0,1": {
+    "checked": 1,
+    "data": {
+     "0": "Delay \u27a1 [('delay', '1.0s')]"
+    },
+    "expanded": false,
+    "selected": true
+   }
+  }
+ },
+ "1": {
+  "checked": "True",
+  "name": "e",
+  "schedules": {}
+ }
+}

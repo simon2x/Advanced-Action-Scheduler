@@ -15,7 +15,6 @@ GEN - general sequence instructions
 """
 
 import wx
-import theme
 import base
 # from wx.lib.agw import spinctrl
 
