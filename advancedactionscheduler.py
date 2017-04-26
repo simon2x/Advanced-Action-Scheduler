@@ -35,7 +35,6 @@ import dialogs
 import sys
 import time
 import wx
-import theme
 import os
 import os.path
 import subprocess
@@ -120,7 +119,8 @@ class Main(wx.Frame):
         self.group_list = base.CheckList(leftpanel)
         self.group_list.InsertColumn(0, "Group")
         self.group_list.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnGroupItemSelected)
-        self.group_list.OnCheckItem = self.OnCheckItem
+        # self.group_list.Bind(wx.EVT_LIST_KEY_DOWN, self.OnGroupItemKeyDown)        
+        self.group_list.OnCheckItem = self.OnGroupCheckItem
         
         leftsizer.Add(self.group_list, 1, wx.ALL|wx.EXPAND, 5)
         leftpanel.SetSizer(leftsizer)        
@@ -679,21 +679,6 @@ class Main(wx.Frame):
             
         return data
         
-    def OnCheckItem(self, index, checked):
-        """ this is called by the base class when an item is checked/unchecked """
-        
-        logging.info('index %d check value: %s\n' % (index, checked))
-        
-        if checked:
-            state = "True"
-        else:
-            state = "False"
-        
-        index = str(index)
-        self._data[index]["checked"] = state
-        
-        self.WriteData()
-        
     def OnButton(self, event):
         e = event.GetEventObject()
         label = e.GetLabel()
@@ -863,6 +848,30 @@ class Main(wx.Frame):
         
         # updated information
         self.info_sched.SetValue(value)
+    
+    def OnGroupCheckItem(self, index, checked):
+        """ this is called by the base "group list" class when an item is checked/unchecked """
+        
+        logging.info('index %d check value: %s\n' % (index, checked))
+        
+        if checked:
+            state = "True"
+        else:
+            state = "False"
+        
+        index = str(index)
+        self._data[index]["checked"] = state
+        
+        self.WriteData()
+        
+    def OnGroupItemKeyDown(self, event):
+        key = event.GetKeyCode()
+        index = self.group_list.GetFirstSelected()
+        # if index == -1:
+            # return
+        print(key)    
+        if key == wx.WXK_SPACE:
+            self.group_list.CheckItem( index )            
         
     def OnGroupItemSelected(self, event):
         index = event.Index        
