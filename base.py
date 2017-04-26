@@ -29,7 +29,7 @@ class CheckList(wx.ListCtrl, ListCtrlAutoWidthMixin, CheckListCtrlMixin):
     def __init__(self, parent, style=wx.LC_REPORT|wx.LC_HRULES|wx.LC_VRULES|wx.LC_SINGLE_SEL):
         
         wx.ListCtrl.__init__(self, parent, style=style)
-        ListCtrlAutoWidthMixin.__init__(self)
+        # ListCtrlAutoWidthMixin.__init__(self)
         CheckListCtrlMixin.__init__(self)
     
     def DeselectAll(self):
@@ -42,7 +42,7 @@ class CheckList(wx.ListCtrl, ListCtrlAutoWidthMixin, CheckListCtrlMixin):
         while self.GetNextSelected(item) != -1:
             item = self.GetNextSelected(item)
             self.Select(self.GetNextSelected(item), on=0)
-            
+    
 class BaseList(wx.ListCtrl, ListCtrlAutoWidthMixin):
     
     def __init__(self, parent, style=wx.LC_REPORT|wx.LC_HRULES|wx.LC_VRULES|wx.LC_SINGLE_SEL):

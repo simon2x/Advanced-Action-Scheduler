@@ -120,6 +120,7 @@ class Main(wx.Frame):
         self.group_list = base.CheckList(leftpanel)
         self.group_list.InsertColumn(0, "Group")
         self.group_list.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnGroupItemSelected)
+        self.group_list.OnCheckItem = self.OnCheckItem
         
         leftsizer.Add(self.group_list, 1, wx.ALL|wx.EXPAND, 5)
         leftpanel.SetSizer(leftsizer)        
@@ -229,7 +230,10 @@ class Main(wx.Frame):
                 
             for k,v in self._data.items():
                 name = self._data[k]["name"]
-                self.group_list.InsertItem(int(k), name)
+                item = self.group_list.InsertItem(int(k), name)
+                checked = v["checked"]
+                if checked == "True":
+                    self.group_list.CheckItem(item)
             
             file.close()
         except FileNotFoundError:    
@@ -531,94 +535,7 @@ class Main(wx.Frame):
             
     # ----- event methods -----
     
-    def OnButton(self, event):
-        e = event.GetEventObject()
-        label = e.GetLabel()
-        
-        if label == "Add Function":
-            self.OnComboboxFunction()
-                    
-        elif label == "Add Schedule":
-            dlg = dialogs.schedule.AddSchedule(self)
-           
-            ret = dlg.ShowModal()
-            if ret == wx.ID_CANCEL:
-                return
-                
-            root = self.sched_list.GetRootItem()
-                
-            name, value = dlg.GetValue()
-            newitem = self.sched_list.AppendItem(root, name + DELIMITER + value)
-            
-            self.sched_list.Select(newitem)
-            self.sched_list.CheckItem(newitem)
-            self.sched_list.Expand(self.sched_list.GetSelection())
-            self.sched_list.SetFocus()
-            
-            g_index = self.group_list.GetFirstSelected()
-            schedules = self.GetScheduleTree()
-            self._data[str(g_index)]["schedules"] = schedules
-            self.WriteData()
     
-        elif label == "Delete":
-            self.sched_list.DeleteItem(self.sched_list.GetSelection())
-            
-            self.GetScheduleTreeAndWriteData()
-            
-        elif label == "Toggle":
-            selection = self.sched_list.GetSelection()
-            checked = self.sched_list.GetCheckedState(selection)
-            if checked == 1:
-                self.sched_list.UncheckItem(selection)
-            else:
-                self.sched_list.CheckItem(selection)  
-                
-            self.GetScheduleTreeAndWriteData()
-            
-        elif label == "Up":
-            """ move then item up by moving the previous item down """
-            
-            # valid item selection?
-            selection = self.sched_list.GetSelection()             
-            if not selection.IsOk():
-                return
-            
-            # can item the moved up?
-            previous = self.GetSchedulePreviousSibling(selection)
-            if not previous:
-                logging.info("previous item is not OK. selection already at the top?")
-                return
-            
-            subtree = self.GetScheduleSubTree(previous)
-            self.sched_list.DeleteItem(previous)
-            self.InsertSubTree(selection, subtree)
-            
-            self.GetScheduleTreeAndWriteData()
-        
-        elif label == "Down":
-        
-            # valid item selection?
-            selection = self.sched_list.GetSelection()             
-            if not selection.IsOk():
-                return
-            
-            # can item the moved down?
-            next = self.sched_list.GetNextSibling(selection)
-            if not next.IsOk():
-                return
-            
-            subtree = self.GetScheduleSubTree(selection)
-            self.sched_list.DeleteItem(selection)
-            self.InsertSubTree(next, subtree) 
-
-            self.GetScheduleTreeAndWriteData()
-    
-    def OnButtonEnterWindow(self, event):
-        e = event.GetEventObject()
-        label = e.GetLabel()
-        
-        self._tooltip.SetTip(label)
-        e.SetToolTip(self._tooltip)
         
     def InsertSubTree(self, previous, data):        
         """ insert sub tree after previous item """        
@@ -762,7 +679,112 @@ class Main(wx.Frame):
             
         return data
         
+    def OnCheckItem(self, index, checked):
+        """ this is called by the base class when an item is checked/unchecked """
+        
+        logging.info('index %d check value: %s\n' % (index, checked))
+        
+        if checked:
+            state = "True"
+        else:
+            state = "False"
+        
+        index = str(index)
+        self._data[index]["checked"] = state
+        
+        self.WriteData()
+        
+    def OnButton(self, event):
+        e = event.GetEventObject()
+        label = e.GetLabel()
+        
+        if label == "Add Function":
+            self.OnComboboxFunction()
+                    
+        elif label == "Add Schedule":
+            dlg = dialogs.schedule.AddSchedule(self)
+           
+            ret = dlg.ShowModal()
+            if ret == wx.ID_CANCEL:
+                return
+                
+            root = self.sched_list.GetRootItem()
+                
+            name, value = dlg.GetValue()
+            newitem = self.sched_list.AppendItem(root, name + DELIMITER + value)
+            
+            self.sched_list.Select(newitem)
+            self.sched_list.CheckItem(newitem)
+            self.sched_list.Expand(self.sched_list.GetSelection())
+            self.sched_list.SetFocus()
+            
+            g_index = self.group_list.GetFirstSelected()
+            schedules = self.GetScheduleTree()
+            self._data[str(g_index)]["schedules"] = schedules
+            self.WriteData()
+    
+        elif label == "Delete":
+            self.sched_list.DeleteItem(self.sched_list.GetSelection())
+            
+            self.GetScheduleTreeAndWriteData()
+            
+        elif label == "Toggle":
+            selection = self.sched_list.GetSelection()
+            checked = self.sched_list.GetCheckedState(selection)
+            if checked == 1:
+                self.sched_list.UncheckItem(selection)
+            else:
+                self.sched_list.CheckItem(selection)  
+                
+            self.GetScheduleTreeAndWriteData()
+            
+        elif label == "Up":
+            """ move then item up by moving the previous item down """
+            
+            # valid item selection?
+            selection = self.sched_list.GetSelection()             
+            if not selection.IsOk():
+                return
+            
+            # can item the moved up?
+            previous = self.GetSchedulePreviousSibling(selection)
+            if not previous:
+                logging.info("previous item is not OK. selection already at the top?")
+                return
+            
+            subtree = self.GetScheduleSubTree(previous)
+            self.sched_list.DeleteItem(previous)
+            self.InsertSubTree(selection, subtree)
+            
+            self.GetScheduleTreeAndWriteData()
+        
+        elif label == "Down":
+        
+            # valid item selection?
+            selection = self.sched_list.GetSelection()             
+            if not selection.IsOk():
+                return
+            
+            # can item the moved down?
+            next = self.sched_list.GetNextSibling(selection)
+            if not next.IsOk():
+                return
+            
+            subtree = self.GetScheduleSubTree(selection)
+            self.sched_list.DeleteItem(selection)
+            self.InsertSubTree(next, subtree) 
+
+            self.GetScheduleTreeAndWriteData()
+    
+    def OnButtonEnterWindow(self, event):
+        e = event.GetEventObject()
+        label = e.GetLabel()
+        
+        self._tooltip.SetTip(label)
+        e.SetToolTip(self._tooltip)
+     
     def OnComboboxFunction(self, event=None):
+        """ selecting a combobox option automatically raises a corresponding dialog """
         
         index = self.cbox_functions.GetSelection()
         if index == -1:
@@ -914,11 +936,12 @@ class Main(wx.Frame):
             newitem = self.group_list.Append([name])
             
             self._data[str(newitem)] = {"name": name,
-                                        "schedules": {}}
+                                        "schedules": {},
+                                        "checked": "False"}
             self.WriteData()
             
             self.group_list.Select(newitem)
-            self.group_list.CheckItem(newitem)
+            # self.group_list.CheckItem(newitem)
                         
             self.group_list.SetFocus()            
             
