@@ -104,8 +104,7 @@ class Main(wx.Frame):
         self._data = {} 
         self._menus = {}
         self._redo_stack = []
-        self._undo_stack = []
-        self._tooltip = wx.ToolTip("")
+        self._undo_stack = []        
         self._schedmgr = schedulemanager.Manager(self)
          
         self.Bind(wx.EVT_CLOSE, self.OnClose)
@@ -152,8 +151,11 @@ class Main(wx.Frame):
                 btn.Bind(wx.EVT_BUTTON, self.OnButton)
             if label in ["Delete"]:
                 hsizer_functions.AddStretchSpacer()
-            btn.Bind(wx.EVT_ENTER_WINDOW, self.OnButtonEnterWindow)
+                
             btn.SetBitmap(bmp)    
+            
+            tooltip = wx.ToolTip(label)
+            btn.SetToolTip(tooltip)
             hsizer_functions.Add(btn, 0, wx.ALL|wx.EXPAND, 2)
         schedsizer.Add(hsizer_functions, 0, wx.ALL|wx.EXPAND, 2)
         
@@ -788,14 +790,7 @@ class Main(wx.Frame):
         
         # and write changes
         self.WriteData()
-    
-    def OnButtonEnterWindow(self, event):
-        e = event.GetEventObject()
-        label = e.GetLabel()
         
-        self._tooltip.SetTip(label)
-        e.SetToolTip(self._tooltip)
-     
     def OnComboboxFunction(self, event=None):
         """ selecting a combobox option automatically raises a corresponding dialog """
         
