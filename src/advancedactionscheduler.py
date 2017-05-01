@@ -250,22 +250,17 @@ class Main(wx.Frame):
         
         menu_file = wx.Menu()
         file_menus = [("New", "New Schedule File"),
-                      ("Open...", "Open Schedule"),
-                      ("Save", "Save PyEmbeddedFile"),
-                      ("Save As...", "Save PyEmbeddedFile As"),
-                      ("Import", "Import Image"),
-                      ("Import From Folder", "Import Images From Folder")]
+                      ("Open...", "Open Schedule File"),
+                      ("Import", "Import Schedule File"),
+                      ("Export", "Export Schedule File"),
+                      ("Preferences", "Open Preferences..."),
+                      ("Exit", "Exit Program")]
         for item, help_str in file_menus:
             self._menus[item] = menu_file.Append(wx.ID_ANY, item, help_str)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
             
-        menu_file.AppendSeparator()
-        
-        menu_settings = wx.Menu()
-        settings_menus = [("setting ...", "Not Yet Implemented")]                    
-        for item, help_str in settings_menus:
-            self._menus[item] = menu_settings.Append(wx.ID_ANY, item, help_str)
-            self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
+            if item == "Preferences":
+                menu_file.AppendSeparator()
             
         menu_help = wx.Menu()
         help_menus = [("Check for updates", "Check for updates (Not Yet Implemented)"),
@@ -275,8 +270,6 @@ class Main(wx.Frame):
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
             
         menubar.Append(menu_file, "&File")
-        # menubar.Append(menu_edit, "&Edit")
-        # menubar.Append(menu_settings, "&Settings")
         menubar.Append(menu_help, "&Help")
         
         self.SetMenuBar(menubar)
@@ -920,19 +913,9 @@ class Main(wx.Frame):
     def OnMenu(self, event):
         e = event.GetEventObject()
         id = event.GetId()
-        label = e.GetLabel(id).lower()
-         
-        if label == "new": 
-            self.CreateNewEditor()            
-        elif label == "open...":
-            self.OpenFile()            
-        elif label == "save": 
-            self.SaveFile()            
-        elif label == "save as...": 
-            self.SaveFileAs()            
-        elif label == "import":  
-            self.ImportFile()
-        elif label == "about":
+        label = e.GetLabel(id)
+        
+        if label == "About":
             message = ("Created by Simon Wu\n"
                      + "Licensed under the terms of the MIT Licence\n")
             
@@ -941,6 +924,30 @@ class Main(wx.Frame):
                                    message,
                                    caption=self._title)
             dlg.ShowModal()
+        
+        elif label == "Check for updates":
+            message = "not yet implemented"
+            
+            dlg = wx.MessageDialog(self, 
+                                   message,
+                                   caption="Checking for updates...")
+                                   
+            dlg.ShowModal()
+            
+        elif label == "Exit":
+            self.Close()
+       
+        elif label == "Export": 
+            self.SaveFileAs()
+         
+        elif label == "Import": 
+            self.SaveFile() 
+            
+        elif label == "New": 
+            self.CreateNewEditor()     
+            
+        elif label == "Open...":
+            self.OpenFile()   
             
     def OnScheduleTreeActivated(self, event):
         e = event.GetEventObject()
@@ -1149,7 +1156,6 @@ class Main(wx.Frame):
     def OnClose(self, event):
         # save data before exiting
         self.WriteData()
-        # self._tooltip.Enable(False)
         event.Skip()
         
 if __name__ == "__main__":
