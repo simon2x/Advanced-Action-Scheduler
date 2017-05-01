@@ -1012,6 +1012,7 @@ class Main(wx.Frame):
             
             self.SaveStateToUndoStack()
             
+            self.sched_list.DeleteAllItems()
             self.group_list.DeleteItem(g_index)
             del self._data[str(g_index)]
             
