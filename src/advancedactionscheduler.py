@@ -933,7 +933,14 @@ class Main(wx.Frame):
         elif label == "import":  
             self.ImportFile()
         elif label == "about":
-            AboutDialog(self)
+            message = ("Created by Simon Wu\n"
+                     + "Licensed under the terms of the MIT Licence\n")
+            
+                        
+            dlg = wx.MessageDialog(self, 
+                                   message,
+                                   caption=self._title)
+            dlg.ShowModal()
             
     def OnScheduleTreeActivated(self, event):
         e = event.GetEventObject()
