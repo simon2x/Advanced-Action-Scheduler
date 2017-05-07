@@ -27,7 +27,6 @@ import pyautogui
 import time
 import webbrowser
 
-
 from ast import literal_eval as make_tuple
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -35,27 +34,15 @@ from apscheduler.schedulers.background import BackgroundScheduler
 DELIMITER = " ➡ "
 
 class Manager:
-
+    
     def __init__(self, parent):
         
         self._parent = parent
         self._schedules = {}
-       
+    
     def GetParent(self):
         return self._parent
-        
-    def Stop(self):
-        """ shutdown all schedules """
-        for index, schedule in self._schedules.items():            
-            name, schedule = schedule
-            schedule.shutdown()
-            logging.info("Shutdown schedule: %s" % name)
-        
-        self._schedules = {}
-        
-    def Start(self):
-        pass
-                
+    
     def SetSchedules(self, schedules):
         """ process schedule data """
         
@@ -84,7 +71,7 @@ class Manager:
                                          
             self._schedules[index] = (sched_name, _schedule)
             _schedule.start()
-    
+      
     def DoAction(self, action, kwargs):
         logging.info("Executing action: %s" % action)
         logging.info("parameters: %s" % str(kwargs))
@@ -192,7 +179,7 @@ class Manager:
             matchstring = kwargs["matchstring"]
             
         return True
-         
+     
     def OnSchedule(self, index):
         name = self._schedules[index][0]
         logging.info("On schedule: %s,%s" % (index, name))
@@ -254,3 +241,18 @@ class Manager:
         for proc in psutil.process_iter():
             if proc.name() == PROCNAME:
                 print(proc)        
+
+    def Stop(self):
+        """ shutdown all schedules """
+        for index, schedule in self._schedules.items():            
+            name, schedule = schedule
+            schedule.shutdown()
+            logging.info("Shutdown schedule: %s" % name)
+        
+        self._schedules = {}
+        
+    def Start(self):
+        pass    
+
+# placeholder comment. For some reason, notepad++ doesn't detect function  
+# list correctly without this

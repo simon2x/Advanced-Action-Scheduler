@@ -1113,7 +1113,7 @@ class Main(wx.Frame):
             art = wx.ArtProvider.GetBitmap(wx.ART_TICK_MARK)
             e.SetToolNormalBitmap(id, art)
             
-            self._schedmgr.Stop()            
+            self._schedmgr.Stop()
     
     def GetScheduleTreeAndWriteData(self):
         # save tree to data
