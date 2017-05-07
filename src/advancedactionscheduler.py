@@ -206,6 +206,9 @@ class Main(wx.Frame):
         mgrsizer = wx.BoxSizer(wx.VERTICAL)
         mgrpanel.SetSizer(mgrsizer)
         
+        self.schedlog = wx.TextCtrl(mgrpanel, style=wx.TE_MULTILINE|wx.TE_READONLY)
+        mgrsizer.Add(self.schedlog, 1, wx.ALL|wx.EXPAND, 0)
+        
         self.notebook.AddPage(schedpanel, "Schedules")
         self.notebook.AddPage(mgrpanel, "Manager")
         
@@ -1098,6 +1101,9 @@ class Main(wx.Frame):
             schedules = self.GetScheduleList()
             self._schedmgr.SetSchedules(schedules)
             self._schedmgr.Start()    
+            
+            # switch to the manager when schedules are started
+            self.notebook.SetSelection(1)
             
         elif label == "Disable":
             tool = e.FindById(id)
