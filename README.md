@@ -1,2 +1,2 @@
-# Serial-Sequence-Creator
-pySerial sequence creator
+# Advanced-Action-Scheduler
+Advanced-Action-Scheduler

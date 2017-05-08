@@ -2,5 +2,4 @@ apscheduler
 pyautogui
 python-xlib
 wx
-
 python3-tk
