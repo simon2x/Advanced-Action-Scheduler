@@ -206,7 +206,19 @@ class Main(wx.Frame):
         mgrsizer = wx.BoxSizer(wx.VERTICAL)
         mgrpanel.SetSizer(mgrsizer)
         
-        self.schedlog = wx.TextCtrl(mgrpanel, style=wx.TE_MULTILINE|wx.TE_READONLY)
+        mgrhsizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.chkboxes = {}
+        for lbl in ["All","Schedules","Actions","Errors"]:
+            chkbox = wx.CheckBox(mgrpanel, label=lbl)
+            self.chkboxes[lbl] = chkbox
+            mgrhsizer.Add(chkbox, 0, wx.ALL, 5)   
+        self.chkboxes["All"].SetValue(True)
+        mgrsizer.Add(mgrhsizer, 0, wx.ALL, 0)
+        
+        self.schedlog = base.BaseList(mgrpanel)
+        self.schedlog.InsertColumn(0, "#")
+        self.schedlog.InsertColumn(1, "Time")
+        self.schedlog.InsertColumn(2, "Message")
         mgrsizer.Add(self.schedlog, 1, wx.ALL|wx.EXPAND, 0)
         
         self.notebook.AddPage(schedpanel, "Schedules")
@@ -481,6 +493,11 @@ class Main(wx.Frame):
         print( parents )
         return parents[-2]
         
+    def AppendLogMessage(self, message):
+        """ append log message to schedule messenger list """
+        i = self.schedlog.GetItemCount()
+        self.schedlog.Append([str(i)] + message)
+    
     def SetScheduleList(self, data):
         """ set the schedule list tree """  
         self.sched_list.DeleteAllItems()
@@ -1098,8 +1115,7 @@ class Main(wx.Frame):
             art = wx.ArtProvider.GetBitmap(wx.ART_CROSS_MARK)
             e.SetToolNormalBitmap(id, art)
                         
-            schedules = self.GetScheduleList()
-            self._schedmgr.SetSchedules(schedules)
+            self._schedmgr.SetSchedules(self._data)
             self._schedmgr.Start()    
             
             # switch to the manager when schedules are started

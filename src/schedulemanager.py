@@ -39,39 +39,80 @@ class Manager:
         
         self._parent = parent
         self._schedules = {}
+        self._sched_data = {}
+        
+        # populate with group names
+        self._group_names = {}
     
     def GetParent(self):
         return self._parent
     
-    def SetSchedules(self, schedules):
+    def AddSchedules(self, group_data):
+        """ this method is processing the group's schedules """
+        
+        group = group_data["name"]
+        schedules = group_data["schedules"]
+        group_checked = group_data["checked"]
+                
+        _schedules = {group: {}}
+        for idx, v in schedules.items():           
+                        
+            # is a schedule?
+            if "," not in idx:       
+                d = v["data"]["0"]
+                sched_name, sched_time = d.split(DELIMITER)
+                
+                sched_time = make_tuple(sched_time)
+                sched_time = {k:v for k,v in sched_time}            
+                
+                params = {}
+                for timevar in ["dof","h","m","s"]:
+                    if timevar in sched_time:
+                        params[timevar] = ",".join([t for t in sched_time[timevar]])
+                    else:
+                        params[timevar] = "*"            
+                
+                schedule = BackgroundScheduler()
+                crontrig = CronTrigger(day_of_week=params["dof"],
+                                       hour=params["h"], 
+                                       minute=params["m"],
+                                       second=params["s"])
+                
+                args = (group, idx)
+                job = schedule.add_job(self.OnSchedule, args=[args], trigger=crontrig)
+                                             
+                checked = v["checked"]
+                _schedules[group][idx] = (sched_name, checked, schedule)
+            
+            # ...is an action
+            else:
+                d = v["data"]["0"]
+                action, params = d.split(DELIMITER)
+                params = make_tuple(params)
+                try:
+                    self._sched_data[group][sched_name][idx] = params
+                except:
+                    self._sched_data[group] = {sched_name: {idx: params}}
+              
+        # finally, start the checked schedules of the checked groups    
+        for group, scheds in _schedules.items():
+            self._schedules[group] = scheds
+            for i,s in scheds.items():         
+                if s[1] == 0:
+                    continue 
+                    
+                s[2].start()
+                self.SendLog(["-","Started schedule %s from %s group" % (s[0], group)])
+            
+    def SetSchedules(self, data):
         """ process schedule data """
         
         # stop and remove schedules first
         self.Stop()
         
-        for index, schedule in enumerate(schedules):            
-            sched_name, sched_time = schedule.split(DELIMITER)
-            
-            sched_time = make_tuple(sched_time)
-            sched_time = {k:v for k,v in sched_time}            
-            
-            params = {}
-            for timevar in ["dof","h","m","s"]:
-                if timevar in sched_time:
-                    params[timevar] = ",".join([t for t in sched_time[timevar]])
-                else:
-                    params[timevar] = "*"            
-            
-            _schedule = BackgroundScheduler()
-            crontrig = CronTrigger(day_of_week=params["dof"],
-                                   hour=params["h"], 
-                                   minute=params["m"],
-                                   second=params["s"])
-            job = _schedule.add_job(self.OnSchedule, args=[index], trigger=crontrig)
-                                         
-            self._schedules[index] = (sched_name, _schedule)
-            _schedule.start()
-      
+        for idx, group_data in data.items():          
+            self.AddSchedules(group_data)            
+
     def DoAction(self, action, kwargs):
         logging.info("Executing action: %s" % action)
         logging.info("parameters: %s" % str(kwargs))
@@ -180,13 +221,18 @@ class Manager:
             
         return True
      
-    def OnSchedule(self, index):
-        name = self._schedules[index][0]
+    def OnSchedule(self, args):
+        group, index = args
+        
+        print(self._sched_data)
+        return
+        name = self._schedules[group][index][0]
         logging.info("On schedule: %s,%s" % (index, name))
+        if name not in self._sched_data:
+            print("no actions to run")
+            return
         
-        parent = self.GetParent()
-        tree = parent.GetTree()
-        
+        exit()
         # get item from index, and its immediate
         idx = 0
         item = tree.GetFirstItem()
@@ -242,13 +288,29 @@ class Manager:
             if proc.name() == PROCNAME:
                 print(proc)        
 
+    def SendLog(self, message):
+        """ pass message to schedule manager lis """
+        parent = self.GetParent()
+        parent.AppendLogMessage(message)
+        
     def Stop(self):
         """ shutdown all schedules """
-        for index, schedule in self._schedules.items():            
-            name, schedule = schedule
-            schedule.shutdown()
-            logging.info("Shutdown schedule: %s" % name)
+        print(self._schedules)
         
+        for group, data in self._schedules.items():            
+            for idx, schedules in data.items():
+                if schedules[1] == 0:
+                    continue
+                s = schedules[2]
+                s.shutdown()
+                
+                name = schedules[0]                
+                self.SendLog(["-",
+                              "Stopped schedule %s from group %s" % (name, group)])
+        
+        self.SendLog(["-","All schedules have been stopped"])
+        
+        # clear schedules
         self._schedules = {}
         
     def Start(self):
