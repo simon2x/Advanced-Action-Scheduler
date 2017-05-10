@@ -421,7 +421,6 @@ class Main(wx.Frame):
         root = tree.GetItemParent(item)
         while item.IsOk():
             d = self.GetItemDepth(item)
-            print(d)
             
             # the very first item (not root)
             if d == 0 and row == 0:
@@ -429,15 +428,16 @@ class Main(wx.Frame):
                 row += 1
                 
             # a toplevel item (excluding first item)
-            elif d == 0 and row != 0:  
+            elif d == 0 and row > 0:  
                 index = str(row)
                 row += 1
                 
             # depth unchanged, item is the next sibling of previous item
             elif d == depth:   
-                index = index.split(",")[:-1] #chop off last level
-                next = int(index[-1]) + 1
-                index.append(str(next))
+                index = index.split(",")
+                next = int(index[-1]) + 1 # ...and increment last 
+                index = index[0:-1]
+                index.append(str(next)) 
                 index = ",".join(index)
                 
             # a child of previous item    
@@ -453,10 +453,10 @@ class Main(wx.Frame):
                 index.append(str(next))
                 index = ",".join(index)
             
-            print( index )
-            depth = d  
+            print("index: ",index, "d: ", d, "last depth: ", depth)
+            depth = d   # change last depth to current depth
             item_data = {}
-            item_data["data"] = {str(col):tree.GetItemText(item, col) for col in range(count)}
+            item_data["data"] = tree.GetItemText(item, 0)
             item_data["checked"] = tree.GetCheckedState(item)
             item_data["expanded"] = tree.IsExpanded(item)
             item_data["selected"] = tree.IsSelected(item)
@@ -498,7 +498,7 @@ class Main(wx.Frame):
         i = self.schedlog.GetItemCount()
         self.schedlog.Append([str(i)] + message)
     
-    def SetScheduleList(self, data):
+    def SetScheduleTree(self, data):
         """ set the schedule list tree """  
         self.sched_list.DeleteAllItems()
         if not data:
@@ -517,10 +517,7 @@ class Main(wx.Frame):
                 parent = items[parent]
                 
             value = data[key]["data"]
-            print( " data ", data )
-            item = tree.AppendItem(parent, value["0"])
-            # tree.SetItemText(item, 1, value["1"])
-            # tree.SetItemText(item, 2, value["2"])
+            item = tree.AppendItem(parent, value)
             
             checked = data[key]["checked"]
             if checked == 1:
@@ -801,9 +798,6 @@ class Main(wx.Frame):
         # finally, clear the redo stack
         self._redo_stack = []
         
-        # and write changes
-        self.WriteData()
-        
     def OnComboboxFunction(self, event=None):
         """ selecting a combobox option automatically raises a corresponding dialog """
         
@@ -833,13 +827,7 @@ class Main(wx.Frame):
         
         self.OnScheduleTreeSelectionChanged()
         
-        # save tree to data
-        schedules = self.GetScheduleTree()
-        g_index = self.group_list.GetFocusedItem()
-        self._data[str(g_index)]["schedules"] = schedules
-        
-        # write changes to file
-        self.WriteData()
+        self.GetScheduleTreeAndWriteData()
         
     def OnEdit(self, event):
         tree = self.sched_list
@@ -922,7 +910,7 @@ class Main(wx.Frame):
             return
          
         schedules = self._data[str(g_index)]["schedules"] 
-        self.SetScheduleList(schedules)
+        self.SetScheduleTree(schedules)
         
         # click the information text
         self.info_sched.SetValue("")
@@ -1137,6 +1125,8 @@ class Main(wx.Frame):
         g_index = self.group_list.GetFirstSelected()
         self._data[str(g_index)]["schedules"] = schedules
     
+        self.WriteData()
+        
     def SaveStateToRedoStack(self):
         """ append current data to undo stack """
         g_index = self.group_list.GetFirstSelected()

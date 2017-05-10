@@ -55,6 +55,7 @@ class Manager:
         group_checked = group_data["checked"]
                 
         _schedules = {group: {}}
+        _ignore = [] #ignore any children of unchecked items
         for idx, v in schedules.items():           
                         
             # is a schedule?
@@ -82,26 +83,45 @@ class Manager:
                 job = schedule.add_job(self.OnSchedule, args=[args], trigger=crontrig)
                                              
                 checked = v["checked"]
-                _schedules[group][idx] = (sched_name, checked, schedule)
+                if checked == 0:
+                    _ignore.append(idx+",")
+                    continue
+                
+                _schedules[group][idx] = (sched_name, schedule)
             
             # ...is an action
             else:
+                checked = v["checked"]   
+                # forget unchecked, because they are never called
+                
+                if checked == 0:
+                    _ignore.append(idx+",")
+                    continue
+                
+                # is index a child of an unchecked item
+                ok = True
+                for g in _ignore:
+                    if idx.startswith(g):
+                        ok = False
+                        break
+                
+                if ok is False:
+                    continue
+                
                 d = v["data"]["0"]
                 action, params = d.split(DELIMITER)
                 params = make_tuple(params)
+                
                 try:
-                    self._sched_data[group][sched_name][idx] = params
-                except:
-                    self._sched_data[group] = {sched_name: {idx: params}}
+                    self._sched_data[group][idx] = params
+                except:                    
+                    self._sched_data[group] = {idx: (action, params)}
               
         # finally, start the checked schedules of the checked groups    
         for group, scheds in _schedules.items():
             self._schedules[group] = scheds
-            for i,s in scheds.items():         
-                if s[1] == 0:
-                    continue 
-                    
-                s[2].start()
+            for i,s in scheds.items(): 
+                s[1].start()
                 self.SendLog(["-","Started schedule %s from %s group" % (s[0], group)])
             
     def SetSchedules(self, data):
@@ -222,72 +242,45 @@ class Manager:
         return True
      
     def OnSchedule(self, args):
-        group, index = args
+        group, idx = args
+        print("flea bag",self._sched_data[group])
         
-        print(self._sched_data)
-        return
-        name = self._schedules[group][index][0]
-        logging.info("On schedule: %s,%s" % (index, name))
-        if name not in self._sched_data:
-            print("no actions to run")
-            return
-        
-        exit()
-        # get item from index, and its immediate
-        idx = 0
-        item = tree.GetFirstItem()
-        while item.IsOk():
-        
-            # if the schedule is unchecked, set item to next sibling
-            checked = tree.GetCheckedState(item)
-            if checked == 0:
-                item = tree.GetNextSibling(item)
-                
-            if idx == index:
-                break
-                
-            item = tree.GetNextSibling(item)            
-            idx += 1            
-                
-        # now iterate through items children
-        # and invoke the relevant actions
-        sched_item = item
-        # next item of schedule, if depth is zero we have reached
-        # the next sibling and should stop 
-        item = tree.GetNextItem(sched_item)
-        depth = 1 #first item should always be 1
-        while item.IsOk() and depth != 0:
-            
-            result = True
-            checked = tree.GetCheckedState(item)
-            if checked == 1:
-                item_text = tree.GetItemText(item)
-                action, params = item_text.split(DELIMITER)
-                params = make_tuple(params)
-                result = self.DoAction(action, params)
-                
-                if result is True:
-                    item = tree.GetNextItem(item)
-                else:
-                    # action failed condition, skip to next sibling
-                    item = tree.GetNextSibling(item)
-                    
-            elif checked == 0:
-                # no action required, skip to next sibling
-                item = tree.GetNextSibling(item)
-            
-            if item.IsOk():
-                depth = parent.GetItemDepth(item)
-            
-        
-        return
-        
-        PROCNAME = "python.exe"
-        
-        for proc in psutil.process_iter():
-            if proc.name() == PROCNAME:
-                print(proc)        
+        # sort indices by order of execution
+        indices = [i for i in self._sched_data[group].keys()]
+        def split_index(index):
+            """Split a index given as string into a tuple of integers."""
+            return tuple(int(p) for p in index.split('.'))
 
+        def my_key(item):
+            return split_ip(item[0])
+        
+        indices = sorted(indices)#, key=indices)
+        
+        
+        print( indices )
+        return
+        depth = 1
+        idx_str = "%s,0" % idx
+        while True:
+            try:
+                # get the first action (if any)
+                a = self._sched_data[group][idx_str]      
+            except:     
+                print("no actions executed")
+                return
+            
+            action, params, checked = a
+            if checked == 0:
+                idx_split = idx_str.split(",")
+                last = int(idx_split[-1]) + 1                
+                idx_str = idx_str[0:-1]
+                idx_str = ",".join(idx_str) + str(last)
+                continue
+            print(a)
+            break
+            
+        return
+    
     def SendLog(self, message):
         """ pass message to schedule manager lis """
         parent = self.GetParent()
@@ -299,9 +292,7 @@ class Manager:
         
         for group, data in self._schedules.items():            
             for idx, schedules in data.items():
-                if schedules[1] == 0:
-                    continue
-                s = schedules[2]
+                s = schedules[1]
                 s.shutdown()
                 
                 name = schedules[0]                
