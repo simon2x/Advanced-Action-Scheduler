@@ -30,8 +30,8 @@ from ast import literal_eval as make_tuple
 import psutil
 import json
 import logging
-from dialogs import *
 import dialogs
+import platform
 import sys
 import time
 import wx
@@ -42,13 +42,12 @@ import schedulemanager
 import wx.dataview #for TreeListCtrl
 import wx.lib.agw.aui as aui 
 
+from dialogs import *
 from wx.lib.scrolledpanel import ScrolledPanel
 from wx.lib.pubsub import setuparg1
 from wx.lib.pubsub import pub
 
 import base
-
-import platform
 
 PLATFORM = platform.system()
 if PLATFORM == "Windows":

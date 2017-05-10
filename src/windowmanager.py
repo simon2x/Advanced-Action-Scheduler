@@ -16,14 +16,10 @@ import time
 def GetHostname():
     hostname = subprocess.check_output(["hostname"]).decode("utf-8").strip()
     return hostname
-    
-#end GetHostname def
 
 def GetUsername():
     username = subprocess.check_output(["whoami"]).decode("utf-8").strip()
     return username
-
-#end GetUsername def
 
 # -----
 
@@ -42,8 +38,6 @@ def WmCtrlList():
     
     return output
     
-#end WmCtrlList def
-    
 def WmCtrlActivate(window_id):
     
     """ activate (set foreground) window id"""
@@ -52,8 +46,6 @@ def WmCtrlActivate(window_id):
     output = subprocess.check_output(cmd).decode("utf-8").strip()    
     logging.info("Activated window: %s" % window_id)
     
-#end WmCtrlActivate def
-
 def SetForegroundWindow(title, winclass):
 
     """ activate the first matched window, and if no match found, return None """
@@ -84,8 +76,6 @@ def SetForegroundWindow(title, winclass):
     
     logging.info("Could not set foreground window: %s" % title)
     return None
- 
-#end SetForegroundWindow def
 
 def GetWindowId(title, winclass):
     """ -r <WIN> -e <MVARG> """
@@ -114,8 +104,6 @@ def GetWindowId(title, winclass):
     
     # window not found!
     return None
-
-#end GetWindowId def
 
 def GetWindowDecorationOffset(title, winclass):
     """ We move the target window to 0,0. Then get the window position 
@@ -189,8 +177,6 @@ def GetWindowRect(title, winclass):
         
         return [adj_x, adj_y, int(w), int(h)]
  
-#end GetWindowRect def
-
 # def GetWindowRect(title, winclass):
     # output = WmCtrlList()
     # hostname = GetHostname()
@@ -223,8 +209,6 @@ def GetWindowRect(title, winclass):
         
         # return [adj_x, adj_y, int(w), int(h)]
  
-#end GetWindowRect def
-
 def SetWindowSize(title, win_class, offw, offy, w, h):
     
     # we always switch to the window since background maximised windows
@@ -241,8 +225,6 @@ def SetWindowSize(title, win_class, offw, offy, w, h):
     logging.info("%s" % str(flags))
     output = subprocess.check_output(["wmctrl"] + flags).decode("utf-8").strip()    
         
-#end SetWindowSize def
-    
 def GetClientArea():
     # centre the dialog
     desktop = win32gui.GetDesktopWindow()
@@ -252,9 +234,7 @@ def GetClientArea():
     # self._SetupList()
     # l,t,r,b = win32gui.GetClientRect(self.hwnd)
     # self._DoSize(r-l,b-t, 1)
-
-#end GetClientArea defj
-
+    
 def CloseWindow(title, matchcase=False, matchstring=True):
     """ 
     Get handles and their respective titles. If condition is
@@ -303,18 +283,12 @@ def CloseWindow(title, matchcase=False, matchstring=True):
         
     for hwnd in handles:
         close_window(hwnd)
-
-#end CloseWindow def
-
+        
 def MouseClickRelative(x, y, w=None, h=None, originalpos=False):         
     pass
- 
-#end MouseClickRelative def
-
+    
 def CloseWindow():
     cmd = "xkill -i $( xprop -root | awk '/_NET_ACTIVE_WINDOW\(WINDOW\)/{print $NF}' )"
-
-#end WmCtrlActivate def
 
 def KillProcess(pid):
     output = subprocess.check_output(["kill"] + [pid]).decode("utf-8").strip()
@@ -322,9 +296,7 @@ def KillProcess(pid):
         pass
     if "No such process" in output:
         pass
-
-#end WmCtrlActivate def
-
+        
 def GetWindowSize(title):
     hostname = GetHostname()
     output = WmCtrlList()
@@ -349,8 +321,6 @@ def GetWindowSize(title):
         
         return (0, 0, w, h)
 
-#end WmCtrlActivate def
-
 def GetWindowList():
 
     """ returns window (title, class) tuple list """
@@ -371,8 +341,6 @@ def GetWindowList():
     
     logging.info("Windows: %s" % str(titles))
     return titles
-
-#end GetWindowList def
 
 def GetWindowInfo():
 
@@ -406,7 +374,3 @@ def GetWindowInfo():
                               "win_class": win_class}
                        
     return windows
-    
-#end GetWindowInfo def
-
-# print(GetWindowInfo())

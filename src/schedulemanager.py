@@ -21,8 +21,8 @@ SOFTWARE.
 """
 
 import base
-import windowmanager
 import logging
+import platform
 import pyautogui
 import time
 import webbrowser
@@ -30,6 +30,13 @@ import webbrowser
 from ast import literal_eval as make_tuple
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.schedulers.background import BackgroundScheduler
+import apscheduler.events as apsevents
+
+PLATFORM = platform.system()
+if PLATFORM == "Windows":
+    import actions.windowsactionmanager as actman
+elif PLATFORM == "Linux":    
+    import actions.linuxactionmanager as actman
 
 DELIMITER = " ➡ "
 
@@ -39,7 +46,7 @@ class Manager:
         
         self._parent = parent
         self._schedules = {}
-        self._sched_data = {}
+        self._sched_data = {}        
         
         # populate with group names
         self._group_names = {}
@@ -52,15 +59,18 @@ class Manager:
         
         group = group_data["name"]
         schedules = group_data["schedules"]
+        
         group_checked = group_data["checked"]
-                
+        if group_checked == "False":
+            return
+        
         _schedules = {group: {}}
         _ignore = [] #ignore any children of unchecked items
         for idx, v in schedules.items():           
                         
             # is a schedule?
             if "," not in idx:       
-                d = v["data"]["0"]
+                d = v["data"]
                 sched_name, sched_time = d.split(DELIMITER)
                 
                 sched_time = make_tuple(sched_time)
@@ -79,14 +89,16 @@ class Manager:
                                        minute=params["m"],
                                        second=params["s"])
                 
-                args = (group, idx)
-                job = schedule.add_job(self.OnSchedule, args=[args], trigger=crontrig)
+                args = (group, idx, sched_name)
+                schedule.add_job(self.OnSchedule, args=[args], trigger=crontrig)
                                              
                 checked = v["checked"]
                 if checked == 0:
                     _ignore.append(idx+",")
                     continue
                 
+                # attach a listener to schedule events
+                # schedule.add_listener(self.OnScheduleEvent, apsevents.EVENT_JOB_EXECUTED|apsevents.EVENT_JOB_ERROR)
                 _schedules[group][idx] = (sched_name, schedule)
             
             # ...is an action
@@ -108,12 +120,12 @@ class Manager:
                 if ok is False:
                     continue
                 
-                d = v["data"]["0"]
+                d = v["data"]
                 action, params = d.split(DELIMITER)
                 params = make_tuple(params)
                 
                 try:
-                    self._sched_data[group][idx] = params
+                    self._sched_data[group][idx] = (action, params)
                 except:                    
                     self._sched_data[group] = {idx: (action, params)}
               
@@ -140,17 +152,18 @@ class Manager:
         #convert tuple list to dictionary
         kwargs = {k:v for k,v in kwargs}
         
-        if action == "CloseWindow":
+        if action == "CloseWindow":            
             window = kwargs["window"]
             matchcase = kwargs["matchcase"]
             matchstring = kwargs["matchstring"]
             
-            windowmanager.CloseWindow(window, matchcase, matchstring)
+            actman.CloseWindow(window, matchcase, matchstring)
             
         elif action == "Delay":
             delay = kwargs["delay"]
-            delay = int(delay.pop("s"))
-            time.sleep(delay)
+            value = float(delay[:-1])
+            time.sleep(value) #remove the 's'
+            self.SendLog(["-","Delayed for %s" % delay])
             
         elif action == "KillProcess":
             pass
@@ -160,10 +173,12 @@ class Manager:
             matchcase = kwargs["matchcase"]
             matchstring = kwargs["matchstring"]
             
-            if not windowmanager.FindWindow(window, matchcase):
+            if not actman.FindWindow(window, matchcase):
                 # no window found
+                self.SendLog(["-","IfWindowOpen: %s ...found" % window])
                 return False
             
+            self.SendLog(["-","IfWindowOpen: %s ...not found" % window])
             return True 
             
         elif action == "IfWindowNotOpen":
@@ -171,10 +186,12 @@ class Manager:
             matchcase = kwargs["matchcase"]
             matchstring = kwargs["matchstring"]
             
-            if windowmanager.FindWindow(window, matchcase):
+            if actman.FindWindow(window, matchcase):
                 # window found
+                self.SendLog(["-","IfWindowNotOpen: %s ...found" % window])
                 return False
             
+            self.SendLog(["-","IfWindowNotOpen: %s ...not found" % window])
             return True 
             
         elif action == "MouseClickAbsolute":
@@ -188,9 +205,8 @@ class Manager:
             x = kwargs["x"]
             y = kwargs["y"]
            
-            windowmanager.SetWindowSize(title, win_class, offsetx, offsety, width, height)
+            actman.SetWindowSize(title, win_class, offsetx, offsety, width, height)
             pyautogui.click(x=x, y=y)
-            
             
         elif action == "MouseClickRelative":
             window = kwargs["window"]
@@ -202,6 +218,8 @@ class Manager:
             height = kwargs["height"]
             x = kwargs["x"]
             y = kwargs["y"]
+            
+            actman.MouseClickRelative(title, win_class, offsetx, offsety, width, height)
             
         elif action == "OpenURL":
             url = kwargs["url"]
@@ -240,47 +258,38 @@ class Manager:
             matchstring = kwargs["matchstring"]
             
         return True
-     
+       
     def OnSchedule(self, args):
-        group, idx = args
-        print("flea bag",self._sched_data[group])
-        
+        group, idx, sched_name = args
+                
         # sort indices by order of execution
         indices = [i for i in self._sched_data[group].keys()]
-        def split_index(index):
-            """Split a index given as string into a tuple of integers."""
-            return tuple(int(p) for p in index.split('.'))
-
-        def my_key(item):
-            return split_ip(item[0])
+        indices = sorted(indices)
         
-        indices = sorted(indices)#, key=indices)
-        
-        
-        print( indices )
-        return
-        depth = 1
-        idx_str = "%s,0" % idx
-        while True:
-            try:
-                # get the first action (if any)
-                a = self._sched_data[group][idx_str]      
-            except:     
-                print("no actions executed")
-                return
+        while indices:
+            i = indices[0]
+            action, kwargs = self._sched_data[group][i]
             
-            action, params, checked = a
-            if checked == 0:
-                idx_split = idx_str.split(",")
-                last = int(idx_split[-1]) + 1                
-                idx_str = idx_str[0:-1]
-                idx_str = ",".join(idx_str) + str(last)
+            a = self.DoAction(action, kwargs)            
+            
+            if a is False:
+                # returned false, therefore action condition was not met
+                # we delete the actions children
+                for j,k in enumerate(reversed(indices)):
+                    if not j.startswith(i):
+                        continue
+                    del indices[k]
                 continue
-            print(a)
-            break
             
-        return
-    
+            try:
+                # otherwise, go to next action
+                del indices[0]
+            except:    
+                break
+            
+        self.SendLog(["",
+                      "Executed schedule %s from group: %s" % (sched_name, group)])
+                      
     def SendLog(self, message):
         """ pass message to schedule manager lis """
         parent = self.GetParent()
@@ -299,7 +308,7 @@ class Manager:
                 self.SendLog(["-",
                               "Stopped schedule %s from group %s" % (name, group)])
         
-        self.SendLog(["-","All schedules have been stopped"])
+        self.SendLog(["-","Any running schedules have been stopped"])
         
         # clear schedules
         self._schedules = {}
@@ -307,5 +316,4 @@ class Manager:
     def Start(self):
         pass    
 
-# placeholder comment. For some reason, notepad++ doesn't detect function  
-# list correctly without this
+# END
