@@ -5,13 +5,183 @@ from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin, CheckListCtrlMixin
 class TreeListCtrl(wx.dataview.TreeListCtrl):
     
     def __init__(self, parent):
+        """
+        Tree data format
+        
+        index = "n,n,n, ..."    
+        ...where the first n is a top-level parent. Subsequent n
+        are children of the left n
+        
+        """
         
         style = wx.dataview.TL_CHECKBOX
         wx.dataview.TreeListCtrl.__init__(self, 
                                           parent,
                                           style=style)
-    
+              
+    def GetSubTree(self, item):
+        """ return the sub tree of schedule item """
+        tree = self.sched_list
         
+        selection = item
+        
+        # we stop when item depth is the same as the selected item
+        # i.e. a sibling
+        selected_depth = self.GetItemDepth(item)                
+            
+        data = {}
+        count = tree.GetColumnCount()       
+        depth = selected_depth 
+        index = "0"
+        
+        while item.IsOk():
+                        
+            d = self.GetItemDepth(item)
+            
+            # have we reached sibling
+            if selected_depth == d and "0" in data:
+                break
+            
+            # selected item is first item
+            if d == selected_depth:             
+                pass
+                
+            # sibling of previous item   
+            elif d == depth:             
+                next = int(index[-1]) + 1
+                del index[-1]
+                index.append(str(next))
+                index = ",".join(index)
+                
+            # a child of previous item    
+            elif d > depth:
+                index += ",0"                
+                
+            # sibling of parent  
+            elif d < depth:
+                index = index.split(",")[:depth]
+                # increment last element
+                next = int(index[-1]) + 1
+                del index[-1]
+                index.append(str(next))
+                index = ",".join(index)
+            
+            # print(index)
+            depth = d  
+            item_data = {}
+            item_data["data"] = tree.GetItemText(item, 0)
+            item_data["checked"] = tree.GetCheckedState(item)
+            item_data["expanded"] = tree.IsExpanded(item)
+            item_data["selected"] = tree.IsSelected(item)
+            
+            data[index] = item_data
+            
+            item = tree.GetNextItem(item)
+            
+        return data
+    
+    def GetTree(self):
+        data = {}
+        item = self.GetFirstItem()
+        if not item.IsOk():        
+            return data
+            
+        column_count = self.GetColumnCount()
+        row = 0
+        depth = 0      
+        idx = "0"
+        root = self.GetItemParent(item)
+        while item.IsOk():
+            d = self.GetItemDepth(item)
+            
+            # the very first item (not root)
+            if d == 0 and row == 0:
+                idx = "0"
+                row += 1
+                
+            # a toplevel item (excluding first item)
+            elif d == 0 and row > 0:  
+                idx = str(row)
+                row += 1
+                
+            # depth unchanged, item is the next sibling of previous item
+            elif d == depth:   
+                idx = idx.split(",")
+                next = int(idx[-1]) + 1 # ...and increment last 
+                idx = idx[0:-1]
+                idx.append(str(next)) 
+                idx = ",".join(idx)
+                
+            # a child of previous item    
+            elif d > depth:
+                idx += ",0"
+                
+            # sibling of parent  
+            elif d < depth:
+                idx = idx.split(",")[:depth]
+                # increment last element
+                next = int(idx[-1]) + 1
+                del idx[-1]
+                idx.append(str(next))
+                idx = ",".join(idx)
+            
+            depth = d   # change last depth to current depth
+            item_data = {}
+            item_data["columns"] = {str(c): self.GetItemText(item, c) for c in range(column_count)}
+            item_data["checked"] = self.GetCheckedState(item)
+            item_data["expanded"] = self.IsExpanded(item)
+            item_data["selected"] = self.IsSelected(item)
+            
+            data[idx] = item_data
+            
+            item = tree.GetNextItem(item)
+        
+        return data
+        
+    def SetTree(self, data)
+        """ set the treelist """  
+        self.DeleteAllItems()
+                
+        if not data:
+            return
+                
+        items = {}  
+        expanded_items = []        
+        root = self.GetRootItem()
+        for idx in sorted(data.keys()):            
+            parent = idx.split(",")[:-1]
+            parent = ",".join(parent)
+            if not parent:
+                parent = root
+            else:
+                parent = items[parent]
+            
+            column_count = self.GetColumnCount()
+            columns = data[idx]["columns"]
+            item = self.AppendItem(parent, value)
+            if column_count > 1:
+                for c in range(0, column_count):
+                    try:
+                        self.SetItemText(item, c, columns[c])
+                    except:
+                        pass
+            
+            checked = data[idx]["checked"]
+            if checked == 1:
+                self.CheckItem(item)
+            else:
+                self.UncheckItem(item)
+            selected = data[idx]["selected"]
+            if selected is True:
+                self.Select(item)
+            expanded = data[idx]["expanded"] 
+            if expanded is True:
+                expanded_items.append(item) 
+            items[idx] = item
+        
+        for item in expanded_items:
+            tree.Expand(item)
+            
 class ToolTip(wx.ToolTip):
     
     def __init__(self, tip):
@@ -93,15 +263,15 @@ class ConfirmDialog(wx.Dialog):
         
         self.SetSizer(sizer)
         
-        #key events binding
-        # self.Bind(wx.EVT_KEY_UP, self.OnKeyUp)
+        #idx events binding
+        # self.Bind(wx.EVT_idx_UP, self.OnidxUp)
     
-    def OnKeyUp(self, event):
-        keycode = event.GetKeyCode()
+    def OnidxUp(self, event):
+        idxcode = event.GetidxCode()
         
-        if keycode == wx.WXK_ESCAPE:
+        if idxcode == wx.WXK_ESCAPE:
             self.EndModal(wx.ID_NO)
-        elif keycode == wx.WXK_ENTER:
+        elif idxcode == wx.WXK_ENTER:
             self.EndModal(wx.ID_YES)
         event.Skip()
         
@@ -145,14 +315,14 @@ class InputDialog(wx.Dialog):
         sizer.Add(hsizer2, 0, wx.ALL|wx.ALIGN_RIGHT, 5)
         panel.SetSizer(sizer)
     
-        #key events binding
-        self.input.Bind(wx.EVT_KEY_UP, self.OnKeyUp)
+        #idx events binding
+        self.input.Bind(wx.EVT_idx_UP, self.OnidxUp)
     
-    def OnKeyUp(self, event):
-        keycode = event.GetKeyCode()
-        if keycode == wx.WXK_ESCAPE:
+    def OnidxUp(self, event):
+        idxcode = event.GetidxCode()
+        if idxcode == wx.WXK_ESCAPE:
             self.EndModal(wx.ID_CANCEL)
-        elif keycode == wx.WXK_RETURN:
+        elif idxcode == wx.WXK_RETURN:
             self.EndModal(wx.ID_OK)
         event.Skip()
         
