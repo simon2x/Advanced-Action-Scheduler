@@ -331,6 +331,9 @@ def GetWindowList():
     lines = output.split("\n")
     for line in lines:
         linesplit = line.split(" ")
+        linesplit = [l for l in linesplit if l != ""]
+        if hostname not in linesplit:
+            continue
         host_idx = linesplit.index(hostname)
         
         title = " ".join(linesplit[host_idx+1:])
