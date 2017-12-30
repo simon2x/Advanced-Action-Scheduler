@@ -2,3 +2,4 @@
 .spyproject/codestyle.ini
 .spyproject/workspace.ini
 *.ini
+src/test.py

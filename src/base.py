@@ -349,7 +349,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
         items = {}  
         expanded_items = []       
         print( sorted(tree.keys()))
-        for idx in sorted(tree.keys()):            
+        for idx in sorted([int(x) for x in tree.keys()]):            
             parent = idx.split(",")[:-1]
             parent = ",".join(parent)
             columns = tree[idx]["columns"]      
