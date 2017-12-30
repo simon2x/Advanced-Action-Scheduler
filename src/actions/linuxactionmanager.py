@@ -295,7 +295,7 @@ def SetWindowSize(title, win_class, offw, offy, w, h):
         
 def WmCtrlActivate(window_id):
     
-    """ activate (set foreground) window id"""
+    """ activate (set foreground) window id """
     
     cmd = ["wmctrl", "-ia"] + [window_id]
     output = subprocess.check_output(cmd).decode("utf-8").strip()    
