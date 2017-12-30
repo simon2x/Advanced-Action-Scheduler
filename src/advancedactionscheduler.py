@@ -509,7 +509,9 @@ class Main(wx.Frame):
     
     def SetGroupTree(self, data):
         """ set the group list tree """  
-        self.group_list.SetTree(data)
+        root = self.group_list_root
+        for idx in sorted([int(x) for x in data.keys()]):            
+            item = self.group_list.AppendItemToRoot(data[str(idx)]["name"])        
         
     def SetScheduleTree(self, data):
         """ set the schedule list tree """  
