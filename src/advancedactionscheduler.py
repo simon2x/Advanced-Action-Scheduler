@@ -633,7 +633,7 @@ class Main(wx.Frame):
             
             schedules = self.GetScheduleTree()
             g_index = self.group_list.GetSelection()
-            self._data[g_index]["sched_tree"] = schedules
+            self._data[g_index]["schedules"] = schedules
             self.WriteData()
     
         elif label == "Delete":
@@ -776,7 +776,7 @@ class Main(wx.Frame):
         # save tree to data
         schedules = self.GetScheduleTree()
         g_index = self.group_list.GetSelection()
-        self._data[str(g_index)]["sched_tree"] = schedules
+        self._data[str(g_index)]["schedules"] = schedules
         
         # write changes to file
         self.WriteData()        
@@ -806,6 +806,7 @@ class Main(wx.Frame):
         g_index = self.group_list.GetSelection()        
         
         data = {
+            "schedules": self._data[str(g_index)]["schedules"],
             "order": self._data[str(g_index)]["order"]
         }
         self.SetScheduleTree(data)
@@ -898,11 +899,10 @@ class Main(wx.Frame):
             group_tree = self.GetGroupTree()
             
             # we insert schedule tree into the relevant group item
-            sched_tree = self.GetScheduleTree()
+            schedules = self.GetScheduleTree()
             self._data[newitem] = group_tree[newitem]
-            self._data[newitem]["sched_tree"] = sched_tree
-#            self._data[newitem]["sched_tree"] = sched_tree
-                                        
+            self._data[newitem]["schedules"] = schedules
+            
             self.WriteData()
             
             self.group_list.Select(newitem)
@@ -1033,12 +1033,12 @@ class Main(wx.Frame):
         # checked = self.group_list.GetCheckedState(selection)
         
 #        group_tree = self.group_list.GetTree()        
-        sched_tree = self.sched_list.GetTree()  
+        schedules = self.sched_list.GetTree()  
         
 #        self._data[g_index] = group_tree
-        self._data[g_index]["sched_tree"] = sched_tree   
+        self._data[g_index]["schedules"] = schedules   
         print(self._data)
-        # group_tree[g_index]["data"] = sched_tree        
+        # group_tree[g_index]["data"] = schedules        
         # self._d
         
         self.WriteData()
