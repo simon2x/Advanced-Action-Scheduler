@@ -1078,7 +1078,7 @@ class Main(wx.Frame):
         logging.info("data: %s" % str(self._data))
        
         with open("schedules.json", 'w') as file: 
-            json.dump(self._data, file, sort_keys=True, indent=4)
+            json.dump(self._data, file, sort_keys=True, indent=2)
             
     def OnClose(self, event):
         # save data before exiting
