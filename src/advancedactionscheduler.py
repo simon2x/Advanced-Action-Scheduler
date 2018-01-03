@@ -805,8 +805,10 @@ class Main(wx.Frame):
         # update schedule list
         g_index = self.group_list.GetSelection()        
         
-        tdata = self._data[str(g_index)]["sched_tree"] 
-        self.SetScheduleTree(tdata)
+        data = {
+            "order": self._data[str(g_index)]["order"]
+        }
+        self.SetScheduleTree(data)
         
         # click the information text
         self.info_sched.SetValue("")
