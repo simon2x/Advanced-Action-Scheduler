@@ -511,7 +511,7 @@ class Main(wx.Frame):
         """ set the group list tree """  
         root = self.group_list_root
         for idx in sorted([int(x) for x in data.keys()]):            
-            item = self.group_list.AppendItemToRoot(data[str(idx)]["name"])        
+            item = self.group_list.AppendItemToRoot(data[str(idx)]["columns"]["0"])        
         
     def SetScheduleTree(self, data):
         """ set the schedule list tree """  
