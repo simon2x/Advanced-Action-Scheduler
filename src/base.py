@@ -289,6 +289,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
         row = 0
         depth = 0      
         idx = "0"
+        data["order"] = [] 
         root = self.GetItemParent(item)
         while item.IsOk():
             d = self.GetItemDepth(item)
@@ -332,6 +333,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             item_data["selected"] = self.IsSelected(item)
             
             data[idx] = item_data
+            data["order"].append(idx)
             
             item = self.GetNextItem(item)
         
@@ -345,11 +347,13 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
         
         if not tree:
             return
-                
+            
         items = {}  
         expanded_items = []       
-        print( sorted(tree.keys()))
-        for idx in sorted([int(x) for x in tree.keys()]):            
+        s = ['0', '0,0', '3,1','0,1',"00, 0","11, 2","11, 1","111, 0"]
+        print(s)
+        # 
+        for idx in sorted(tree.keys()):            
             parent = idx.split(",")[:-1]
             parent = ",".join(parent)
             columns = tree[idx]["columns"]      
@@ -365,7 +369,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
                     self.SetItemText(item, str(c), columns[c])
                 except:
                     pass
-            
+
             checked = tree[idx]["checked"]
             if checked == 1:
                 self.CheckItem(item)
