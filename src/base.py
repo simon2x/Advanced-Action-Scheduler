@@ -433,55 +433,6 @@ class BaseList(wx.ListCtrl, ListCtrlAutoWidthMixin):
             item = self.GetNextSelected(item)
             self.Select(self.GetNextSelected(item), on=0)
 
-class ConfirmDialog(wx.Dialog):
-
-    def __init__(self, parent, title="", caption=""):
-
-        wx.Dialog.__init__(self,
-                           parent,
-                           style=wx.DEFAULT_DIALOG_STYLE)
-
-        self.SetTitle(title)
-
-        # panel = wx.Panel(self)
-        sizer = wx.BoxSizer(wx.VERTICAL)
-
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        caption = wx.StaticText(self, label=caption)
-        hsizer.Add(caption, 0, wx.ALL|wx.EXPAND)
-
-        hsizer2 = wx.BoxSizer(wx.HORIZONTAL)
-        # hsizer2.AddStretchSpacer(0)
-        for label, id in [("No", wx.ID_NO), ("Yes", wx.ID_YES)]:
-            btn = wx.Button(self, id=id, label=label)
-            btn.Bind(wx.EVT_BUTTON, self.OnButton)
-            hsizer2.Add(btn, 0, wx.ALL, 2)
-
-        sizer.AddSpacer(20)
-        sizer.Add(hsizer, 2, wx.ALIGN_CENTRE, 5)
-        # sizer.AddStretchSpacer()
-        sizer.Add(wx.StaticLine(self), 0, wx.ALL|wx.EXPAND, 2)
-        sizer.Add(hsizer2, 1, wx.ALL|wx.ALIGN_CENTRE, 5)
-
-        self.SetSizer(sizer)
-
-        #idx events binding
-        # self.Bind(wx.EVT_idx_UP, self.OnidxUp)
-
-    def OnidxUp(self, event):
-        idxcode = event.GetidxCode()
-
-        if idxcode == wx.WXK_ESCAPE:
-            self.EndModal(wx.ID_NO)
-        elif idxcode == wx.WXK_ENTER:
-            self.EndModal(wx.ID_YES)
-        event.Skip()
-
-    def OnButton(self, event):
-        e = event.GetEventObject()
-        id = e.GetId()
-        self.EndModal(id)
-
 class InputDialog(wx.Dialog):
 
     def __init__(self, parent, title="", caption=""):

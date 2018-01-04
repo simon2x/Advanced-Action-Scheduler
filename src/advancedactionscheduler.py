@@ -885,7 +885,7 @@ class Main(wx.Frame):
                 return
                 
             dlg = wx.MessageDialog(self, 
-                                   "Delete group '{0}'?".format(self._data[str(groupIdx)]["columns"]["0"]), 
+                                   "Confirm delete group '{0}'?".format(self._data[str(groupIdx)]["columns"]["0"]), 
                                    "Delete Group",
                                    style=wx.YES_NO)
             if dlg.ShowModal() == wx.ID_NO:
@@ -897,15 +897,15 @@ class Main(wx.Frame):
             self.group_list.DeleteItem(groupIdx)
             del self._data[str(groupIdx)]
 
-            new_data = {}
+            newData = {}
             count = 0
             for k in sorted(self._data.keys()):
-                new_data[str(count)] = self._data[k]
+                newData[str(count)] = self._data[k]
                 count += 1
 
             self._redo_stack = []
 
-            self._data = new_data
+            self._data = newData
             self.WriteData()
 
             self.OnScheduleTreeSelectionChanged()
