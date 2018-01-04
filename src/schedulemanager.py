@@ -50,10 +50,7 @@ class Manager:
 
         # populate with group names
         self._group_names = {}
-
-    def GetParent(self):
-        return self._parent
-
+    
     def AddSchedules(self, group_data):
         """ this method is processing the group's schedules """
 
@@ -135,16 +132,7 @@ class Manager:
             for i,s in scheds.items():
                 s[1].start()
                 self.SendLog(["-","Started schedule %s from %s group" % (s[0], group)])
-
-    def SetSchedules(self, data):
-        """ process schedule data """
-
-        # stop and remove schedules first
-        self.Stop()
-
-        for idx, group_data in data.items():
-            self.AddSchedules(group_data)
-
+    
     def DoAction(self, action, kwargs):
         logging.info("Executing action: %s" % action)
         logging.info("parameters: %s" % str(kwargs))
@@ -258,6 +246,9 @@ class Manager:
             matchstring = kwargs["matchstring"]
 
         return True
+        
+    def GetParent(self):
+        return self._parent
 
     def OnSchedule(self, args):
         group, idx, sched_name = args
@@ -295,6 +286,15 @@ class Manager:
         parent = self.GetParent()
         parent.AppendLogMessage(message)
 
+    def SetSchedules(self, data):
+        """ process schedule data """
+
+        # stop and remove schedules first
+        self.Stop()
+
+        for idx, group_data in data.items():
+            self.AddSchedules(group_data)
+            
     def Stop(self):
         """ shutdown all schedules """
         print(self._schedules)

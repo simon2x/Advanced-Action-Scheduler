@@ -1003,6 +1003,7 @@ class Main(wx.Frame):
             e.SetToolShortHelp(id, "Disable Schedule Manager")
 
             img = wx.Image("icons/disableschedulemanager.png")
+            img = img.Rescale(48,48, wx.IMAGE_QUALITY_HIGH)
             bmp = wx.Bitmap(img)
             e.SetToolNormalBitmap(id, bmp)
 
@@ -1018,6 +1019,7 @@ class Main(wx.Frame):
             e.SetToolShortHelp(id, "Enable Schedule Manager")
 
             img = wx.Image("icons/enableschedulemanager.png")
+            img = img.Rescale(48,48, wx.IMAGE_QUALITY_HIGH)
             bmp = wx.Bitmap(img)
             e.SetToolNormalBitmap(id, bmp)
 
