@@ -6,42 +6,42 @@ import windowmanager
 class WindowDialog(wx.Dialog):
 
     def __init__(self, parent, title=""):
-    
+
         wx.Dialog.__init__(self,
                            parent,
                            title=title)
-        
+
         # self._variables = variables
-        panel = wx.Panel(self) 
+        panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
-        
-        sbox = wx.StaticBox(panel, label="")        
+
+        sbox = wx.StaticBox(panel, label="")
         sbox_sizer = wx.StaticBoxSizer(sbox, wx.HORIZONTAL)
         grid = wx.GridBagSizer(5,5)
-        
+
         row = 0
-        
+
         lbl_function = wx.StaticText(panel, label="Window:")
         choices = []
         choices.extend(windowmanager.GetWindows())
         self.cbox_window = wx.ComboBox(panel, choices=choices)
         btn_refresh = wx.Button(panel, label="Refresh")
         btn_refresh.Bind(wx.EVT_BUTTON, self.OnButton)
-        
+
         grid.Add(lbl_function, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
         grid.Add(self.cbox_window, pos=(row,1), span=(0,2), flag=wx.ALL|wx.EXPAND, border=5)
         grid.Add(btn_refresh, pos=(row,3), flag=wx.ALL|wx.EXPAND, border=5)
-        
+
         row += 1
-        self.chk_match_case = wx.CheckBox(panel, label="Match Case")        
+        self.chk_match_case = wx.CheckBox(panel, label="Match Case")
         self.chk_match_string = wx.CheckBox(panel, label="Match Whole String")
         self.chk_match_case.SetValue(True)
         self.chk_match_string.SetValue(True)
         grid.Add(self.chk_match_case, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
         grid.Add(self.chk_match_string, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
-        
+
         grid.AddGrowableCol(1)
-      
+
         sbox_sizer.AddSpacer(10)
         sbox_sizer.Add(grid, 1, wx.ALL|wx.EXPAND, 2)
         #-----
@@ -54,24 +54,24 @@ class WindowDialog(wx.Dialog):
         # self.btn_add.Disable()
         hsizer.Add(btn_cancel, 0, wx.ALL|wx.EXPAND, 5)
         hsizer.Add(self.btn_add, 0, wx.ALL|wx.EXPAND, 5)
-                        
+
         #add to main sizer
         sizer.Add(sbox_sizer, 0, wx.ALL|wx.EXPAND, 2)
         sizer.Add(hsizer, 0, wx.ALL|wx.EXPAND, 2)
-        
-        panel.SetSizer(sizer)  
-        
+
+        panel.SetSizer(sizer)
+
         w, h = sizer.Fit(self)
-        
+
     def OnButton(self, event):
         e = event.GetEventObject()
         label = e.GetLabel()
         id = e.GetId()
-        
+
         if label == "Cancel":
-            self.EndModal(id)            
-        elif label == "Ok":            
-            self.EndModal(id)            
+            self.EndModal(id)
+        elif label == "Ok":
+            self.EndModal(id)
         elif label == "Refresh":
             value = self.cbox_window.GetValue()
             self.cbox_window.Clear()
@@ -79,21 +79,20 @@ class WindowDialog(wx.Dialog):
             choices.extend(windowmanager.GetWindows())
             self.cbox_window.Append(choices)
             self.cbox_window.SetValue(value)
-        
+
     def SetValue(self, data):
         window = data["window"]
         self.cbox_window.SetValue(window)
-        
+
         case = data["matchcase"]
         string = data["matchstring"]
         self.chk_match_case.SetValue(case)
         self.chk_match_string.SetValue(string)
-        
-    def GetValue(self):        
+
+    def GetValue(self):
         data = []
         data.append(("window", self.cbox_window.GetValue()))
         data.append(("matchcase", self.chk_match_case.GetValue()))
         data.append(("matchstring", self.chk_match_string.GetValue()))
-        
+
         return str(data)
-                
