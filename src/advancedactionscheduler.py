@@ -563,48 +563,7 @@ class Main(wx.Frame):
             items[key] = item
 
         for item in expanded_items:
-            tree.Expand(item)
-            
-    def PrependSubTree(self, previous, data):
-        """ insert sub tree before item """
-
-        items = {}
-        expanded_items = []
-        tree = self.sched_list
-        for key in sorted(data.keys()):
-
-
-            if key == "0":
-                parent = None
-            else:
-                parent = key.split(",")[:-1]
-                parent = ",".join(parent)
-                parent = items[parent]
-
-            value = data[key]["data"]
-
-            if not parent:
-                # parent = tree.GetItemParent(previous)
-                # parenti
-                item = tree.PrependItem(previous, value["0"])
-            else:
-                item = tree.AppendItem(parent, value["0"])
-            # tree.SetItemText(item, 1, value["1"])
-            # tree.SetItemText(item, 2, value["2"])
-
-            checked = data[key]["checked"]
-            if checked == 1:
-                tree.CheckItem(item)
-            selected = data[key]["selected"]
-            if selected is True:
-                tree.Select(item)
-            expanded = data[key]["expanded"]
-            if expanded is True:
-                expanded_items.append(item)
-            items[key] = item
-
-        for item in expanded_items:
-            tree.Expand(item)
+            tree.Expand(item)            
     
     def OnButton(self, event):
         e = event.GetEventObject()
@@ -641,9 +600,10 @@ class Main(wx.Frame):
             if not index.IsOk():
                 return
 
-            dlg = base.ConfirmDialog(self,
-                                     "Confirm delete",
-                                     "Delete schedule list item?")
+            dlg = wx.MessageDialog(self, 
+                                   "Confirm delete", 
+                                   "Delete schedule list item?",
+                                   style=wx.YES_NO)
             if dlg.ShowModal() == wx.ID_NO:
                 return
 
@@ -889,7 +849,7 @@ class Main(wx.Frame):
                 dlg = wx.TextEntryDialog(self, message=m, caption="Add Group")
                 ret = dlg.ShowModal()
                 if ret == wx.ID_CANCEL:
-                    break
+                    return
                 elif dlg.GetValue() in self.GetGroupNames():
                     m = "Group Name: ('{0}' already exists)".format(dlg.GetValue())
                     continue    
@@ -921,15 +881,16 @@ class Main(wx.Frame):
 
         elif label == "Remove Group":
             g_index = self.group_list.GetSelection()
-            if g_index == -1:
+            if g_index is None:
                 return
-
-            dlg = base.ConfirmDialog(self,
-                                     "Confirm delete",
-                                     "Delete group?")
+                
+            dlg = wx.MessageDialog(self, 
+                                   "Delete group '{0}'?".format(self._data[str(g_index)]["columns"]["0"]), 
+                                   "Delete Group",
+                                   style=wx.YES_NO)
             if dlg.ShowModal() == wx.ID_NO:
                 return
-
+                
             self.SaveStateToUndoStack()
 
             self.sched_list.DeleteAllItems()
@@ -1035,6 +996,47 @@ class Main(wx.Frame):
 
             self._schedmgr.Stop()
 
+    def PrependSubTree(self, previous, data):
+        """ insert sub tree before item """
+
+        items = {}
+        expanded_items = []
+        tree = self.sched_list
+        for key in sorted(data.keys()):
+
+
+            if key == "0":
+                parent = None
+            else:
+                parent = key.split(",")[:-1]
+                parent = ",".join(parent)
+                parent = items[parent]
+
+            value = data[key]["data"]
+
+            if not parent:
+                # parent = tree.GetItemParent(previous)
+                # parenti
+                item = tree.PrependItem(previous, value["0"])
+            else:
+                item = tree.AppendItem(parent, value["0"])
+            # tree.SetItemText(item, 1, value["1"])
+            # tree.SetItemText(item, 2, value["2"])
+
+            checked = data[key]["checked"]
+            if checked == 1:
+                tree.CheckItem(item)
+            selected = data[key]["selected"]
+            if selected is True:
+                tree.Select(item)
+            expanded = data[key]["expanded"]
+            if expanded is True:
+                expanded_items.append(item)
+            items[key] = item
+
+        for item in expanded_items:
+            tree.Expand(item)
+    
     def SaveStateToRedoStack(self):
         """ append current data to undo stack """
         g_index = self.group_list.GetFirstSelected()
