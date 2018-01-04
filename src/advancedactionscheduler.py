@@ -90,7 +90,7 @@ FUNCTIONS = ["CloseWindow",
              "StopSchedule",
              "StartSchedule",
              "SwitchWindow"]
-
+             
 class Main(wx.Frame):
 
     def __init__(self):
@@ -310,27 +310,29 @@ class Main(wx.Frame):
         toolbar.SetToolBitmapSize((48,48))
         # toolbar.SetToolBitmapSize((48,48))
         toolbar.SetBackgroundColour("white")
-        for label, help, art in [
-            ("Add Group", "Add Group", wx.ART_NEW),
-            ("Remove Group", "Remove Selected Group", wx.ART_MINUS),
-            ("Undo", "Undo", wx.ART_UNDO),
-            ("Redo", "Redo", wx.ART_REDO),
-            ("Enable", "Enable Schedule Manager", wx.ART_TICK_MARK)]:
+        for label, help in [
+            ("Settings", "Settings"),
+            ("Add Group", "Add Group"),
+            ("Remove Group", "Remove Selected Group"),
+            ("Undo", "Undo"),
+            ("Redo", "Redo"),            
+            ("Enable Schedule Manager", "Enable Schedule Manager")]:
 
             try:
-                # bmp = theme.GetBitmap(icon, 48,48)
-                # bmp = theme.GetBitmap(icon, 24,24)
-                bmp = wx.ArtProvider.GetBitmap(art)
+                img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
+                img.Rescale(48,48, wx.IMAGE_QUALITY_HIGH)
+                bmp = wx.Bitmap(img)
                 tool = toolbar.AddTool(wx.ID_ANY, label=label, bitmap=bmp, shortHelp=help)
             except:
-                bmp = wx.Bitmap(24,24)
+                bmp = wx.Bitmap(48,48)
                 tool = toolbar.AddTool(wx.ID_ANY, label=label, bitmap=bmp, shortHelp=help)
             self.Bind(wx.EVT_TOOL, self.OnToolBar, tool)
 
+            if label == "Settings":
+                toolbar.AddSeparator()  
             if label == "Redo":
                 toolbar.AddSeparator()
                 toolbar.AddStretchableSpace()
-                toolbar.AddSeparator()
 
         toolbar.Realize()
         self.SetToolBar(toolbar)
@@ -995,13 +997,14 @@ class Main(wx.Frame):
 
             self.WriteData()
 
-        elif label == "Enable":
+        elif label == "Enable Schedule Manager":
             tool = e.FindById(id)
-            tool.SetLabel("Disable")
+            tool.SetLabel("Disable Schedule Manager")
             e.SetToolShortHelp(id, "Disable Schedule Manager")
 
-            art = wx.ArtProvider.GetBitmap(wx.ART_CROSS_MARK)
-            e.SetToolNormalBitmap(id, art)
+            img = wx.Image("icons/disableschedulemanager.png")
+            bmp = wx.Bitmap(img)
+            e.SetToolNormalBitmap(id, bmp)
 
             self._schedmgr.SetSchedules(self._data)
             self._schedmgr.Start()
@@ -1009,13 +1012,14 @@ class Main(wx.Frame):
             # switch to the manager when schedules are started
             self.notebook.SetSelection(1)
 
-        elif label == "Disable":
+        elif label == "Disable Schedule Manager":
             tool = e.FindById(id)
-            tool.SetLabel("Enable")
+            tool.SetLabel("Enable Schedule Manager")
             e.SetToolShortHelp(id, "Enable Schedule Manager")
 
-            art = wx.ArtProvider.GetBitmap(wx.ART_TICK_MARK)
-            e.SetToolNormalBitmap(id, art)
+            img = wx.Image("icons/enableschedulemanager.png")
+            bmp = wx.Bitmap(img)
+            e.SetToolNormalBitmap(id, bmp)
 
             self._schedmgr.Stop()
 

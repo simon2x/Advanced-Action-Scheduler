@@ -3,3 +3,4 @@
 .spyproject/workspace.ini
 *.ini
 src/test.py
+src/schedules.json
