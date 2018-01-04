@@ -408,7 +408,14 @@ class Main(wx.Frame):
         tree.SetItemData(item, None)
 
         return previous
-
+    
+    def GetGroupNames(self):
+        """ return ordered list of group names """
+        groupNames = []
+        for idx in sorted([int(n) for n in self._data.keys()]):
+            groupNames.append(self._data[str(idx)]["columns"]["0"])
+        return groupNames
+        
     def GetGroupTree(self):
         """ retrieve tree structure, used for saving data """
         data = self.group_list.GetTree()
@@ -877,30 +884,36 @@ class Main(wx.Frame):
         logging.info("OnToolBar event: %s" % label)
 
         if label == "Add Group":
-            dlg = dialogs.groups.AddGroup(self)
-
-            ret = dlg.ShowModal()
-            if ret == wx.ID_CANCEL:
-                return
-
+            m = "Group Name:"
+            while True:
+                dlg = wx.TextEntryDialog(self, message=m, caption="Add Group")
+                ret = dlg.ShowModal()
+                if ret == wx.ID_CANCEL:
+                    break
+                elif dlg.GetValue() in self.GetGroupNames():
+                    m = "Group Name: ('{0}' already exists)".format(dlg.GetValue())
+                    continue    
+                elif dlg.GetValue() == "":
+                    m = "Group Name: (name cannot be empty)"
+                    continue                                   
+                break    
+                
             self.SaveStateToUndoStack()
+            newName = dlg.GetValue()
 
-            name = dlg.GetValue()
-
-            newitem = self.group_list.AppendItemToRoot(name)
+            newItem = self.group_list.AppendItemToRoot(newName)
             self.sched_list.DeleteAllItems()
 
-            group_tree = {idx:idxData for idx,idxData in self.GetGroupTree()}
+            groupTree = {idx:idxData for idx,idxData in self.GetGroupTree()}
 
             # we insert schedule tree into the relevant group item
             schedules = self.GetScheduleTree()
-            self._data[newitem] = group_tree[newitem]
-            self._data[newitem]["schedules"] = schedules
+            self._data[newItem] = groupTree[newItem]
+            self._data[newItem]["schedules"] = schedules
 
             self.WriteData()
 
-            self.group_list.Select(newitem)
-            # self.group_list.CheckItem(newitem)
+            self.group_list.Select(newItem)
 
             self.group_list.SetFocus()
 
