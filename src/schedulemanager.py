@@ -51,87 +51,87 @@ class Manager:
         # populate with group names
         self._group_names = {}
     
-    def AddSchedules(self, group_data):
-        """ this method is processing the group's schedules """
+    def AddSchedules(self, groupData):
+        """ this method processes the groups schedules """
+        
+        groupName = groupData["columns"]["0"]
+        groupSchedules = groupData["schedules"]
 
-        group = group_data["name"]
-        schedules = group_data["schedules"]
-
-        group_checked = group_data["checked"]
-        if group_checked == "False":
+        groupChecked = groupData["checked"]
+        if groupChecked == "False":
             return
 
-        _schedules = {group: {}}
-        _ignore = [] #ignore any children of unchecked items
-        for idx, v in schedules.items():
+        _schedules = {groupName: {}}
+        ignore = [] #ignore any children of unchecked items
+        for idx, idxData in groupSchedules:
+            
+            checked = idxData["checked"]
+            if checked == 0:
+                ignore.append(idx+",")
+                continue
 
             # is a schedule?
             if "," not in idx:
-                d = v["data"]
-                sched_name, sched_time = d.split(DELIMITER)
+                schedStr = idxData["columns"]["0"]
+                schedName, schedTime = schedStr.split(DELIMITER)
 
-                sched_time = make_tuple(sched_time)
-                sched_time = {k:v for k,v in sched_time}
+                schedTime = make_tuple(schedTime)
+                schedTime = {k:v for k,v in schedTime}
 
                 params = {}
-                for timevar in ["dof","h","m","s"]:
-                    if timevar in sched_time:
-                        params[timevar] = ",".join([t for t in sched_time[timevar]])
+                for timeVar in ["dof","h","m","s"]:
+                    if timeVar in schedTime:
+                        params[timeVar] = ",".join([t for t in schedTime[timeVar]])
                     else:
-                        params[timevar] = "*"
+                        params[timeVar] = "*"
 
                 schedule = BackgroundScheduler()
-                crontrig = CronTrigger(day_of_week=params["dof"],
+                cronTrig = CronTrigger(day_of_week=params["dof"],
                                        hour=params["h"],
                                        minute=params["m"],
                                        second=params["s"])
 
-                args = (group, idx, sched_name)
-                schedule.add_job(self.OnSchedule, args=[args], trigger=crontrig)
-
-                checked = v["checked"]
-                if checked == 0:
-                    _ignore.append(idx+",")
-                    continue
+                args = (groupName, idx, schedName)
+                schedule.add_job(self.OnSchedule, args=[args], trigger=cronTrig)
 
                 # attach a listener to schedule events
                 # schedule.add_listener(self.OnScheduleEvent, apsevents.EVENT_JOB_EXECUTED|apsevents.EVENT_JOB_ERROR)
-                _schedules[group][idx] = (sched_name, schedule)
+                _schedules[groupName][idx] = (schedName, schedule)
 
             # ...is an action
             else:
-                checked = v["checked"]
+                checked = idxData["checked"]
                 # forget unchecked, because they are never called
 
                 if checked == 0:
-                    _ignore.append(idx+",")
+                    ignore.append(idx+",")
                     continue
 
-                # is index a child of an unchecked item
-                ok = True
-                for g in _ignore:
+                # is index a child of an unchecked item?
+                isOk = True
+                for g in ignore:
                     if idx.startswith(g):
-                        ok = False
+                        isOk = False
                         break
 
-                if ok is False:
+                if isOk is False:
                     continue
 
-                d = v["data"]
-                action, params = d.split(DELIMITER)
+                actionStr = idxData["columns"]["0"]
+                action, params = actionStr.split(DELIMITER)
                 params = make_tuple(params)
 
                 try:
-                    self._sched_data[group][idx] = (action, params)
+                    self._sched_data[groupName][idx] = (action, params)
                 except:
-                    self._sched_data[group] = {idx: (action, params)}
+                    self._sched_data[groupName] = {idx: (action, params)}
 
         # finally, start the checked schedules of the checked groups
-        for group, scheds in _schedules.items():
-            self._schedules[group] = scheds
-            for i,s in scheds.items():
-                s[1].start()
-                self.SendLog(["-","Started schedule %s from %s group" % (s[0], group)])
+        for groupName, groupScheds in _schedules.items():
+            self._schedules[groupName] = groupScheds
+            for i, sched in groupScheds.items():
+                sched[1].start()
+                self.SendLog(["-","Started schedule %s from %s group" % (sched[0], groupName)])
     
     def DoAction(self, action, kwargs):
         logging.info("Executing action: %s" % action)
@@ -246,12 +246,11 @@ class Manager:
             matchstring = kwargs["matchstring"]
 
         return True
-        
     def GetParent(self):
         return self._parent
 
     def OnSchedule(self, args):
-        group, idx, sched_name = args
+        group, idx, schedName = args
 
         # sort indices by order of execution
         indices = [i for i in self._sched_data[group].keys()]
@@ -279,7 +278,7 @@ class Manager:
                 break
 
         self.SendLog(["",
-                      "Executed schedule %s from group: %s" % (sched_name, group)])
+                      "Executed schedule %s from group: %s" % (schedName, group)])
 
     def SendLog(self, message):
         """ pass message to schedule manager lis """
@@ -292,9 +291,12 @@ class Manager:
         # stop and remove schedules first
         self.Stop()
 
-        for idx, group_data in data.items():
-            self.AddSchedules(group_data)
-            
+        for idx, groupData in data.items():
+            self.AddSchedules(groupData)
+    
+    def Start(self):
+        pass
+
     def Stop(self):
         """ shutdown all schedules """
         print(self._schedules)
@@ -312,8 +314,5 @@ class Manager:
 
         # clear schedules
         self._schedules = {}
-
-    def Start(self):
-        pass
-
+    
 # END
