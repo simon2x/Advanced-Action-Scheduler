@@ -893,7 +893,7 @@ class Main(wx.Frame):
             newitem = self.group_list.AppendItemToRoot(name)
             self.sched_list.DeleteAllItems()
             
-            group_tree = self.GetGroupTree()
+            group_tree = {idx:idxData for idx,idxData in self.GetGroupTree()}
             
             # we insert schedule tree into the relevant group item
             schedules = self.GetScheduleTree()
