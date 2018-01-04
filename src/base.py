@@ -32,6 +32,8 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
 
     def GetSelection(self):
         item = super(TreeListCtrl, self).GetSelection()
+        if not item.IsOk():
+            return
         index = super(TreeListCtrl, self).GetItemData(item)
 
         return index
