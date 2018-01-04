@@ -138,14 +138,11 @@ class Main(wx.Frame):
 
         # -----
         hsizer_functions = wx.WrapSizer(wx.HORIZONTAL)
-        for label, art in [("Add Schedule", wx.ART_NEW),
-                           ("Up", wx.ART_GO_UP),
-                           ("Down", wx.ART_GO_DOWN),
-                           ("Edit", wx.ART_REPORT_VIEW),
-                           ("Toggle", wx.ART_LIST_VIEW),
-                           ("Delete", wx.ART_MINUS)]:
+        for label in ["Add Schedule", "Up", "Down", "Edit", "Toggle", "Delete"]:
             btn = wx.Button(schedpanel, label=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
-            bmp = wx.ArtProvider().GetBitmap(art)
+            img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
+            img = img.Rescale(32,32, wx.IMAGE_QUALITY_HIGH)
+            bmp = wx.Bitmap(img)
             if label == "Edit":
                 btn.Bind(wx.EVT_BUTTON, self.OnEdit)
             else:
