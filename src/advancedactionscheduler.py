@@ -268,6 +268,11 @@ class Main(wx.Frame):
 
         # tree.Select(tree.GetFirstItem())
 
+    def AppendLogMessage(self, message):
+        """ append log message to schedule messenger list """
+        i = self.schedlog.GetItemCount()
+        self.schedlog.Append([str(i)] + message)
+
     def CreateMenu(self):
         menubar = wx.MenuBar()
 
@@ -405,6 +410,16 @@ class Main(wx.Frame):
 
         return previous
 
+    def GetGroupTree(self):
+        """ retrieve tree structure, used for saving data """
+        data = self.group_list.GetTree()
+        return data
+
+    def GetScheduleTree(self):
+        """ retrieve tree structure, used for saving data """
+        data = self.sched_list.GetTree()
+        return data
+    
     def GetScheduleSubTree(self, item):
         """ return the sub tree of schedule item """
         tree = self.sched_list
@@ -466,15 +481,18 @@ class Main(wx.Frame):
 
         return data
 
-    def GetGroupTree(self):
-        """ retrieve tree structure, used for saving data """
-        data = self.group_list.GetTree()
-        return data
+    def GetScheduleTreeAndWriteData(self):
+        # save tree to data
+        #self.sched_list.DeleteAllItems()
+        # update schedule list
+        g_index = self.group_list.GetSelection()
 
-    def GetScheduleTree(self):
-        """ retrieve tree structure, used for saving data """
-        data = self.sched_list.GetTree()
-        return data
+        # checked = self.group_list.GetCheckedState(selection)
+        schedules = self.sched_list.GetTree()
+        self._data[g_index]["schedules"] = schedules
+        print(self._data)
+        self.WriteData()
+
 
     def GetTopLevel(self):
         """ return sequence tree top-level """
@@ -501,32 +519,7 @@ class Main(wx.Frame):
         parents = [self.sched_list.GetItemText(itm) for itm in parents if itm.IsOk()]
         print( parents )
         return parents[-2]
-
-    def AppendLogMessage(self, message):
-        """ append log message to schedule messenger list """
-        i = self.schedlog.GetItemCount()
-        self.schedlog.Append([str(i)] + message)
-
-    def SetGroupTree(self, data):
-        """ set the group list tree """
-        root = self.group_list_root
-        for idx in sorted([int(x) for x in data.keys()]):
-            item = self.group_list.AppendItemToRoot(data[str(idx)]["columns"]["0"])
-
-    def SetScheduleTree(self, data):
-        """ set the schedule list tree """
-        self.sched_list.SetTree(data)
-
-    def SetStatusBar(self, event=None):
-        """ update status bar when selecting a tree item on sequence"""
-        selection = self.sched_list.GetSelection()
-        status = self.sched_list.GetItemText(selection)
-        print( status )
-        self.GetTopLevelParent().SetStatusText(status)
-
-        if event:
-            event.Skip()
-
+    
     def InsertSubTree(self, previous, data):
         """ insert sub tree after previous item """
 
@@ -565,7 +558,7 @@ class Main(wx.Frame):
 
         for item in expanded_items:
             tree.Expand(item)
-
+            
     def PrependSubTree(self, previous, data):
         """ insert sub tree before item """
 
@@ -606,7 +599,7 @@ class Main(wx.Frame):
 
         for item in expanded_items:
             tree.Expand(item)
-
+    
     def OnButton(self, event):
         e = event.GetEventObject()
         label = e.GetLabel()
@@ -712,6 +705,11 @@ class Main(wx.Frame):
         # finally, clear the redo stack
         self._redo_stack = []
 
+    def OnClose(self, event):
+        # save data before exiting
+        self.WriteData()
+        event.Skip()
+
     def OnComboboxFunction(self, event=None):
         """ selecting a combobox option automatically raises a corresponding dialog """
 
@@ -784,7 +782,12 @@ class Main(wx.Frame):
         self.sched_list.SetFocus()
 
         # updated information
-        self.info_sched.SetValue(value)
+        self.info_sched.SetValue(value)    
+
+    def OnGroupItemChecked(self, event):
+        logging.info("OnGroupItemChecked")
+        g_index = self.group_list.GetSelection()
+        self._data[g_index]["checked"] = self.group_list.GetCheckedState(g_index)
 
     def OnGroupItemKeyDown(self, event):
         key = event.GetKeyCode()
@@ -794,12 +797,7 @@ class Main(wx.Frame):
         print(key)
         if key == wx.WXK_SPACE:
             self.group_list.CheckItem( index )
-
-    def OnGroupItemChecked(self, event):
-        logging.info("OnGroupItemChecked")
-        g_index = self.group_list.GetSelection()
-        self._data[g_index]["checked"] = self.group_list.GetCheckedState(g_index)
-
+            
     def OnGroupItemSelected(self, event):
         self.sched_list.DeleteAllItems()
         # update schedule list
@@ -1021,25 +1019,6 @@ class Main(wx.Frame):
 
             self._schedmgr.Stop()
 
-    def GetScheduleTreeAndWriteData(self):
-        # save tree to data
-        #self.sched_list.DeleteAllItems()
-        # update schedule list
-        g_index = self.group_list.GetSelection()
-
-        # checked = self.group_list.GetCheckedState(selection)
-
-#        group_tree = self.group_list.GetTree()
-        schedules = self.sched_list.GetTree()
-
-#        self._data[g_index] = group_tree
-        self._data[g_index]["schedules"] = schedules
-        print(self._data)
-        # group_tree[g_index]["data"] = schedules
-        # self._d
-
-        self.WriteData()
-
     def SaveStateToRedoStack(self):
         """ append current data to undo stack """
         g_index = self.group_list.GetFirstSelected()
@@ -1072,6 +1051,26 @@ class Main(wx.Frame):
         self._undo_stack.append(state)
 
         self.WriteData()
+    
+    def SetGroupTree(self, data):
+        """ set the group list tree """
+        root = self.group_list_root
+        for idx in sorted([int(x) for x in data.keys()]):
+            item = self.group_list.AppendItemToRoot(data[str(idx)]["columns"]["0"])
+
+    def SetScheduleTree(self, data):
+        """ set the schedule list tree """
+        self.sched_list.SetTree(data)
+
+    def SetStatusBar(self, event=None):
+        """ update status bar when selecting a tree item on sequence"""
+        selection = self.sched_list.GetSelection()
+        status = self.sched_list.GetItemText(selection)
+        print( status )
+        self.GetTopLevelParent().SetStatusText(status)
+
+        if event:
+            event.Skip()     
 
     def WriteData(self):
         """ write changes to data file"""
@@ -1079,12 +1078,7 @@ class Main(wx.Frame):
 
         with open("schedules.json", 'w') as file:
             json.dump(self._data, file, sort_keys=True, indent=2)
-
-    def OnClose(self, event):
-        # save data before exiting
-        self.WriteData()
-        event.Skip()
-
+    
 if __name__ == "__main__":
     app = wx.App()
     Main()
