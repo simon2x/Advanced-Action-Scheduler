@@ -491,11 +491,11 @@ class Main(wx.Frame):
         # save tree to data
         #self.sched_list.DeleteAllItems()
         # update schedule list
-        g_index = self.group_list.GetSelection()
+        groupIdx = self.group_list.GetSelection()
 
         # checked = self.group_list.GetCheckedState(selection)
         schedules = self.sched_list.GetTree()
-        self._data[g_index]["schedules"] = schedules
+        self._data[groupIdx]["schedules"] = schedules
         print(self._data)
         self.WriteData()
 
@@ -590,8 +590,8 @@ class Main(wx.Frame):
             self.sched_list.SetFocus()
 
             schedules = self.GetScheduleTree()
-            g_index = self.group_list.GetSelection()
-            self._data[g_index]["schedules"] = schedules
+            groupIdx = self.group_list.GetSelection()
+            self._data[groupIdx]["schedules"] = schedules
             self.WriteData()
 
         elif label == "Delete":
@@ -739,8 +739,8 @@ class Main(wx.Frame):
 
         # save tree to data
         schedules = self.GetScheduleTree()
-        g_index = self.group_list.GetSelection()
-        self._data[str(g_index)]["schedules"] = schedules
+        groupIdx = self.group_list.GetSelection()
+        self._data[str(groupIdx)]["schedules"] = schedules
 
         # write changes to file
         self.WriteData()
@@ -752,8 +752,8 @@ class Main(wx.Frame):
 
     def OnGroupItemChecked(self, event):
         logging.info("OnGroupItemChecked")
-        g_index = self.group_list.GetSelection()
-        self._data[g_index]["checked"] = self.group_list.GetCheckedState(g_index)
+        groupIdx = self.group_list.GetSelection()
+        self._data[groupIdx]["checked"] = self.group_list.GetCheckedState(groupIdx)
 
     def OnGroupItemKeyDown(self, event):
         key = event.GetKeyCode()
@@ -767,9 +767,9 @@ class Main(wx.Frame):
     def OnGroupItemSelected(self, event):
         self.sched_list.DeleteAllItems()
         # update schedule list
-        g_index = self.group_list.GetSelection()
+        groupIdx = self.group_list.GetSelection()
 
-        data = self._data[str(g_index)]["schedules"]
+        data = self._data[str(groupIdx)]["schedules"]
         self.SetScheduleTree(data)
 
         # click the information text
@@ -880,12 +880,12 @@ class Main(wx.Frame):
             self._redo_stack = []
 
         elif label == "Remove Group":
-            g_index = self.group_list.GetSelection()
-            if g_index is None:
+            groupIdx = self.group_list.GetSelection()
+            if groupIdx is None:
                 return
                 
             dlg = wx.MessageDialog(self, 
-                                   "Delete group '{0}'?".format(self._data[str(g_index)]["columns"]["0"]), 
+                                   "Delete group '{0}'?".format(self._data[str(groupIdx)]["columns"]["0"]), 
                                    "Delete Group",
                                    style=wx.YES_NO)
             if dlg.ShowModal() == wx.ID_NO:
@@ -894,8 +894,8 @@ class Main(wx.Frame):
             self.SaveStateToUndoStack()
 
             self.sched_list.DeleteAllItems()
-            self.group_list.DeleteItem(g_index)
-            del self._data[str(g_index)]
+            self.group_list.DeleteItem(groupIdx)
+            del self._data[str(groupIdx)]
 
             new_data = {}
             count = 0
@@ -935,7 +935,7 @@ class Main(wx.Frame):
                 if checked == "True":
                     self.group_list.CheckItem(item)
 
-            self.group_list.Select(state["g_index"])
+            self.group_list.Select(state["groupIdx"])
 
             self.WriteData()
 
@@ -964,7 +964,7 @@ class Main(wx.Frame):
                 if checked == "True":
                     self.group_list.CheckItem(item)
 
-            self.group_list.Select(state["g_index"])
+            self.group_list.Select(state["groupIdx"])
 
             self.WriteData()
 
@@ -1039,7 +1039,7 @@ class Main(wx.Frame):
     
     def SaveStateToRedoStack(self):
         """ append current data to undo stack """
-        g_index = self.group_list.GetFirstSelected()
+        groupIdx = self.group_list.GetFirstSelected()
 
         # create a copy of data
         data = {}
@@ -1047,7 +1047,7 @@ class Main(wx.Frame):
             data[k] = dict(v)
 
         state = {"data": data,
-                 "g_index": g_index}
+                 "groupIdx": groupIdx}
 
         self._redo_stack.append(state)
 
@@ -1056,7 +1056,7 @@ class Main(wx.Frame):
     def SaveStateToUndoStack(self):
         """ append current data to undo stack """
         return
-        g_index = self.group_list.GetFirstSelected()
+        groupIdx = self.group_list.GetFirstSelected()
 
         # create a copy of data
         data = {}
@@ -1064,7 +1064,7 @@ class Main(wx.Frame):
             data[k] = dict(v)
 
         state = {"data": data,
-                 "g_index": g_index}
+                 "groupIdx": groupIdx}
 
         self._undo_stack.append(state)
 
