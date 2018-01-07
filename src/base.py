@@ -17,146 +17,11 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
         if not style:
             style = wx.dataview.TL_CHECKBOX
         wx.dataview.TreeListCtrl.__init__(self, parent, style=style)
-
-        # implicit root item
-        self.__root = self.GetRootItem()
-
-        # item reference by index
-        self.__indexdict = {}
-
-        # item data/state reference by index
-        # self.__indexdata = {}
-
-        # number of top-level items
-        self.__toplevelcount = 0
-
-    def GetSelection(self):
-        item = super(TreeListCtrl, self).GetSelection()
-        if not item.IsOk():
-            return
-        index = super(TreeListCtrl, self).GetItemData(item)
-
-        return index
-
-    def SetItemText(self, index, value):
-        item = self.__indexdict[index]
-        super(TreeListCtrl, self).SetItemText(item, value)
-
-        # self.__indexdata[index]["columns"] =
-
-    def UncheckItem(self, index):
-        item = self.__indexdict[index]
-        super(TreeListCtrl, self).UncheckItem(item)
-
-    def CheckItem(self, index):
-        item = self.__indexdict[index]
-        super(TreeListCtrl, self).CheckItem(item)
-
-    def Expand(self, index):
-        item = self.__indexdict[index]
-        super(TreeListCtrl, self).Expand(item)
-
-    def GetCheckedState(self, item):
-        """ return checked state of given item """
-        if isinstance(item, wx._dataview.TreeListItem):
-            return super(TreeListCtrl, self).GetCheckedState(item)
-
-        assert item in self.__indexdict, "not a valid index: %s (%s)" % (str(item), type(item))
-
-        item = self.__indexdict[item]
-        return self.GetCheckedState(item)
-
-    def DeleteItem(self, item):
-        """ return checked state of given item """
-        if isinstance(item, wx._dataview.TreeListItem):
-            d = {value: key for key,value in self.__indexdict.items()}
-            item = d[item]
-
-        assert item in self.__indexdict, "not a valid index: %s (%s)" % (str(item), type(item))
-
-        item = self.__indexdict[item]
-        self.DeleteItem(item)
-
-        # we need to adjust index keys to account for the deleted item
-        for k,v in self.__indexdict.items():
-            if k.startswith(item):
-                del self.__indexdict[k]
-
-        # decrement by one for items below deleted item
-        item_split = item.split(",")
-        parent = item_split[:-1]
-
-        last_index = item_split[-1]
-        for k in sorted(self.__indexdict.keys()):
-            if not k.startswith(parent):
-                continue
-            #if not
-
-    def IsSelected(self, item):
-        """ return selected, checked, expanded state of given item """
-        if isinstance(item, wx._dataview.TreeListItem):
-            return super(TreeListCtrl, self).IsSelected(item)
-
-        assert item in self.__indexdict, "not a valid index: %s (%s)" % (str(item), type(item))
-
-        item = self.__indexdict[item]
-        return self.IsSelected(item)
-
-    def IsExpanded(self, item):
-        """ return selected, checked, expanded state of given item """
-        if isinstance(item, wx._dataview.TreeListItem):
-            return super(TreeListCtrl, self).IsExpanded(item)
-
-        assert item in self.__indexdict, "not a valid index: %s (%s)" % (str(item), type(item))
-
-        item = self.__indexdict[item]
-        return self.IsExpanded(item)
-
-    def AppendItem(self, parent, value):
-        assert parent in self.__indexdict, "not a valid index: %s (%s)" % (str(parent), type(parent))
-
-        item_par = self.__indexdict[parent]
-        item = super(TreeListCtrl, self).AppendItem(item_par, value)
-        i = 0
-        index_chk = parent + ",%d" % i
-        while index_chk in self.__indexdict:
-            i += 1
-            index_chk = parent + ",%d" % i
-
-        index = index_chk
-        super(TreeListCtrl, self).SetItemData(item, index)
-        self.__indexdict[index] = item
-
-        return index
-
-    def Select(self, index):
-        item = self.__indexdict[index]
-        super(TreeListCtrl, self).Select(item)
-        return index
-
+        
     def AppendItemToRoot(self, value):
-        item = super(TreeListCtrl, self).AppendItem(self.__root, value)
-        print(self.__toplevelcount)
-        print(self.__indexdict)
-        index = str(self.__toplevelcount)
-        self.SetItemIndex(item, index)
-        self.__toplevelcount += 1
-
-        self.__indexdict[index] = item
-
-        return index
-
-    def SetItemIndex(self, item, index):
-        super(TreeListCtrl, self).SetItemData(item, index)
-
-    def GetItemData(self, *args, **kwargs):
-        """ we override this because we want to use data for storing index """
-        pass
-
-    def SetItemData(self, *args, **kwargs):
-        """ we override this because we want to use data for storing index """
-        pass
-
+        item = super(TreeListCtrl, self).AppendItem(self.GetRootItem(), value)
+        return item 
+        
     def GetItemDepth(self, item):
         """  backwards """
         depth = 0
@@ -341,9 +206,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
     def SetTree(self, data):
         """ set the treelist """
         self.DeleteAllItems()
-        self.__indexdict = {}
-        self.__toplevelcount = 0
-
+        
         if not data:
             return
 
@@ -358,11 +221,11 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             else:
                 parent = idx.split(",")[:-1]
                 parent = ",".join(parent)
-                item = self.AppendItem(parent, columns["0"])
+                item = self.AppendItem(items[parent], columns["0"])
 
             for c in range(1, len(columns)):
                 try:
-                    self.SetItemText(item, str(c), columns[c])
+                    self.SetItemText(items[idx], str(c), columns[c])
                 except:
                     pass
 
@@ -378,6 +241,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
                 self.Select(item)
             expanded = idxData["expanded"]
             if expanded is True:
+                print( expanded )
                 expanded_items.append(item)
             items[idx] = item
 
