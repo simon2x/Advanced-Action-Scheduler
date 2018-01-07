@@ -793,9 +793,10 @@ class Main(wx.Frame):
         self.GetScheduleTreeAndWriteData()
 
     def OnEdit(self, event):
-        tree = self.schedList
-        selection = tree.GetSelection()
-
+        selection = self.schedList.GetSelection()
+        if not selection.IsOk():
+            return
+        
         item_text = self.schedList.GetItemText(selection, 0)
         name, params = item_text.split(DELIMITER)
         params = make_tuple(params)
