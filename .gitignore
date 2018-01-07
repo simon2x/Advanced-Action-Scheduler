@@ -4,3 +4,4 @@
 *.ini
 src/test.py
 src/schedules.json
+*.xcf
