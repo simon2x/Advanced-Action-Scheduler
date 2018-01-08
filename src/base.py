@@ -37,18 +37,17 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             return -1
 
         i = self.GetFirstItem()
-        column_count = self.GetColumnCount()
+        root = self.GetItemParent(i)
         row = 0
         depth = 0
-        idx = "0"
-        root = self.GetItemParent(i)
+        idx = "0"        
         while i.IsOk():
 
             d = self.GetItemDepth(i)
 
             # the very first item (not root)
             if d == 0 and row == 0:
-                idx = "0"
+                newidx = "0"
                 row += 1
 
             # a toplevel item (excluding first item)
@@ -79,15 +78,11 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
 
             depth = d   # change last depth to current depth
 
-            # compare item
-            # itmcmp = self.Compare(0, item, i)
-            itmcmp = item is i
-            print( item == i)
-            # if self.
-            i = self.GetNextItem(i)
-        print( item == i)
-        return idx
+            if i == item:
+                return idx
 
+            i = self.GetNextItem(i)
+            
     def GetSubTree(self, item):
         """ return the sub tree of schedule item """
 

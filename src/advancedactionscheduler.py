@@ -263,7 +263,7 @@ class Main(wx.Frame):
             with open("schedules.json", 'w') as file:
                 pass
 
-        # tree.Select(tree.GetFirstItem())
+        self.groupList.Select(self.groupList.GetFirstItem())
 
     def AppendLogMessage(self, message):
         """ append log message to schedule messenger list """
@@ -587,7 +587,6 @@ class Main(wx.Frame):
         print(self._data)
         self.WriteData()
 
-
     def GetTopLevel(self):
         """ return sequence tree top-level """
         try:
@@ -678,10 +677,12 @@ class Main(wx.Frame):
             self.schedList.SetFocus()
 
             schedules = self.GetScheduleTree()
-            groupIdx = self.groupList.GetSelection()
-            self._data[groupIdx]["schedules"] = schedules
-            self.WriteData()
-
+            groupSel = self.groupList.GetSelection()
+            for item, data in self._data.items():
+                if groupSel != item:
+                    continue
+                self._data[groupSel] = schedules
+                
         elif label == "Delete":
 
             index = self.schedList.GetSelection()
@@ -767,73 +768,78 @@ class Main(wx.Frame):
     def OnComboboxFunction(self, event=None):
         """ selecting a combobox option automatically raises a corresponding dialog """
 
+        schedSel = self.schedList.GetSelection()
+        if not schedSel.IsOk():
+            return
+            
         index = self.cbox_functions.GetSelection()
         if index == -1:
             return
         label = self.cbox_functions.GetStringSelection()
         logging.info("OnComboboxFunction event: %s" % label)
-        logging.debug(index)
-
-        selection = self.schedList.GetSelection()
+        logging.debug(index)        
 
         dlg = self.GetDialog(label)
-
         ret = dlg.ShowModal()
         if ret == wx.ID_CANCEL:
             return
 
-        value = dlg.GetValue()
-        newitem = self.schedList.AppendItem(selection, label + DELIMITER + value)
-
-        self.schedList.Select(newitem)
-        self.schedList.CheckItem(newitem)
-        self.schedList.Expand(newitem)
+        value = label + DELIMITER + dlg.GetValue()
+        newItem = self.schedList.AppendItem(schedSel, value)
+        
+        schedSelIdx = self.schedList.GetItemIndex(schedSel)
+        idx = self.schedList.GetItemIndex(newItem)
+        groupSel = self.groupList.GetSelection()
+        for n, (j, k) in enumerate(self._data[groupSel]):
+            if j == schedSelIdx:
+                break 
+                
+        self._data[groupSel].insert(n+1, (idx, {'columns': {"0": value}, 
+                                              'expanded': False, 
+                                              'selected': True, 
+                                              'checked': 1}))
+        
+        self.schedList.Select(newItem)
+        self.schedList.CheckItem(newItem)
+        self.schedList.Expand(newItem)
         self.schedList.SetFocus()
-
-        self.GetScheduleTreeAndWriteData()
-
+        
     def OnEdit(self, event):
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
             return
         
-        item_text = self.schedList.GetItemText(selection, 0)
-        name, params = item_text.split(DELIMITER)
+        itemText = self.schedList.GetItemText(selection, 0)
+        name, params = itemText.split(DELIMITER)
         params = make_tuple(params)
         params = {x:y for x,y in params}
         params["name"] = name
-
-        if selection == -1:
-            logging.info("No item selected. Nothing to edit")
-            return
-
-        if self.GetItemDepth(selection) == 0:
-
-            logging.info("Toplevel item selected. Item is a schedule")
+        
+        # is item top level? i.e. a schedule
+        if self.schedList.GetItemParent(selection) == self.schedList.GetRootItem():
             dlg = dialogs.schedule.AddSchedule(self)
             dlg.SetName(name)
             dlg.SetValue(params)
             if dlg.ShowModal() == wx.ID_OK:
                 name, value = dlg.GetValue()
                 value = name + DELIMITER + value
-                tree.SetItemText(selection, 0, value)
-
+                self.schedList.SetItemText(selection, 0, value)
         else:
             dlg = self.GetDialog(name)
             dlg.SetValue(params)
             if dlg.ShowModal() == wx.ID_OK:
                 value = dlg.GetValue()
                 value = name + DELIMITER + value
-                tree.SetItemText(selection, 0, value)
-
-        # save tree to data
-        schedules = self.GetScheduleTree()
-        groupIdx = self.groupList.GetSelection()
-        self._data[str(groupIdx)]["schedules"] = schedules
-
-        # write changes to file
-        self.WriteData()
-
+                self.schedList.SetItemText(selection, 0, value)
+                
+        idx = self.schedList.GetItemIndex(selection)
+        groupSel = self.groupList.GetSelection()
+        for n, (j, k) in enumerate(self._data[groupSel]):
+            if not j == idx:
+                continue 
+            self._data[groupSel][n][1]["columns"]["0"] = value
+            break
+          
         self.schedList.SetFocus()
 
         # updated information
@@ -852,16 +858,16 @@ class Main(wx.Frame):
             self.groupList.CheckItem( index )
             
     def OnGroupItemSelected(self, event):
+        """ update schedule list """
+        print("OnGroupItemSelected", self._data)
         self.schedList.DeleteAllItems()
-        # update schedule list
-        selected = self.groupList.GetSelection()
-        
+        groupSel = self.groupList.GetSelection()
         for item, data in self._data.items():
-            if selected == item:
-                self.SetScheduleTree(data)
-        # data = self._data[str(item)]["schedules"]
-        # self.SetScheduleTree(data)
-
+            if groupSel != item:
+                continue
+            self.SetScheduleTree(data)
+            return
+            
         # # click the information text
         # self.info_sched.SetValue("")
 
