@@ -1,44 +1,46 @@
-
 import logging
 import sys
 import time
 import wx
 import base
 
+DELIMITER = " ➡ "
+
 class AddSchedule(wx.Dialog):
 
-    def __init__(self, parent):
+    def __init__(self, parent, blacklist=[]):
 
         wx.Dialog.__init__(self,
                            parent,
                            title="Add New Schedule")
 
+        self.blacklist = []
+        
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         sbox = wx.StaticBox(panel, label="")
-        sbox_sizer = wx.StaticBoxSizer(sbox, wx.VERTICAL)
+        sboxSizer = wx.StaticBoxSizer(sbox, wx.VERTICAL)
+        
+        hSizer = wx.BoxSizer(wx.HORIZONTAL)
+        labelName = wx.StaticText(panel, label="Schedule Name:", style=wx.TE_PROCESS_ENTER)
+        self.textName = wx.TextCtrl(panel)
+        self.textName.Bind(wx.EVT_TEXT_ENTER, self.OnScheduleNameEnter)
+        self.textName.Bind(wx.EVT_TEXT, self.OnScheduleNameEdit)
+        hSizer.Add(labelName, 0, wx.ALL|wx.ALIGN_CENTRE, 5)
+        hSizer.Add(self.textName, 0, wx.ALL|wx.ALIGN_BOTTOM, 5)
+        sboxSizer.Add(hSizer, 0, wx.ALL|wx.EXPAND, 5)
 
+        hSizer = wx.BoxSizer(wx.HORIZONTAL)
 
-
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        lbl_name = wx.StaticText(panel, label="Schedule Name:", style=wx.TE_PROCESS_ENTER)
-        self.text_name = wx.TextCtrl(panel)
-        self.text_name.Bind(wx.EVT_TEXT_ENTER, self.OnFunctionEnter)
-        hsizer.Add(lbl_name, 0, wx.ALL|wx.ALIGN_CENTRE, 5)
-        hsizer.Add(self.text_name, 0, wx.ALL|wx.ALIGN_BOTTOM, 5)
-        sbox_sizer.Add(hsizer, 0, wx.ALL|wx.EXPAND, 5)
-
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        self.day_of_week = {}
-        self._day_of_week = ["mon","tue","wed","thu","fri","sat","sun"]
+        self.dayOfWeek = {}
+        self._dayOfWeek = ["mon","tue","wed","thu","fri","sat","sun"]
         grid = wx.GridSizer(cols=1)
-        for label in self._day_of_week:
-            self.day_of_week[label] = wx.Button(panel, label=str(label), name="0", size=(36,22))
-            self.day_of_week[label].Bind(wx.EVT_BUTTON, self.OnTimeButton)
-            grid.Add(self.day_of_week[label], 0, wx.ALL, 0)
-        hsizer.Add(grid, 0, wx.ALL, 2)
+        for label in self._dayOfWeek:
+            self.dayOfWeek[label] = wx.Button(panel, label=str(label), name="0", size=(36,22))
+            self.dayOfWeek[label].Bind(wx.EVT_BUTTON, self.OnTimeButton)
+            grid.Add(self.dayOfWeek[label], 0, wx.ALL, 0)
+        hSizer.Add(grid, 0, wx.ALL, 2)
 
         self.hours = {}
         grid = wx.GridSizer(cols=4)
@@ -46,7 +48,7 @@ class AddSchedule(wx.Dialog):
             self.hours[x] = wx.Button(panel, label=str(x), name="0", size=(22,22))
             self.hours[x].Bind(wx.EVT_BUTTON, self.OnTimeButton)
             grid.Add(self.hours[x], 0, wx.ALL, 0)
-        hsizer.Add(grid, 0, wx.ALL, 2)
+        hSizer.Add(grid, 0, wx.ALL, 2)
 
         self.mins = {}
         grid = wx.GridSizer(cols=10)
@@ -54,7 +56,7 @@ class AddSchedule(wx.Dialog):
             self.mins[x] = wx.Button(panel, label=str(x), name="0", size=(22,22))
             self.mins[x].Bind(wx.EVT_BUTTON, self.OnTimeButton)
             grid.Add(self.mins[x], 0, wx.ALL, 0)
-        hsizer.Add(grid, 1, wx.ALL, 2)
+        hSizer.Add(grid, 1, wx.ALL, 2)
 
         self.secs = {}
         grid = wx.GridSizer(cols=10)
@@ -62,25 +64,23 @@ class AddSchedule(wx.Dialog):
             self.secs[x] = wx.Button(panel, label=str(x), name="0", size=(22,22))
             self.secs[x].Bind(wx.EVT_BUTTON, self.OnTimeButton)
             grid.Add(self.secs[x], 0, wx.ALL, 0)
-        hsizer.Add(grid, 1, wx.ALL, 2)
+        hSizer.Add(grid, 1, wx.ALL, 2)
 
-        sbox_sizer.Add(hsizer, 0, wx.ALL, 5)
-
-
+        sboxSizer.Add(hSizer, 0, wx.ALL, 5)
 
         #-----
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hsizer.AddStretchSpacer()
+        hSizer = wx.BoxSizer(wx.HORIZONTAL)
+        hSizer.AddStretchSpacer()
         btn_cancel = wx.Button(panel, label="Cancel", id=wx.ID_CANCEL)
         btn_cancel.Bind(wx.EVT_BUTTON, self.OnButton)
-        self.btn_add = wx.Button(panel, label="Add", id=wx.ID_OK)
-        self.btn_add.Bind(wx.EVT_BUTTON, self.OnButton)
-        hsizer.Add(btn_cancel, 0, wx.ALL|wx.EXPAND, 5)
-        hsizer.Add(self.btn_add, 0, wx.ALL|wx.EXPAND, 5)
+        self.btnOk = wx.Button(panel, label="Ok", id=wx.ID_OK)
+        self.btnOk.Bind(wx.EVT_BUTTON, self.OnButton)
+        hSizer.Add(btn_cancel, 0, wx.ALL|wx.EXPAND, 5)
+        hSizer.Add(self.btnOk, 0, wx.ALL|wx.EXPAND, 5)
 
         #add to main sizer
-        sizer.Add(sbox_sizer, 0, wx.ALL|wx.EXPAND, 2)
-        sizer.Add(hsizer, 0, wx.ALL|wx.EXPAND, 5)
+        sizer.Add(sboxSizer, 0, wx.ALL|wx.EXPAND, 2)
+        sizer.Add(hSizer, 0, wx.ALL|wx.EXPAND, 5)
 
         panel.SetSizer(sizer)
 
@@ -94,16 +94,23 @@ class AddSchedule(wx.Dialog):
     def OnFunctionChange(self, event):
         e = event.GetEventObject()
         value = e.GetValue()
-        # e.SetValue(value.replace(" ", ""))
 
         if e.GetValue() == "":
-            self.btn_add.Disable()
+            self.btnOk.Disable()
         elif e.GetValue().lower() in ["setup","main"]:
-            self.btn_add.Disable()
+            self.btnOk.Disable()
         else:
-            self.btn_add.Enable()
+            self.btnOk.Enable()
 
-    def OnFunctionEnter(self, event):
+    def OnScheduleNameEdit(self, event):
+        e = event.GetEventObject()
+        value = e.GetValue().replace("_","") # allow underscores
+        if value == "" or value in self.blacklist or not value.isalnum():
+            self.btnOk.Disable()
+        else:
+            self.btnOk.Enable() 
+            
+    def OnScheduleNameEnter(self, event):
         e = event.GetEventObject()
         value = e.GetValue()
         if value == "":
@@ -129,20 +136,23 @@ class AddSchedule(wx.Dialog):
 
         if label == "Cancel":
             self.EndModal(id)
-        elif label == "Add":
-            if self.text_name.GetValue() != "":
+        elif label == "Ok":
+            if self.textName.GetValue() != "":
                 self.EndModal(id)
 
+    def SetScheduleName(self, value):
+        self.textName.SetValue(value)
+        
     def SetValue(self, value):
         params = value
 
         if "name" in params:
-            self.text_name.SetValue(params["name"])
+            self.textName.SetValue(params["name"])
 
         if "dow" in params:
             for day in params["dow"]:
-                self.day_of_week[day].SetName("1")
-                self.day_of_week[day].SetBackgroundColour("green")
+                self.dayOfWeek[day].SetName("1")
+                self.dayOfWeek[day].SetBackgroundColour("green")
 
         if "h" in params:
             for h in params["h"]:
@@ -165,11 +175,11 @@ class AddSchedule(wx.Dialog):
     def GetValue(self):
 
         data = []
-        name = self.text_name.GetValue()
+        name = self.textName.GetValue()
 
         dayofweek = []
-        for day in self._day_of_week:
-            if self.day_of_week[day].GetName() != "1":
+        for day in self._dayOfWeek:
+            if self.dayOfWeek[day].GetName() != "1":
                 continue
             dayofweek.append(day)
         if dayofweek != []:
@@ -225,7 +235,7 @@ class ScheduleDialog(wx.Dialog):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         sbox = wx.StaticBox(panel, label="")
-        sbox_sizer = wx.StaticBoxSizer(sbox, wx.HORIZONTAL)
+        sboxSizer = wx.StaticBoxSizer(sbox, wx.HORIZONTAL)
         grid = wx.GridBagSizer(5,5)
 
         row = 0
@@ -239,22 +249,22 @@ class ScheduleDialog(wx.Dialog):
         grid.Add(self.cbox_schedule, pos=(row,1), span=(0,2), flag=wx.ALL|wx.EXPAND, border=5)
         grid.AddGrowableCol(1)
 
-        sbox_sizer.AddSpacer(10)
-        sbox_sizer.Add(grid, 1, wx.ALL|wx.EXPAND, 2)
+        sboxSizer.AddSpacer(10)
+        sboxSizer.Add(grid, 1, wx.ALL|wx.EXPAND, 2)
         #-----
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hsizer.AddStretchSpacer()
+        hSizer = wx.BoxSizer(wx.HORIZONTAL)
+        hSizer.AddStretchSpacer()
         btn_cancel = wx.Button(panel, label="Cancel", id=wx.ID_CANCEL)
         btn_cancel.Bind(wx.EVT_BUTTON, self.OnButton)
-        self.btn_add = wx.Button(panel, label="Ok", id=wx.ID_OK)
-        self.btn_add.Bind(wx.EVT_BUTTON, self.OnButton)
-        # self.btn_add.Disable()
-        hsizer.Add(btn_cancel, 0, wx.ALL|wx.EXPAND, 5)
-        hsizer.Add(self.btn_add, 0, wx.ALL|wx.EXPAND, 5)
+        self.btnOk = wx.Button(panel, label="Ok", id=wx.ID_OK)
+        self.btnOk.Bind(wx.EVT_BUTTON, self.OnButton)
+        # self.btnOk.Disable()
+        hSizer.Add(btn_cancel, 0, wx.ALL|wx.EXPAND, 5)
+        hSizer.Add(self.btnOk, 0, wx.ALL|wx.EXPAND, 5)
 
         #add to main sizer
-        sizer.Add(sbox_sizer, 0, wx.ALL|wx.EXPAND, 2)
-        sizer.Add(hsizer, 0, wx.ALL|wx.EXPAND, 2)
+        sizer.Add(sboxSizer, 0, wx.ALL|wx.EXPAND, 2)
+        sizer.Add(hSizer, 0, wx.ALL|wx.EXPAND, 2)
 
         panel.SetSizer(sizer)
 
@@ -266,7 +276,7 @@ class ScheduleDialog(wx.Dialog):
             pass
 
     def OnFunctionSelection(self, event):
-        self.btn_add.Enable()
+        self.btnOk.Enable()
 
     def OnButton(self, event):
         e = event.GetEventObject()
