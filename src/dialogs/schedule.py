@@ -91,87 +91,6 @@ class AddSchedule(wx.Dialog):
         except:
             pass
 
-    def OnFunctionChange(self, event):
-        e = event.GetEventObject()
-        value = e.GetValue()
-
-        if e.GetValue() == "":
-            self.btnOk.Disable()
-        elif e.GetValue().lower() in ["setup","main"]:
-            self.btnOk.Disable()
-        else:
-            self.btnOk.Enable()
-
-    def OnScheduleNameEdit(self, event):
-        e = event.GetEventObject()
-        value = e.GetValue()
-        if value == "" or value in self.blacklist or not value.replace("_","").isalnum():
-            self.btnOk.Disable()
-        else:
-            self.btnOk.Enable() 
-            
-    def OnScheduleNameEnter(self, event):
-        e = event.GetEventObject()
-        value = e.GetValue()
-        if value == "":
-            return
-
-        self.EndModal(id)
-
-    def OnTimeButton(self, event):
-        e = event.GetEventObject()
-        label = e.GetLabel()
-        name = e.GetName()
-        if name == "1":
-            e.SetName("0")
-            e.SetBackgroundColour("default")
-        else:
-            e.SetName("1")
-            e.SetBackgroundColour("green")
-
-    def OnButton(self, event):
-        e = event.GetEventObject()
-        label = e.GetLabel()
-        id = e.GetId()
-
-        if label == "Cancel":
-            self.EndModal(id)
-        elif label == "Ok":
-            if self.textName.GetValue() != "":
-                self.EndModal(id)
-
-    def SetScheduleName(self, value):
-        self.textName.SetValue(value)
-        
-    def SetValue(self, value):
-        params = value
-
-        if "name" in params:
-            self.textName.SetValue(params["name"])
-
-        if "dow" in params:
-            for day in params["dow"]:
-                self.dayOfWeek[day].SetName("1")
-                self.dayOfWeek[day].SetBackgroundColour("green")
-
-        if "h" in params:
-            for h in params["h"]:
-                h = int(h)
-                self.hours[h].SetName("1")
-                self.hours[h].SetBackgroundColour("green")
-
-        if "m" in params:
-            for m in params["m"]:
-                m = int(m)
-                self.mins[m].SetName("1")
-                self.mins[m].SetBackgroundColour("green")
-
-        if "s" in params:
-            for s in params["s"]:
-                s = int(s)
-                self.secs[s].SetName("1")
-                self.secs[s].SetBackgroundColour("green")
-
     def GetValue(self):
 
         data = []
@@ -221,6 +140,74 @@ class AddSchedule(wx.Dialog):
             data = [("h", "0"), ("s", "0")]
 
         return (name, str(data))
+        
+    def OnButton(self, event):
+        e = event.GetEventObject()
+        label = e.GetLabel()
+        id = e.GetId()
+
+        if label == "Cancel":
+            self.EndModal(id)
+        elif label == "Ok":
+            self.EndModal(id)
+    
+    def OnScheduleNameEdit(self, event):
+        e = event.GetEventObject()
+        value = e.GetValue()
+        if value == "" or value in self.blacklist or not value.replace("_","").isalnum():
+            self.btnOk.Disable()
+        else:
+            self.btnOk.Enable() 
+            
+    def OnScheduleNameEnter(self, event):
+        e = event.GetEventObject()
+        id = e.GetId()
+        if not self.btnOk.IsEnabled():
+            return
+        self.EndModal(id)
+        
+    def OnTimeButton(self, event):
+        e = event.GetEventObject()
+        label = e.GetLabel()
+        name = e.GetName()
+        if name == "1":
+            e.SetName("0")
+            e.SetBackgroundColour("default")
+        else:
+            e.SetName("1")
+            e.SetBackgroundColour("green")
+
+    def SetScheduleName(self, value):
+        self.textName.SetValue(value)
+        
+    def SetValue(self, value):
+        params = value
+
+        if "name" in params:
+            self.textName.SetValue(params["name"])
+
+        if "dow" in params:
+            for day in params["dow"]:
+                self.dayOfWeek[day].SetName("1")
+                self.dayOfWeek[day].SetBackgroundColour("green")
+
+        if "h" in params:
+            for h in params["h"]:
+                h = int(h)
+                self.hours[h].SetName("1")
+                self.hours[h].SetBackgroundColour("green")
+
+        if "m" in params:
+            for m in params["m"]:
+                m = int(m)
+                self.mins[m].SetName("1")
+                self.mins[m].SetBackgroundColour("green")
+
+        if "s" in params:
+            for s in params["s"]:
+                s = int(s)
+                self.secs[s].SetName("1")
+                self.secs[s].SetBackgroundColour("green")
 
 class ScheduleDialog(wx.Dialog):
 
