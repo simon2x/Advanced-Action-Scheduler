@@ -164,11 +164,10 @@ class AddSchedule(wx.Dialog):
             m = "Name can be 0-9/A-Z. Underscores allowed"
         else:
             self.btnOk.Enable() 
+            self.labelError.SetLabel("")
             return
         
         self.labelError.SetLabel(m)
-            
-            
         self.btnOk.Disable()    
             
     def OnScheduleNameEnter(self, event):
