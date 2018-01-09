@@ -259,6 +259,31 @@ class Main(wx.Frame):
         i = self.schedlog.GetItemCount()
         self.schedlog.Append([str(i)] + message)
 
+    def ClearUI(self):
+        """ clears lists and set toolbar/button states appropriately """
+        self.groupList.DeleteAllItems()
+        self.schedList.DeleteAllItems()
+        self._data = {}
+        self._appConfig["currentFile"] = False
+        self.UpdateScheduleToolbar()
+        self.UpdateTitlebar()
+        
+        self.menubar.FindItemById(wx.ID_CLOSE).Enable(False)
+        
+    def CloseFile(self):
+        dlg = wx.MessageDialog(self,
+                               message="Save file before closing?",
+                               caption="Close File",
+                               style=wx.YES_NO|wx.CANCEL|wx.CANCEL_DEFAULT)
+        ret = dlg.ShowModal()                 
+        if ret == wx.ID_CANCEL:
+            return
+        
+        if ret == wx.ID_YES:
+            self.SaveData()
+        
+        self.ClearUI()
+        
     def CreateMenu(self):
         menubar = wx.MenuBar()
 
@@ -902,24 +927,14 @@ class Main(wx.Frame):
         label = e.GetLabel(id)
 
         if label == "About":
-            message = ("Created by Simon Wu\n"
-                     + "Licensed under the terms of the MIT Licence\n")
-
-
-            dlg = wx.MessageDialog(self,
-                                   message,
-                                   caption=self._title)
-            dlg.ShowModal()
-
+            self.ShowAboutDialog()  
+          
+        elif label == "Close":
+            self.CloseFile()  
+            
         elif label == "Check for updates":
-            message = "not yet implemented"
-
-            dlg = wx.MessageDialog(self,
-                                   message,
-                                   caption="Checking for updates...")
-
-            dlg.ShowModal()
-
+            self.ShowCheckForUpdatesDialog()  
+            
         elif label == "Exit":
             self.Close()
 
@@ -1105,6 +1120,15 @@ class Main(wx.Frame):
         if event:
             event.Skip()     
 
+    def ShowAboutDialog(self):
+        message = ("Created by Simon Wu\n"
+                 + "Licensed under the terms of the MIT Licence\n")
+
+        dlg = wx.MessageDialog(self,
+                               message,
+                               caption=self._title)
+        dlg.ShowModal()
+        
     def ShowAddGroupDialog(self):   
         m = "Group Name:"
         
@@ -1175,6 +1199,13 @@ class Main(wx.Frame):
         self.UpdateScheduleToolbar()
         
         self.SaveScheduleTreeToData()
+        
+    def ShowCheckForUpdatesDialog(self):
+        message = "Not yet implemented"
+        dlg = wx.MessageDialog(self,
+                               message,
+                               caption="Checking for updates...")
+        dlg.ShowModal()
         
     def ShowRemoveGroupDialog(self):
         groupIdx = self.GetGroupListIndex(self.groupList.GetSelection())
