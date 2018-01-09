@@ -340,6 +340,16 @@ class Main(wx.Frame):
         self.toolbar = toolbar
         self.SetToolBar(toolbar)
 
+    def DeleteScheduleItem(self):   
+        selection = self.schedList.GetSelection()
+        if not selection.IsOk():
+            return
+
+        self.SaveStateToUndoStack()
+        self.schedList.DeleteItem(selection)
+        self.UpdateScheduleToolbar()
+        self.SaveScheduleTreeToData()
+        
     def DoRedo(self):
         print(self._redo_stack)
         # can we redo?
@@ -670,7 +680,7 @@ class Main(wx.Frame):
             self.ShowAddScheduleDialog()
                 
         elif label == "Delete":
-            self.ShowDeleteScheduleItemDialog()            
+            self.DeleteScheduleItem()            
 
         elif label == "Toggle":
             self.ToggleScheduleSelection()
@@ -971,6 +981,15 @@ class Main(wx.Frame):
     def SaveData(self):
         print("saving data")
         
+    def SaveScheduleTreeToData(self):
+        """ cache schedule tree to selected group item in data """
+        schedules = self.GetScheduleTree()
+        groupSel = self.groupList.GetSelection()
+        for item, data in self._data.items():
+            if groupSel != item:
+                continue
+            self._data[groupSel] = schedules
+            
     def SaveStateToRedoStack(self):
         """ append current data to undo stack """
         groupIdx = self.groupList.GetFirstSelected()
@@ -1092,21 +1111,7 @@ class Main(wx.Frame):
         self.schedList.SetFocus()
         self.UpdateScheduleToolbar()
         
-        schedules = self.GetScheduleTree()
-        groupSel = self.groupList.GetSelection()
-        for item, data in self._data.items():
-            if groupSel != item:
-                continue
-            self._data[groupSel] = schedules
-                
-    def ShowDeleteScheduleItemDialog(self):   
-        selection = self.schedList.GetSelection()
-        if not selection.IsOk():
-            return
-
-        self.SaveStateToUndoStack()
-        self.schedList.DeleteItem(selection)
-        self.UpdateScheduleToolbar()
+        self.SaveScheduleTreeToData()
         
     def ShowRemoveGroupDialog(self):
         groupIdx = self.GetGroupListIndex(self.groupList.GetSelection())
