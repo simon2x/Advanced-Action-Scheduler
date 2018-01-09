@@ -1100,24 +1100,14 @@ class Main(wx.Frame):
             self._data[groupSel] = schedules
                 
     def ShowDeleteScheduleItemDialog(self):   
-        index = self.schedList.GetSelection()
-        if not index.IsOk():
-            return
-
-        dlg = wx.MessageDialog(self, 
-                               "Confirm delete", 
-                               "Delete schedule list item?",
-                               style=wx.YES_NO)
-        if dlg.ShowModal() == wx.ID_NO:
+        selection = self.schedList.GetSelection()
+        if not selection.IsOk():
             return
 
         self.SaveStateToUndoStack()
-
-        self.schedList.DeleteItem(self.schedList.GetSelection())
-        self.GetScheduleTreeAndWriteData()
-
-        # self.OnScheduleTreeSelectionChanged()
-            
+        self.schedList.DeleteItem(selection)
+        self.UpdateScheduleToolbar()
+        
     def ShowRemoveGroupDialog(self):
         groupIdx = self.GetGroupListIndex(self.groupList.GetSelection())
         if groupIdx is None:
