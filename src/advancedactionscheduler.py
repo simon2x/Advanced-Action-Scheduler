@@ -945,7 +945,7 @@ class Main(wx.Frame):
             self.SaveFile()
 
         elif label == "New":
-            self.CreateNewEditor()
+            self.CloseFile()
 
         elif label == "Open...":
             self.OpenFile()
@@ -984,6 +984,8 @@ class Main(wx.Frame):
             self.DisableScheduleManager()
         elif label == "Enable Schedule Manager":
             self.EnableScheduleManager()
+        elif label == "New":
+            self.CloseFile()
         elif label == "Remove Group":
             self.ShowRemoveGroupDialog()        
         elif label == "Redo":
