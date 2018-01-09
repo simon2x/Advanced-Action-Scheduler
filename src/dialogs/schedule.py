@@ -161,7 +161,7 @@ class AddSchedule(wx.Dialog):
         elif value in self.blacklist:
             m = "Name already exists"
         elif not value.replace("_","").isalnum():
-            m = "Name can be 0-9/A-Z. Underscores allowed"
+            m = "Name can be 0-9, A-Z. Underscores allowed"
         else:
             self.btnOk.Enable() 
             self.labelError.SetLabel("")
