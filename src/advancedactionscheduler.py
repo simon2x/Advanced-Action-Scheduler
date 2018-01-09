@@ -108,6 +108,11 @@ class Main(wx.Frame):
         self._schedmgr = schedulemanager.Manager(self)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+        
+        #-----
+        self.CreateMenu()
+        self.CreateToolbar()
+        self.CreateStatusBar()
 
         #-----
         self.splitter = wx.SplitterWindow(self)
@@ -138,8 +143,11 @@ class Main(wx.Frame):
 
         # -----
         hsizer_functions = wx.WrapSizer(wx.HORIZONTAL)
+        self.schedBtns = {}
         for label in ["Add Schedule", "Up", "Down", "Edit", "Toggle", "Delete"]:
             btn = wx.Button(schedpanel, label=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
+            btn.Disable()
+            self.schedBtns[label] = btn
             img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
             img = img.Rescale(32,32, wx.IMAGE_QUALITY_HIGH)
             bmp = wx.Bitmap(img)
@@ -231,11 +239,6 @@ class Main(wx.Frame):
         self.SetSize((700, 600))
 
         #-----
-        self.CreateMenu()
-        self.CreateToolbar()
-        self.CreateStatusBar()
-
-        #-----
         self.Show()
 
         #load settings
@@ -262,8 +265,6 @@ class Main(wx.Frame):
             logging.info("JSONDecodeError: creating new schedules file")
             with open("schedules.json", 'w') as file:
                 pass
-
-        self.groupList.Select(self.groupList.GetFirstItem())
 
     def AppendLogMessage(self, message):
         """ append log message to schedule messenger list """
@@ -307,23 +308,23 @@ class Main(wx.Frame):
         toolbar.SetToolBitmapSize((48,48))
         # toolbar.SetToolBitmapSize((48,48))
         toolbar.SetBackgroundColour("white")
-        for label, help, state in [  
-            ("Save", "Save", True),
-            ("Add Group", "Add Group", True),
-            ("Remove Group", "Remove Selected Group", False),
-            ("Undo", "Undo", False),
-            ("Redo", "Redo", False),
-            ("Enable Schedule Manager", "Enable Schedule Manager", True),
-            ("Settings", "Settings", True)]:
+        for label, help, state, wxId in [  
+            ("Save", "Save", True, wx.ID_SAVE),
+            ("Add Group", "Add Group", True, wx.ID_ADD),
+            ("Remove Group", "Remove Selected Group", False, wx.ID_REMOVE),
+            ("Undo", "Undo", False, wx.ID_UNDO),
+            ("Redo", "Redo", False, wx.ID_REDO),
+            ("Enable Schedule Manager", "Enable Schedule Manager", True, wx.ID_ANY),
+            ("Settings", "Settings", True, wx.ID_ANY)]:
 
             try:
                 img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
                 img.Rescale(48,48, wx.IMAGE_QUALITY_HIGH)
                 bmp = wx.Bitmap(img)
-                tool = toolbar.AddTool(wx.ID_ANY, label=label, bitmap=bmp, shortHelp=help)
+                tool = toolbar.AddTool(wxId, label=label, bitmap=bmp, shortHelp=help)
             except:
                 bmp = wx.Bitmap(48,48)
-                tool = toolbar.AddTool(wx.ID_ANY, label=label, bitmap=bmp, shortHelp=help)
+                tool = toolbar.AddTool(wxId, label=label, bitmap=bmp, shortHelp=help)
             self.Bind(wx.EVT_TOOL, self.OnToolBar, tool)
             
             tool.Enable(state)
@@ -332,12 +333,23 @@ class Main(wx.Frame):
                 toolbar.AddSeparator()  
             elif label == "Redo":
                 toolbar.AddSeparator()
-            elif label == "Enable Schedule Manager":    
+            elif label == "Enable Schedule Manager":
                 toolbar.AddStretchableSpace()
 
         toolbar.Realize()
+        self.toolbar = toolbar
         self.SetToolBar(toolbar)
 
+    def DeleteScheduleItem(self):   
+        selection = self.schedList.GetSelection()
+        if not selection.IsOk():
+            return
+
+        self.SaveStateToUndoStack()
+        self.schedList.DeleteItem(selection)
+        self.UpdateScheduleToolbar()
+        self.SaveScheduleTreeToData()
+        
     def DoRedo(self):
         print(self._redo_stack)
         # can we redo?
@@ -668,20 +680,11 @@ class Main(wx.Frame):
             self.ShowAddScheduleDialog()
                 
         elif label == "Delete":
-            self.ShowDeleteScheduleItemDialog()            
+            self.DeleteScheduleItem()            
 
         elif label == "Toggle":
-            selection = self.schedList.GetSelection()
-            checked = self.schedList.GetCheckedState(selection)
-            if checked == 1:
-                self.schedList.UncheckItem(selection)
-            else:
-                self.schedList.CheckItem(selection)
-
-            self.SaveStateToUndoStack()
-
-            self.GetScheduleTreeAndWriteData()
-
+            self.ToggleScheduleSelection()
+            
         elif label == "Up":
             """ move then item up by moving the previous item down """
 
@@ -829,18 +832,26 @@ class Main(wx.Frame):
             
     def OnGroupItemSelected(self, event):
         """ update schedule list """
-        print("OnGroupItemSelected", self._data)
         self.schedList.DeleteAllItems()
         groupSel = self.groupList.GetSelection()
         for item, data in self._data.items():
             if groupSel != item:
                 continue
+            self.toolbar.FindById(wx.ID_REMOVE).Enable(True)  
+            self.toolbar.Realize()
             self.SetScheduleTree(data)
-            return
             
+            self.schedBtns["Add Schedule"].Enable()
+            return
+        
+        self.toolbar.FindById(wx.ID_REMOVE).Enable(False)
+        self.toolbar.Realize()
+        
+        self.schedBtns["Add Schedule"].Disable()
+        self.UpdateScheduleToolbar()
         # # click the information text
         # self.info_sched.SetValue("")
-
+    
     def OnListItemActivated(self, event):
         self.OnAddFunction()
 
@@ -897,7 +908,9 @@ class Main(wx.Frame):
             self.info_sched.SetValue(text)
         except:
             self.info_sched.SetValue("")
-
+            
+        self.UpdateScheduleToolbar()    
+            
     def OnScheduleTreeItemChecked(self, event):
         """ here we just save the new tree """
         self.GetScheduleTreeAndWriteData()
@@ -968,6 +981,15 @@ class Main(wx.Frame):
     def SaveData(self):
         print("saving data")
         
+    def SaveScheduleTreeToData(self):
+        """ cache schedule tree to selected group item in data """
+        schedules = self.GetScheduleTree()
+        groupSel = self.groupList.GetSelection()
+        for item, data in self._data.items():
+            if groupSel != item:
+                continue
+            self._data[groupSel] = schedules
+            
     def SaveStateToRedoStack(self):
         """ append current data to undo stack """
         groupIdx = self.groupList.GetFirstSelected()
@@ -1001,11 +1023,11 @@ class Main(wx.Frame):
     
     def SetGroupTree(self, data):
         """ set the group list tree """
-        root = self.groupList_root
         for idx in sorted([int(x) for x in data.keys()]):
             item = self.groupList.AppendItemToRoot(data[str(idx)]["columns"]["0"])
             self._data[item] = data[str(idx)]["schedules"] 
-
+        self.groupList.UnselectAll()
+        
     def SetScheduleTree(self, data):
         """ set the schedule list tree """
         self.schedList.SetTree(data)
@@ -1087,33 +1109,10 @@ class Main(wx.Frame):
         self.schedList.CheckItem(newItem)
         self.schedList.Expand(newItem)
         self.schedList.SetFocus()
-
-        schedules = self.GetScheduleTree()
-        groupSel = self.groupList.GetSelection()
-        for item, data in self._data.items():
-            if groupSel != item:
-                continue
-            self._data[groupSel] = schedules
-                
-    def ShowDeleteScheduleItemDialog(self):   
-        index = self.schedList.GetSelection()
-        if not index.IsOk():
-            return
-
-        dlg = wx.MessageDialog(self, 
-                               "Confirm delete", 
-                               "Delete schedule list item?",
-                               style=wx.YES_NO)
-        if dlg.ShowModal() == wx.ID_NO:
-            return
-
-        self.SaveStateToUndoStack()
-
-        self.schedList.DeleteItem(self.schedList.GetSelection())
-        self.GetScheduleTreeAndWriteData()
-
-        # self.OnScheduleTreeSelectionChanged()
-            
+        self.UpdateScheduleToolbar()
+        
+        self.SaveScheduleTreeToData()
+        
     def ShowRemoveGroupDialog(self):
         groupIdx = self.GetGroupListIndex(self.groupList.GetSelection())
         if groupIdx is None:
@@ -1136,6 +1135,40 @@ class Main(wx.Frame):
         self._redo_stack = []
         self.WriteData()
         
+    def ToggleScheduleSelection(self):
+        selection = self.schedList.GetSelection()
+        checked = self.schedList.GetCheckedState(selection)
+        if checked == 1:
+            self.schedList.UncheckItem(selection)
+        else:
+            self.schedList.CheckItem(selection)
+
+        self.SaveStateToUndoStack()
+            
+    def UpdateScheduleToolbar(self):
+        selection = self.schedList.GetSelection()
+        if not selection.IsOk():
+            for label, btn in self.schedBtns.items():
+                if label == "Add Schedule":
+                    continue
+                btn.Disable()
+            return
+            
+        self.schedBtns["Edit"].Enable()
+        self.schedBtns["Toggle"].Enable()
+        self.schedBtns["Delete"].Enable()
+         
+        if self.schedList.GetNextSibling(selection).IsOk():   
+            self.schedBtns["Down"].Enable()
+        else:
+            self.schedBtns["Down"].Disable()
+            
+        parent = self.schedList.GetItemParent(selection)    
+        if self.schedList.GetFirstChild(parent) != selection:   
+            self.schedBtns["Up"].Enable()
+        else:
+            self.schedBtns["Up"].Disable()
+            
     def WriteData(self):
         return
         """ write changes to data file"""
