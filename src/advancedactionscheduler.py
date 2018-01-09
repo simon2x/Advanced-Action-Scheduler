@@ -993,6 +993,35 @@ class Main(wx.Frame):
         elif label == "Undo":
             self.DoUndo()
         
+    def OpenFile(self):
+        
+        # ask if user wants to save first
+        dlg = wx.MessageDialog(self,
+                               message="Save file before closing?",
+                               caption="Close File",
+                               style=wx.YES_NO|wx.CANCEL|wx.CANCEL_DEFAULT)
+        ret = dlg.ShowModal()                 
+        if ret == wx.ID_CANCEL:
+            return
+        
+        if ret == wx.ID_YES:
+            self.SaveData()  
+            
+        # proceed by opening file
+        wildcard = "JSON files (*.json)|"
+        dlg = wx.FileDialog(self, 
+                            defaultDir="",
+                            message="Open Schedule File", 
+                            wildcard=wildcard,
+                            style=wx.FD_DEFAULT_STYLE|wx.FD_FILE_MUST_EXIST)
+        
+        if dlg.ShowModal() == wx.ID_CANCEL:
+            return
+                
+        path = dlg.GetPath()
+        _, file = os.path.split(path)
+        self.LoadFile(path)
+        
     def PrependSubTree(self, previous, data):
         """ insert sub tree before item """
 
