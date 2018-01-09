@@ -290,6 +290,8 @@ class Main(wx.Frame):
         menu_file = wx.Menu()
         file_menus = [("New", "New Schedule File", True, wx.ID_ANY),
                       ("Open...", "Open Schedule File", True, wx.ID_ANY),
+                      ("Save", "Save Schedule File", True, wx.ID_ANY),
+                      ("Save As...", "Save Schedule File As...", True, wx.ID_ANY),
                       ("Close", "Close Schedule File", False, wx.ID_CLOSE),
                       ("Import", "Import Schedule File", True, wx.ID_ANY),
                       ("Preferences", "Open Preferences...", True, wx.ID_ANY),
@@ -321,9 +323,10 @@ class Main(wx.Frame):
         # toolbar.AddTool(wx.ID _ANY, "t")#,  wx.BitmapFromBuffer(wx.ART_FILE_OPEN))
         toolbar.SetToolBitmapSize((48,48))
         # toolbar.SetToolBitmapSize((48,48))
-        toolbar.SetBackgroundColour("white")
+        # toolbar.SetBackgroundColour("white")
         for label, help, state, wxId in [  
             ("Save", "Save", True, wx.ID_SAVE),
+            ("Save As...", "Save As...", True, wx.ID_SAVEAS),
             ("Add Group", "Add Group", True, wx.ID_ADD),
             ("Remove Group", "Remove Selected Group", False, wx.ID_REMOVE),
             ("Undo", "Undo", False, wx.ID_UNDO),
@@ -332,7 +335,7 @@ class Main(wx.Frame):
             ("Settings", "Settings", True, wx.ID_ANY)]:
 
             try:
-                img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
+                img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "").replace(".","")))
                 img.Rescale(48,48, wx.IMAGE_QUALITY_HIGH)
                 bmp = wx.Bitmap(img)
                 tool = toolbar.AddTool(wxId, label=label, bitmap=bmp, shortHelp=help)
@@ -343,7 +346,7 @@ class Main(wx.Frame):
             
             tool.Enable(state)
             
-            if label == "Save":
+            if label == "Save As...":
                 toolbar.AddSeparator()  
             elif label == "Redo":
                 toolbar.AddSeparator()
@@ -725,6 +728,7 @@ class Main(wx.Frame):
             self.SetGroupTree(fileData)
             self.schedList.DeleteAllItems()
             self._appConfig["currentFile"] = filePath
+            self.SaveDataToJSON("config.json", self._appConfig)
             self.UpdateTitlebar()
             
             self.menubar.FindItemById(wx.ID_CLOSE).Enable(True)
@@ -927,7 +931,7 @@ class Main(wx.Frame):
         label = e.GetLabel(id)
 
         if label == "About":
-            self.ShowAboutDialog()  
+            self.ShowAboutDialog()
           
         elif label == "Close":
             self.CloseFile()  
@@ -938,9 +942,6 @@ class Main(wx.Frame):
         elif label == "Exit":
             self.Close()
 
-        elif label == "Export":
-            self.SaveFileAs()
-
         elif label == "Import":
             self.SaveFile()
 
@@ -949,6 +950,9 @@ class Main(wx.Frame):
 
         elif label == "Open...":
             self.OpenFile()
+            
+        elif label == "Save As...":
+            self.SaveFileAs()   
 
     def OnScheduleTreeActivated(self, event):
         e = event.GetEventObject()
@@ -991,7 +995,9 @@ class Main(wx.Frame):
         elif label == "Redo":
             self.DoRedo()
         elif label == "Save":
-            self.SaveData()    
+            self.SaveData()
+        elif label == "Save As...":
+            self.SaveFileAs()      
         elif label == "Undo":
             self.DoUndo()
         
@@ -1019,7 +1025,8 @@ class Main(wx.Frame):
         
         if dlg.ShowModal() == wx.ID_CANCEL:
             return
-                
+        
+        self.ClearUI()        
         path = dlg.GetPath()
         _, file = os.path.split(path)
         self.LoadFile(path)
@@ -1089,6 +1096,30 @@ class Main(wx.Frame):
     def SaveDataToJSON(self, filePath, data):    
         with open(filePath, "w") as file:
             json.dump(data, file, sort_keys=True, indent=2)
+        
+    def SaveFileAs(self):
+    
+        if self._appConfig["currentFile"]:
+            path, name = os.path.split(self._appConfig["currentFile"])
+        else:
+            path, name = "", ""
+            
+        wildcard = "JSON files (*.json;)|"
+        file = wx.FileDialog(self, 
+                             defaultDir=path,
+                             defaultFile=name,
+                             message="Save Schedule File As...", 
+                             wildcard=wildcard,
+                             style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
+        
+        if file.ShowModal() == wx.ID_CANCEL:
+            return
+        
+        jsonData = self.GetDataForJSON()
+        self._appConfig["currentFile"] = file.GetPath()
+        self.SaveDataToJSON("config.json", self._appConfig)
+        self.SaveDataToJSON(file.GetPath(), jsonData)
+        self.UpdateTitlebar()
         
     def SaveScheduleTreeToData(self):
         """ cache schedule tree to selected group item in data """
