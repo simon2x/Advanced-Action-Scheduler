@@ -27,8 +27,10 @@ class AddSchedule(wx.Dialog):
         self.textName = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER)
         self.textName.Bind(wx.EVT_TEXT_ENTER, self.OnScheduleNameEnter)
         self.textName.Bind(wx.EVT_TEXT, self.OnScheduleNameEdit)
+        self.labelError = wx.StaticText(panel, label="")
         hSizer.Add(labelName, 0, wx.ALL|wx.ALIGN_CENTRE, 5)
         hSizer.Add(self.textName, 0, wx.ALL|wx.ALIGN_BOTTOM, 5)
+        hSizer.Add(self.labelError, 0, wx.ALL|wx.ALIGN_CENTRE, 5)
         sboxSizer.Add(hSizer, 0, wx.ALL|wx.EXPAND, 5)
 
         hSizer = wx.BoxSizer(wx.HORIZONTAL)
