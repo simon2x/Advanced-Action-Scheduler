@@ -14,7 +14,7 @@ class AddSchedule(wx.Dialog):
                            parent,
                            title="Add New Schedule")
 
-        self.blacklist = []
+        self.blacklist = blacklist
         
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -104,8 +104,8 @@ class AddSchedule(wx.Dialog):
 
     def OnScheduleNameEdit(self, event):
         e = event.GetEventObject()
-        value = e.GetValue().replace("_","") # allow underscores
-        if value == "" or value in self.blacklist or not value.isalnum():
+        value = e.GetValue()
+        if value == "" or value in self.blacklist or not value.replace("_","").isalnum():
             self.btnOk.Disable()
         else:
             self.btnOk.Enable() 

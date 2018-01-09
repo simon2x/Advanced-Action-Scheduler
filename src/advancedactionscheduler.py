@@ -778,18 +778,14 @@ class Main(wx.Frame):
         # is item top level? i.e. a schedule
         if self.schedList.GetItemParent(selection) == self.schedList.GetRootItem():
             schedNames = [s for s in self.GetScheduleNames() if not s == name]
-            while True:
-                dlg = dialogs.schedule.AddSchedule(self)
-                dlg.SetScheduleName(name)
-                dlg.SetValue(params)
-                if dlg.ShowModal() != wx.ID_OK:
-                    return
-                newName, value = dlg.GetValue()
-                if newName in schedNames:
-                    continue
-                value = newName + DELIMITER + value
-                self.schedList.SetItemText(selection, 0, value)
-                break
+            dlg = dialogs.schedule.AddSchedule(self, blacklist=schedNames)
+            dlg.SetScheduleName(name)
+            dlg.SetValue(params)
+            if dlg.ShowModal() != wx.ID_OK:
+                return
+            newName, value = dlg.GetValue()
+            value = newName + DELIMITER + value
+            self.schedList.SetItemText(selection, 0, value)
         else:
             dlg = self.GetDialog(newName)
             dlg.SetValue(params)
