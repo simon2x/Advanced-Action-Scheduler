@@ -49,6 +49,9 @@ from wx.lib.pubsub import pub
 
 import base
 
+__version__ = 0.1
+__title__ = "Advanced Action Scheduler"
+
 PLATFORM = platform.system()
 if PLATFORM == "Windows":
     pass
@@ -92,7 +95,8 @@ FUNCTIONS = ["CloseWindow",
              "SwitchWindow"]
   
 DEFAULTCONFIG = {
-    "lastFile": False,
+    "currentFile": False,
+    "fileList": [],
     "windowSize": False,
     "windowPos": False,
 }  
@@ -100,7 +104,7 @@ class Main(wx.Frame):
 
     def __init__(self):
 
-        self._title = "Advanced Action Scheduler 0.1"
+        self._title = "{0} {1}".format(__title__, __version__)
 
         wx.Frame.__init__(self,
                           parent=None,
@@ -457,6 +461,37 @@ class Main(wx.Frame):
             if dataItem == item:
                 return dataItem
         return -1
+    
+    def GetDataForJSON(self):
+        """ convert data for json dump """ 
+        n = 0
+        jsonData = {idx:idxData for idx, idxData in self.GetGroupTree()}
+        child = self.groupList.GetFirstItem()
+        while child.IsOk():
+            childText = self.groupList.GetItemText(child)
+            for item, itemData in self._data.items():
+                if self.groupList.GetItemText(item) != childText:
+                    continue
+                break
+            jsonData[str(n)]["schedules"] = itemData
+            n += 1    
+            child = self.groupList.GetNextSibling(child)
+            
+        return jsonData
+        
+    def GetGroupNames(self):
+        """ return ordered list of group names """
+        groupNames = []
+        child = self.groupList.GetFirstItem()
+        while child.IsOk():
+            groupNames.append(self.groupList.GetItemText(child, col=0))
+            child = self.groupList.GetNextSibling(child)
+        return groupNames
+        
+    def GetGroupTree(self):
+        """ retrieve tree structure, used for saving data """
+        data = self.groupList.GetTree()
+        return data
 
     def GetScheduleNames(self):
         """ return toplevel items"""
@@ -495,21 +530,7 @@ class Main(wx.Frame):
         tree.SetItemData(item, None)
 
         return previous
-    
-    def GetGroupNames(self):
-        """ return ordered list of group names """
-        groupNames = []
-        child = self.groupList.GetFirstItem()
-        while child.IsOk():
-            groupNames.append(self.groupList.GetItemText(child, col=0))
-            child = self.groupList.GetNextSibling(child)
-        return groupNames
         
-    def GetGroupTree(self):
-        """ retrieve tree structure, used for saving data """
-        data = self.groupList.GetTree()
-        return data
-
     def GetScheduleTree(self):
         """ retrieve tree structure, used for saving data """
         data = self.schedList.GetTree()
@@ -665,10 +686,10 @@ class Main(wx.Frame):
             with open("config.json", 'w') as file:
                 json.dump(self._appConfig, file, sort_keys=True, indent=2)
         
-        if os.path.exists(self._appConfig["lastFile"]):
-            self.LoadFile(self._appConfig["lastFile"])
+        if os.path.exists(self._appConfig["currentFile"]):
+            self.LoadFile(self._appConfig["currentFile"])
         else:
-           self._appConfig["lastFile"] = False
+           self._appConfig["currentFile"] = False
            
     def LoadFile(self, filePath):
         try:
@@ -677,7 +698,8 @@ class Main(wx.Frame):
 
             self.SetGroupTree(fileData)
             self.schedList.DeleteAllItems()
-            self._appConfig["lastFile"] = filePath
+            self._appConfig["currentFile"] = filePath
+            self.UpdateTitlebar()
         except FileNotFoundError:
             return
         except json.JSONDecodeError:
@@ -994,7 +1016,29 @@ class Main(wx.Frame):
             tree.Expand(item)
     
     def SaveData(self):
-        print("saving data")
+        jsonData = self.GetDataForJSON()
+        if self._appConfig["currentFile"] is not False:
+            self.SaveDataToJSON(self._appConfig["currentFile"], jsonData)
+            return
+            
+        wildcard = "JSON files (*.json)|*.json"
+        file = wx.FileDialog(self, 
+                             defaultDir="",
+                             message="Save File", 
+                             wildcard=wildcard,
+                             style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT|wx.FD_CHANGE_DIR)
+        
+        if file.ShowModal() == wx.ID_CANCEL:
+            return
+           
+        self._appConfig["currentFile"] = file.GetPath()
+        self.SaveDataToJSON("config.json", self._appConfig)
+        self.SaveDataToJSON(self._appConfig["currentFile"], jsonData)
+        self.UpdateTitlebar()
+        
+    def SaveDataToJSON(self, filePath, data):    
+        with open(filePath, "w") as file:
+            json.dump(data, file, sort_keys=True, indent=2)
         
     def SaveScheduleTreeToData(self):
         """ cache schedule tree to selected group item in data """
@@ -1184,6 +1228,13 @@ class Main(wx.Frame):
         else:
             self.schedBtns["Up"].Disable()
             
+    def UpdateTitlebar(self):
+        try:
+            _, name = os.path.split(self._appConfig["currentFile"])
+            self.SetTitle("{0} - {1} {2}".format(name, __title__, __version__))
+        except:
+            self.SetTitle("{0} {1}".format(__title__, __version__))
+            
     def WriteData(self):
         return
         """ write changes to data file"""
@@ -1191,7 +1242,7 @@ class Main(wx.Frame):
 
         with open("schedules.json", 'w') as file:
             json.dump(self._data, file, sort_keys=True, indent=2)
-    
+
 if __name__ == "__main__":
     app = wx.App()
     Main()
