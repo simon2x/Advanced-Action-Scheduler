@@ -265,7 +265,7 @@ class Main(wx.Frame):
         menu_file = wx.Menu()
         file_menus = [("New", "New Schedule File", True, wx.ID_ANY),
                       ("Open...", "Open Schedule File", True, wx.ID_ANY),
-                      ("Close", "Close Schedule File", False, wx.ID_ANY),
+                      ("Close", "Close Schedule File", False, wx.ID_CLOSE),
                       ("Import", "Import Schedule File", True, wx.ID_ANY),
                       ("Preferences", "Open Preferences...", True, wx.ID_ANY),
                       ("Exit", "Exit Program", True, wx.ID_ANY)]
@@ -701,6 +701,9 @@ class Main(wx.Frame):
             self.schedList.DeleteAllItems()
             self._appConfig["currentFile"] = filePath
             self.UpdateTitlebar()
+            
+            self.menubar.FindItemById(wx.ID_CLOSE).Enable(True)
+            
         except FileNotFoundError:
             return
         except json.JSONDecodeError:
