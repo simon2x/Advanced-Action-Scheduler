@@ -673,17 +673,8 @@ class Main(wx.Frame):
             self.ShowDeleteScheduleItemDialog()            
 
         elif label == "Toggle":
-            selection = self.schedList.GetSelection()
-            checked = self.schedList.GetCheckedState(selection)
-            if checked == 1:
-                self.schedList.UncheckItem(selection)
-            else:
-                self.schedList.CheckItem(selection)
-
-            self.SaveStateToUndoStack()
-
-            self.GetScheduleTreeAndWriteData()
-
+            self.ToggleScheduleSelection()
+            
         elif label == "Up":
             """ move then item up by moving the previous item down """
 
@@ -1149,6 +1140,16 @@ class Main(wx.Frame):
         self._redo_stack = []
         self.WriteData()
         
+    def ToggleScheduleSelection(self):
+        selection = self.schedList.GetSelection()
+        checked = self.schedList.GetCheckedState(selection)
+        if checked == 1:
+            self.schedList.UncheckItem(selection)
+        else:
+            self.schedList.CheckItem(selection)
+
+        self.SaveStateToUndoStack()
+            
     def UpdateScheduleToolbar(self):
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
