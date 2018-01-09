@@ -307,14 +307,14 @@ class Main(wx.Frame):
         toolbar.SetToolBitmapSize((48,48))
         # toolbar.SetToolBitmapSize((48,48))
         toolbar.SetBackgroundColour("white")
-        for label, help in [        
-            ("Settings", "Settings"),
-            ("Save", "Save"),
-            ("Add Group", "Add Group"),
-            ("Remove Group", "Remove Selected Group"),
-            ("Undo", "Undo"),
-            ("Redo", "Redo"),            
-            ("Enable Schedule Manager", "Enable Schedule Manager")]:
+        for label, help, state in [  
+            ("Save", "Save", True),
+            ("Add Group", "Add Group", True),
+            ("Remove Group", "Remove Selected Group", False),
+            ("Undo", "Undo", False),
+            ("Redo", "Redo", False),
+            ("Enable Schedule Manager", "Enable Schedule Manager", True),
+            ("Settings", "Settings", True)]:
 
             try:
                 img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
@@ -325,11 +325,14 @@ class Main(wx.Frame):
                 bmp = wx.Bitmap(48,48)
                 tool = toolbar.AddTool(wx.ID_ANY, label=label, bitmap=bmp, shortHelp=help)
             self.Bind(wx.EVT_TOOL, self.OnToolBar, tool)
-
+            
+            tool.Enable(state)
+            
             if label == "Save":
                 toolbar.AddSeparator()  
-            if label == "Redo":
+            elif label == "Redo":
                 toolbar.AddSeparator()
+            elif label == "Enable Schedule Manager":    
                 toolbar.AddStretchableSpace()
 
         toolbar.Realize()
