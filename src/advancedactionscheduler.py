@@ -145,6 +145,7 @@ class Main(wx.Frame):
         hsizer_functions = wx.WrapSizer(wx.HORIZONTAL)
         for label in ["Add Schedule", "Up", "Down", "Edit", "Toggle", "Delete"]:
             btn = wx.Button(schedpanel, label=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
+            btn.Disable()
             img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
             img = img.Rescale(32,32, wx.IMAGE_QUALITY_HIGH)
             bmp = wx.Bitmap(img)
@@ -262,8 +263,6 @@ class Main(wx.Frame):
             logging.info("JSONDecodeError: creating new schedules file")
             with open("schedules.json", 'w') as file:
                 pass
-
-        self.groupList.Select(self.groupList.GetFirstItem())
 
     def AppendLogMessage(self, message):
         """ append log message to schedule messenger list """
