@@ -143,9 +143,11 @@ class Main(wx.Frame):
 
         # -----
         hsizer_functions = wx.WrapSizer(wx.HORIZONTAL)
+        self.schedBtns = {}
         for label in ["Add Schedule", "Up", "Down", "Edit", "Toggle", "Delete"]:
             btn = wx.Button(schedpanel, label=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
             btn.Disable()
+            self.schedBtns[label] = btn
             img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
             img = img.Rescale(32,32, wx.IMAGE_QUALITY_HIGH)
             bmp = wx.Bitmap(img)
