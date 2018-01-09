@@ -263,14 +263,15 @@ class Main(wx.Frame):
         menubar = wx.MenuBar()
 
         menu_file = wx.Menu()
-        file_menus = [("New", "New Schedule File"),
-                      ("Open...", "Open Schedule File"),
-                      ("Import", "Import Schedule File"),
-                      ("Export", "Export Schedule File"),
-                      ("Preferences", "Open Preferences..."),
-                      ("Exit", "Exit Program")]
-        for item, help_str in file_menus:
-            self._menus[item] = menu_file.Append(wx.ID_ANY, item, help_str)
+        file_menus = [("New", "New Schedule File", True, wx.ID_ANY),
+                      ("Open...", "Open Schedule File", True, wx.ID_ANY),
+                      ("Close", "Close Schedule File", False, wx.ID_ANY),
+                      ("Import", "Import Schedule File", True, wx.ID_ANY),
+                      ("Preferences", "Open Preferences...", True, wx.ID_ANY),
+                      ("Exit", "Exit Program", True, wx.ID_ANY)]
+        for item, helpStr, state, wxId in file_menus:
+            self._menus[item] = menu_file.Append(wxId, item, helpStr)
+            self._menus[item].Enable(state)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
 
             if item == "Preferences":
@@ -279,13 +280,13 @@ class Main(wx.Frame):
         menu_help = wx.Menu()
         help_menus = [("Check for updates", "Check for updates (Not Yet Implemented)"),
                       ("About", "Import Images From Folder")]
-        for item, help_str in help_menus:
-            self._menus[item] = menu_help.Append(wx.ID_ANY, item, help_str)
+        for item, helpStr in help_menus:
+            self._menus[item] = menu_help.Append(wx.ID_ANY, item, helpStr)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
 
         menubar.Append(menu_file, "&File")
         menubar.Append(menu_help, "&Help")
-
+        self.menubar = menubar
         self.SetMenuBar(menubar)
 
     def CreateToolbar(self):
