@@ -847,9 +847,10 @@ class Main(wx.Frame):
         self.toolbar.Realize()
         
         self.schedBtns["Add Schedule"].Disable()
+        self.UpdateScheduleToolbar()
         # # click the information text
         # self.info_sched.SetValue("")
-
+    
     def OnListItemActivated(self, event):
         self.OnAddFunction()
 
@@ -1098,7 +1099,8 @@ class Main(wx.Frame):
         self.schedList.CheckItem(newItem)
         self.schedList.Expand(newItem)
         self.schedList.SetFocus()
-
+        self.UpdateScheduleToolbar()
+        
         schedules = self.GetScheduleTree()
         groupSel = self.groupList.GetSelection()
         for item, data in self._data.items():
@@ -1153,8 +1155,13 @@ class Main(wx.Frame):
             for label, btn in self.schedBtns.items():
                 if label == "Add Schedule":
                     continue
-                btn.Disable()        
+                btn.Disable()
+            return
             
+        self.schedBtns["Edit"].Enable()
+        self.schedBtns["Toggle"].Enable()
+        self.schedBtns["Delete"].Enable()
+         
         if self.schedList.GetNextSibling(selection).IsOk():   
             self.schedBtns["Down"].Enable()
         else:
