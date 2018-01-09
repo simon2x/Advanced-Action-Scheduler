@@ -1034,8 +1034,11 @@ class Main(wx.Frame):
                 m = "Group Name: ('{0}' already exists)".format(dlg.GetValue())
                 continue    
             elif dlg.GetValue() == "":
-                m = "Group Name: (name cannot be empty)"
-                continue    
+                m = "Group Name: (Name cannot be empty)"
+                continue 
+            elif not dlg.GetValue().replace("_","").isalnum():
+                m = "Group Name: (Name can only contain 0-9, A-Z. Underscores allowed)"
+                continue
                 
             self.SaveStateToUndoStack()
             newName = dlg.GetValue()
