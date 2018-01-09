@@ -906,7 +906,9 @@ class Main(wx.Frame):
             self.info_sched.SetValue(text)
         except:
             self.info_sched.SetValue("")
-
+            
+        self.UpdateScheduleToolbar()    
+            
     def OnScheduleTreeItemChecked(self, event):
         """ here we just save the new tree """
         self.GetScheduleTreeAndWriteData()
@@ -1145,6 +1147,25 @@ class Main(wx.Frame):
         self._redo_stack = []
         self.WriteData()
         
+    def UpdateScheduleToolbar(self):
+        selection = self.schedList.GetSelection()
+        if not selection.IsOk():
+            for label, btn in self.schedBtns.items():
+                if label == "Add Schedule":
+                    continue
+                btn.Disable()        
+            
+        if self.schedList.GetNextSibling(selection).IsOk():   
+            self.schedBtns["Down"].Enable()
+        else:
+            self.schedBtns["Down"].Disable()
+            
+        parent = self.schedList.GetItemParent(selection)    
+        if self.schedList.GetFirstChild(parent) != selection:   
+            self.schedBtns["Up"].Enable()
+        else:
+            self.schedBtns["Up"].Disable()
+            
     def WriteData(self):
         return
         """ write changes to data file"""
