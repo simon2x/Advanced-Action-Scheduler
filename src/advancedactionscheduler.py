@@ -90,7 +90,12 @@ FUNCTIONS = ["CloseWindow",
              "StopSchedule",
              "StartSchedule",
              "SwitchWindow"]
-             
+  
+DEFAULTCONFIG = {
+    "lastFile": False,
+    "windowSize": False,
+    "windowPos": False,
+}  
 class Main(wx.Frame):
 
     def __init__(self):
@@ -101,6 +106,7 @@ class Main(wx.Frame):
                           parent=None,
                           title=self._title)
 
+        self._appConfig = DEFAULTCONFIG 
         self._data = {}
         self._menus = {}
         self._redo_stack = []
@@ -240,32 +246,10 @@ class Main(wx.Frame):
 
         #-----
         self.Show()
-
+            
         #load settings
-        try:
-            with open("schedules2.json", 'r') as file:
-                fileData = json.load(file)
-
-            self.SetGroupTree(fileData)
-            # for k,v in self._data.items():
-                # name = self._data[k]["name"]
-                # item = self.groupList.AppendItem(self.groupList_root, name)
-                # self.groupList.SetItemData(item, k)
-                # checked = v["checked"]
-                # if checked == 1:
-                    # self.groupList.CheckItem(item)
-
-            file.close()
-        except FileNotFoundError:
-            logging.info("FileNotFoundError: creating new schedules file")
-            with open("schedules.json", 'w') as file:
-                pass
-
-        except json.JSONDecodeError:
-            logging.info("JSONDecodeError: creating new schedules file")
-            with open("schedules.json", 'w') as file:
-                pass
-
+        self.LoadConfig()
+        
     def AppendLogMessage(self, message):
         """ append log message to schedule messenger list """
         i = self.schedlog.GetItemCount()
@@ -668,6 +652,37 @@ class Main(wx.Frame):
 
         for item in expanded_items:
             tree.Expand(item)            
+    
+    def LoadConfig(self):
+        """ load application config and restore config settings """
+        try:
+            with open("config.json", 'r') as file:
+                self._appConfig.update(json.load(file))
+        except FileNotFoundError:
+            with open("config.json", 'w') as file:
+                json.dump(self._appConfig, file, sort_keys=True, indent=2)
+        except json.JSONDecodeError:
+            with open("config.json", 'w') as file:
+                json.dump(self._appConfig, file, sort_keys=True, indent=2)
+        
+        if os.path.exists(self._appConfig["lastFile"]):
+            self.LoadFile(self._appConfig["lastFile"])
+        else:
+           self._appConfig["lastFile"] = False
+           
+    def LoadFile(self, filePath):
+        try:
+            with open(filePath, 'r') as file:
+                fileData = json.load(file)
+
+            self.SetGroupTree(fileData)
+            self.schedList.DeleteAllItems()
+            self._appConfig["lastFile"] = filePath
+        except FileNotFoundError:
+            return
+        except json.JSONDecodeError:
+            # TODO: raise corrupt/invalid file error
+            return
     
     def OnButton(self, event):
         e = event.GetEventObject()
