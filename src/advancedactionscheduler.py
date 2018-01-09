@@ -839,10 +839,14 @@ class Main(wx.Frame):
             self.toolbar.FindById(wx.ID_REMOVE).Enable(True)  
             self.toolbar.Realize()
             self.SetScheduleTree(data)
+            
+            self.schedBtns["Add Schedule"].Enable()
             return
         
         self.toolbar.FindById(wx.ID_REMOVE).Enable(False)
         self.toolbar.Realize()
+        
+        self.schedBtns["Add Schedule"].Disable()
         # # click the information text
         # self.info_sched.SetValue("")
 
