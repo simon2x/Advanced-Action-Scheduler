@@ -452,8 +452,12 @@ class Main(wx.Frame):
 
         return dlg
 
-    def GetGroupListIndex(self):
-        pass
+    def GetGroupListIndex(self, item):
+        """ only way to finding existing item in self._data by comparing TreeListItem """
+        for dataItem in self._data.keys():
+            if dataItem == item:
+                return dataItem
+        return -1
 
     def GetScheduleNames(self):
         """ return toplevel items"""
@@ -1034,9 +1038,12 @@ class Main(wx.Frame):
                 m = "Group Name: ('{0}' already exists)".format(dlg.GetValue())
                 continue    
             elif dlg.GetValue() == "":
-                m = "Group Name: (name cannot be empty)"
-                continue    
-                
+                m = "Group Name: (Name cannot be empty)"
+                continue 
+            elif not dlg.GetValue().replace("_","").isalnum():
+                m = "Group Name: (Name can only contain 0-9, A-Z. Underscores allowed)"
+                continue
+
             self.SaveStateToUndoStack()
             newName = dlg.GetValue()
             newItem = self.groupList.AppendItemToRoot(newName)
@@ -1105,12 +1112,13 @@ class Main(wx.Frame):
         # self.OnScheduleTreeSelectionChanged()
             
     def ShowRemoveGroupDialog(self):
-        groupIdx = self.groupList.GetSelection()
+        groupIdx = self.GetGroupListIndex(self.groupList.GetSelection())
         if groupIdx is None:
             return
-            
+                    
+        itemText = self.groupList.GetItemText(groupIdx)
         dlg = wx.MessageDialog(self, 
-                               "Confirm delete group '{0}'?".format(self._data[str(groupIdx)]["columns"]["0"]), 
+                               "Confirm delete group '{0}'?".format(itemText), 
                                "Delete Group",
                                style=wx.YES_NO)
         if dlg.ShowModal() == wx.ID_NO:
@@ -1120,26 +1128,11 @@ class Main(wx.Frame):
 
         self.schedList.DeleteAllItems()
         self.groupList.DeleteItem(groupIdx)
-        del self._data[str(groupIdx)]
+        del self._data[groupIdx]
 
-        adjItems = {}
-        count = int(groupIdx)
-        for k in sorted([int(x) for x in self._data.keys()])[int(groupIdx):]:
-            adjItems[str(count)] = self._data[str(k)]
-            count += 1
-            
-        try:    
-            del self._data[str(count)] 
-        except:
-            pass # no item deleted if no items are adjusted
-            
         self._redo_stack = []
-
-        self._data.update(adjItems)
         self.WriteData()
-
-        self.OnScheduleTreeSelectionChanged()
-           
+        
     def WriteData(self):
         return
         """ write changes to data file"""
