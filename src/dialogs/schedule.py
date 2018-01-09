@@ -156,10 +156,20 @@ class AddSchedule(wx.Dialog):
     def OnScheduleNameEdit(self, event):
         e = event.GetEventObject()
         value = e.GetValue()
-        if value == "" or value in self.blacklist or not value.replace("_","").isalnum():
-            self.btnOk.Disable()
+        if value == "":
+            m = "" # leave message empty 
+        elif value in self.blacklist:
+            m = "Name already exists"
+        elif not value.replace("_","").isalnum():
+            m = "Name can be 0-9/A-Z. Underscores allowed"
         else:
             self.btnOk.Enable() 
+            return
+        
+        self.labelError.SetLabel(m)
+            
+            
+        self.btnOk.Disable()    
             
     def OnScheduleNameEnter(self, event):
         e = event.GetEventObject()
