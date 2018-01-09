@@ -108,6 +108,11 @@ class Main(wx.Frame):
         self._schedmgr = schedulemanager.Manager(self)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+        
+        #-----
+        self.CreateMenu()
+        self.CreateToolbar()
+        self.CreateStatusBar()
 
         #-----
         self.splitter = wx.SplitterWindow(self)
@@ -231,11 +236,6 @@ class Main(wx.Frame):
         self.SetSize((700, 600))
 
         #-----
-        self.CreateMenu()
-        self.CreateToolbar()
-        self.CreateStatusBar()
-
-        #-----
         self.Show()
 
         #load settings
@@ -307,23 +307,23 @@ class Main(wx.Frame):
         toolbar.SetToolBitmapSize((48,48))
         # toolbar.SetToolBitmapSize((48,48))
         toolbar.SetBackgroundColour("white")
-        for label, help, state in [  
-            ("Save", "Save", True),
-            ("Add Group", "Add Group", True),
-            ("Remove Group", "Remove Selected Group", False),
-            ("Undo", "Undo", False),
-            ("Redo", "Redo", False),
-            ("Enable Schedule Manager", "Enable Schedule Manager", True),
-            ("Settings", "Settings", True)]:
+        for label, help, state, wxId in [  
+            ("Save", "Save", True, wx.ID_SAVE),
+            ("Add Group", "Add Group", True, wx.ID_ADD),
+            ("Remove Group", "Remove Selected Group", False, wx.ID_REMOVE),
+            ("Undo", "Undo", False, wx.ID_UNDO),
+            ("Redo", "Redo", False, wx.ID_REDO),
+            ("Enable Schedule Manager", "Enable Schedule Manager", True, wx.ID_ANY),
+            ("Settings", "Settings", True, wx.ID_ANY)]:
 
             try:
                 img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
                 img.Rescale(48,48, wx.IMAGE_QUALITY_HIGH)
                 bmp = wx.Bitmap(img)
-                tool = toolbar.AddTool(wx.ID_ANY, label=label, bitmap=bmp, shortHelp=help)
+                tool = toolbar.AddTool(wxId, label=label, bitmap=bmp, shortHelp=help)
             except:
                 bmp = wx.Bitmap(48,48)
-                tool = toolbar.AddTool(wx.ID_ANY, label=label, bitmap=bmp, shortHelp=help)
+                tool = toolbar.AddTool(wxId, label=label, bitmap=bmp, shortHelp=help)
             self.Bind(wx.EVT_TOOL, self.OnToolBar, tool)
             
             tool.Enable(state)
@@ -332,10 +332,11 @@ class Main(wx.Frame):
                 toolbar.AddSeparator()  
             elif label == "Redo":
                 toolbar.AddSeparator()
-            elif label == "Enable Schedule Manager":    
+            elif label == "Enable Schedule Manager":
                 toolbar.AddStretchableSpace()
 
         toolbar.Realize()
+        self.toolbar = toolbar
         self.SetToolBar(toolbar)
 
     def DoRedo(self):
@@ -829,15 +830,18 @@ class Main(wx.Frame):
             
     def OnGroupItemSelected(self, event):
         """ update schedule list """
-        print("OnGroupItemSelected", self._data)
         self.schedList.DeleteAllItems()
         groupSel = self.groupList.GetSelection()
         for item, data in self._data.items():
             if groupSel != item:
                 continue
+            self.toolbar.FindById(wx.ID_REMOVE).Enable(True)  
+            self.toolbar.Realize()
             self.SetScheduleTree(data)
             return
-            
+        
+        self.toolbar.FindById(wx.ID_REMOVE).Enable(False)
+        self.toolbar.Realize()
         # # click the information text
         # self.info_sched.SetValue("")
 
@@ -1001,11 +1005,11 @@ class Main(wx.Frame):
     
     def SetGroupTree(self, data):
         """ set the group list tree """
-        root = self.groupList_root
         for idx in sorted([int(x) for x in data.keys()]):
             item = self.groupList.AppendItemToRoot(data[str(idx)]["columns"]["0"])
             self._data[item] = data[str(idx)]["schedules"] 
-
+        self.groupList.UnselectAll()
+        
     def SetScheduleTree(self, data):
         """ set the schedule list tree """
         self.schedList.SetTree(data)
