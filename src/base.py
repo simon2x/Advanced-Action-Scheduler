@@ -29,70 +29,95 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             depth += 1
             item = self.GetItemParent(item)
         return depth - 1
-
+        
     def GetItemIndex(self, item):
         """ hacky way of getting the item index """
-
+        selection = item
+        item = self.GetFirstItem()
+        lastItem = item
         if not item.IsOk():
-            return -1
-
-        i = self.GetFirstItem()
-        root = self.GetItemParent(i)
+            return data
+          
+        columnCount = self.GetColumnCount()
         row = 0
         depth = 0
-        idx = "0"        
-        while i.IsOk():
-
-            d = self.GetItemDepth(i)
-
-            # the very first item (not root)
-            if d == 0 and row == 0:
-                newidx = "0"
+        idx = "0"
+        
+        root = self.GetRootItem()
+        items = []
+        while item.IsOk():
+            
+            # first top level item
+            if lastItem == item:
+                idx = "0"
                 row += 1
-
-            # a toplevel item (excluding first item)
-            elif d == 0 and row > 0:
+            
+            # top level item
+            elif self.GetItemParent(item) == root:
                 idx = str(row)
-                row += 1
-
-            # depth unchanged, item is the next sibling of previous item
-            elif d == depth:
+                row += 1   
+                
+            # first child of previous item
+            elif item == self.GetFirstChild(lastItem):
+                # print(self.GetItemText(item, 0))
+                idx += ",0"
+                
+            # sibling of previous item
+            elif item == self.GetNextSibling(lastItem):
                 idx = idx.split(",")
                 next = int(idx[-1]) + 1 # ...and increment last
                 idx = idx[0:-1]
                 idx.append(str(next))
                 idx = ",".join(idx)
 
-            # a child of previous item
-            elif d > depth:
-                idx += ",0"
-
             # sibling of parent
-            elif d < depth:
-                idx = idx.split(",")[:depth]
+            elif item == self.GetNextSibling(self.GetItemParent(lastItem)):
+                idx = idx.split(",")[:-1]
                 # increment last element
                 next = int(idx[-1]) + 1
                 del idx[-1]
                 idx.append(str(next))
                 idx = ",".join(idx)
-
-            depth = d   # change last depth to current depth
-
-            if i == item:
-                return idx
-
-            i = self.GetNextItem(i)
             
+            else:
+                for itm, itmIdx in items:
+                    if self.GetNextSibling(itm) != item:
+                        continue
+                    idx = itmIdx.split(",")
+                    next = int(idx[-1]) + 1 # ...and increment last
+                    idx = idx[0:-1]
+                    idx.append(str(next))
+                    idx = ",".join(idx)
+                    break
+                        
+            if item == selection:
+                break
+            lastItem = item
+            items.append((item, idx))
+            item = self.GetNextItem(item)
+
+        return idx
+            
+    def GetPreviousSibling(self, item):
+        parent = self.GetItemParent(item)
+        sib = self.GetNextItem(parent)
+        if item == sib:
+            return -1
+        
+        while self.GetNextSibling(sib) != item:
+            sib = self.GetNextSibling(sib)
+            
+        return sib
+        
     def GetSubTree(self, item):
         """ return the sub tree of schedule item """
 
-        # we stop when item depth is the same as the selected item
-        # i.e. a sibling
-        selected_depth = self.GetItemDepth(item)
-
-        data = {}
-        count = tree.GetColumnCount()
-        depth = selected_depth
+        # we stop when item is a sibling
+        selectedDepth = self.GetItemDepth(item)
+        nextSib = self.GetNextSibling(item)
+        data = []
+        columnCount = self.GetColumnCount()
+        depth = selectedDepth
         idx = "0"
 
         while item.IsOk():
@@ -100,17 +125,18 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             d = self.GetItemDepth(item)
 
             # have we reached sibling
-            if selected_depth == d and "0" in data:
+            if item == nextSib:
                 break
 
             # selected item is first item
-            if d == selected_depth:
+            if d == selectedDepth:
                 pass
 
-            # sibling of previous item
+            # depth unchanged, item is the next sibling of previous item
             elif d == depth:
-                next = int(idx[-1]) + 1
-                del idx[-1]
+                idx = idx.split(",")
+                next = int(idx[-1]) + 1 # ...and increment last
+                idx = idx[0:-1]
                 idx.append(str(next))
                 idx = ",".join(idx)
 
@@ -129,66 +155,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
 
             depth = d
             idxData = {}
-            idxData["data"] = tree.GetItemText(item, 0)
-            idxData["checked"] = tree.GetCheckedState(item)
-            idxData["expanded"] = tree.IsExpanded(item)
-            idxData["selected"] = tree.IsSelected(item)
-
-            data[idx] = idxData
-
-            item = tree.GetNextItem(item)
-
-        return data
-
-    def GetTree(self):
-        data = []
-        item = self.GetFirstItem()
-        if not item.IsOk():
-            return data
-
-        column_count = self.GetColumnCount()
-        row = 0
-        depth = 0
-        idx = "0"
-
-        root = self.GetItemParent(item)
-        while item.IsOk():
-            d = self.GetItemDepth(item)
-
-            # the very first item (not root)
-            if d == 0 and row == 0:
-                idx = "0"
-                row += 1
-
-            # a toplevel item (excluding first item)
-            elif d == 0 and row > 0:
-                idx = str(row)
-                row += 1
-
-            # depth unchanged, item is the next sibling of previous item
-            elif d == depth:
-                idx = idx.split(",")
-                next = int(idx[-1]) + 1 # ...and increment last
-                idx = idx[0:-1]
-                idx.append(str(next))
-                idx = ",".join(idx)
-
-            # a child of previous item
-            elif d > depth:
-                idx += ",0"
-
-            # sibling of parent
-            elif d < depth:
-                idx = idx.split(",")[:depth]
-                # increment last element
-                next = int(idx[-1]) + 1
-                del idx[-1]
-                idx.append(str(next))
-                idx = ",".join(idx)
-
-            depth = d # change last depth to current depth
-            idxData = {}
-            idxData["columns"] = {str(c): self.GetItemText(item, c) for c in range(column_count)}
+            idxData["columns"] = {str(c): self.GetItemText(item, c) for c in range(columnCount)}
             idxData["checked"] = self.GetCheckedState(item)
             idxData["expanded"] = self.IsExpanded(item)
             idxData["selected"] = self.IsSelected(item)
@@ -198,6 +165,122 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
 
         return data
 
+    def GetTree(self):
+        data = []
+        item = self.GetFirstItem()
+        items = []
+        lastItem = item
+        if not item.IsOk():
+            return data
+          
+        columnCount = self.GetColumnCount()
+        row = 0
+        depth = 0
+        idx = "0"
+        
+        root = self.GetRootItem()
+        while item.IsOk():
+            
+            # first top level item
+            if lastItem == item:
+                idx = "0"
+                row += 1
+            
+            # top level item
+            elif self.GetItemParent(item) == root:
+                idx = str(row)
+                row += 1   
+                
+            # first child of previous item
+            elif item == self.GetFirstChild(lastItem):
+                # print(self.GetItemText(item, 0))
+                idx += ",0"
+                
+            # sibling of previous item
+            elif item == self.GetNextSibling(lastItem):
+                idx = idx.split(",")
+                next = int(idx[-1]) + 1 # ...and increment last
+                idx = idx[0:-1]
+                idx.append(str(next))
+                idx = ",".join(idx)
+
+            # sibling of parent
+            elif item == self.GetNextSibling(self.GetItemParent(lastItem)):
+                idx = idx.split(",")[:-1]
+                # increment last element
+                next = int(idx[-1]) + 1
+                del idx[-1]
+                idx.append(str(next))
+                idx = ",".join(idx)
+            
+            else:
+                for itm, itmIdx in items:
+                    if self.GetNextSibling(itm) != item:
+                        continue
+                    idx = itmIdx.split(",")
+                    next = int(idx[-1]) + 1 # ...and increment last
+                    idx = idx[0:-1]
+                    idx.append(str(next))
+                    idx = ",".join(idx)
+                    break
+                
+
+            idxData = {}
+            idxData["columns"] = {str(c): self.GetItemText(item, c) for c in range(columnCount)}
+            idxData["checked"] = self.GetCheckedState(item)
+            idxData["expanded"] = self.IsExpanded(item)
+            idxData["selected"] = self.IsSelected(item)
+
+            data.append((idx, idxData))
+            items.append((item, idx))
+            lastItem = item
+            item = self.GetNextItem(item)
+
+        return data
+
+    def InsertSubTree(self, previous, data):
+        """ insert sub tree after previous item """
+
+        if not data:
+            return
+
+        items = {}
+        expandedItems = []
+
+        for idx, idxData in data:
+
+            columns = idxData["columns"]
+            if "," not in idx:
+                item = self.InsertItem(self.GetItemParent(previous), previous, columns["0"])
+            else:
+                parent = idx.split(",")[:-1]
+                parent = ",".join(parent)
+                item = self.AppendItem(items[parent], columns["0"])
+
+            for c in range(1, len(columns)):
+                try:
+                    self.SetItemText(items[idx], str(c), columns[c])
+                except:
+                    pass
+
+            items[idx] = item
+
+            checked = idxData["checked"]
+            if checked == 1:
+                self.CheckItem(item)
+            else:
+                self.UncheckItem(item)
+            selected = idxData["selected"]
+            if selected is True:
+                self.Select(item)
+            expanded = idxData["expanded"]
+            if expanded is True:
+                expandedItems.append(item)
+            items[idx] = item
+
+        for item in expandedItems:
+            self.Expand(item)
+            
     def SetTree(self, data):
         """ set the treelist """
         self.DeleteAllItems()
@@ -206,7 +289,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             return
 
         items = {}
-        expanded_items = []
+        expandedItems = []
 
         for idx, idxData in data:
 
@@ -237,10 +320,10 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             expanded = idxData["expanded"]
             if expanded is True:
                 print( expanded )
-                expanded_items.append(item)
+                expandedItems.append(item)
             items[idx] = item
 
-        for item in expanded_items:
+        for item in expandedItems:
             self.Expand(item)
 
 class ToolTip(wx.ToolTip):
