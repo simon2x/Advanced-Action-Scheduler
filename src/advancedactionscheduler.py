@@ -164,7 +164,7 @@ class Main(wx.Frame):
             if label == "Edit":
                 btn.Bind(wx.EVT_BUTTON, self.OnEdit)
             else:
-                btn.Bind(wx.EVT_BUTTON, self.OnButton)
+                btn.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
             if label in ["Delete"]:
                 hsizer_functions.AddStretchSpacer()
 
@@ -185,7 +185,7 @@ class Main(wx.Frame):
         self.cbox_functions.Bind(wx.EVT_COMBOBOX, self.OnComboboxFunction)
 
         btn_addfn = wx.Button(schedpanel, label="Add Function", size=(-1, -1))
-        btn_addfn.Bind(wx.EVT_BUTTON, self.OnButton)
+        btn_addfn.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
 
         hsizer_functions2.Add(self.cbox_functions, 0, wx.ALL|wx.CENTRE, 5)
         hsizer_functions2.Add(btn_addfn, 0, wx.ALL|wx.CENTRE, 5)
@@ -740,68 +740,7 @@ class Main(wx.Frame):
         except json.JSONDecodeError:
             # TODO: raise corrupt/invalid file error
             return
-    
-    def OnButton(self, event):
-        e = event.GetEventObject()
-        label = e.GetLabel()
-
-        if label == "Add Function":
-            self.OnComboboxFunction()
-
-        elif label == "Add Schedule":
-            self.ShowAddScheduleDialog()
-                
-        elif label == "Delete":
-            self.DeleteScheduleItem()            
-
-        elif label == "Toggle":
-            self.ToggleScheduleSelection()
-            
-        elif label == "Up":
-            """ move then item up by moving the previous item down """
-
-            # valid item selection?
-            selection = self.schedList.GetSelection()
-            if not selection.IsOk():
-                return
-
-            # can item the moved up?
-            previous = self.GetSchedulePreviousSibling(selection)
-            if not previous:
-                logging.info("previous item is not OK. selection already at the top?")
-                return
-
-            self.SaveStateToUndoStack()
-
-            subtree = self.GetScheduleSubTree(previous)
-            self.schedList.DeleteItem(previous)
-            self.InsertSubTree(selection, subtree)
-
-            self.GetScheduleTreeAndWriteData()
-
-        elif label == "Down":
-
-            # valid item selection?
-            selection = self.schedList.GetSelection()
-            if not selection.IsOk():
-                return
-
-            # can item the moved down?
-            next = self.schedList.GetNextSibling(selection)
-            if not next.IsOk():
-                return
-
-            self.SaveStateToUndoStack()
-
-            subtree = self.GetScheduleSubTree(selection)
-            self.schedList.DeleteItem(selection)
-            self.InsertSubTree(next, subtree)
-
-            self.GetScheduleTreeAndWriteData()
-
-        # finally, clear the redo stack
-        self._redo_stack = []
-
+        
     def OnClose(self, event):
         # save data before exiting
         self.WriteData()
@@ -956,6 +895,67 @@ class Main(wx.Frame):
         elif label == "Save As...":
             self.SaveFileAs()   
 
+    def OnScheduleToolBar(self, event):
+        e = event.GetEventObject()
+        label = e.GetLabel()
+
+        if label == "Add Function":
+            self.OnComboboxFunction()
+
+        elif label == "Add Schedule":
+            self.ShowAddScheduleDialog()
+                
+        elif label == "Delete":
+            self.DeleteScheduleItem()            
+
+        elif label == "Toggle":
+            self.ToggleScheduleSelection()
+            
+        elif label == "Up":
+            """ move then item up by moving the previous item down """
+
+            # valid item selection?
+            selection = self.schedList.GetSelection()
+            if not selection.IsOk():
+                return
+
+            # can item the moved up?
+            previous = self.GetSchedulePreviousSibling(selection)
+            if not previous:
+                logging.info("previous item is not OK. selection already at the top?")
+                return
+
+            self.SaveStateToUndoStack()
+
+            subtree = self.GetScheduleSubTree(previous)
+            self.schedList.DeleteItem(previous)
+            self.InsertSubTree(selection, subtree)
+
+            self.GetScheduleTreeAndWriteData()
+
+        elif label == "Down":
+
+            # valid item selection?
+            selection = self.schedList.GetSelection()
+            if not selection.IsOk():
+                return
+
+            # can item the moved down?
+            next = self.schedList.GetNextSibling(selection)
+            if not next.IsOk():
+                return
+
+            self.SaveStateToUndoStack()
+
+            subtree = self.GetScheduleSubTree(selection)
+            self.schedList.DeleteItem(selection)
+            self.InsertSubTree(next, subtree)
+
+            self.GetScheduleTreeAndWriteData()
+
+        # finally, clear the redo stack
+        self._redo_stack = []
+        
     def OnScheduleTreeActivated(self, event):
         e = event.GetEventObject()
 
