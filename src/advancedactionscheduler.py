@@ -162,7 +162,7 @@ class Main(wx.Frame):
             img = img.Rescale(32,32, wx.IMAGE_QUALITY_HIGH)
             bmp = wx.Bitmap(img)
             if label == "Edit":
-                btn.Bind(wx.EVT_BUTTON, self.OnEdit)
+                btn.Bind(wx.EVT_BUTTON, self.OnScheduleItemEdit)
             else:
                 btn.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
             if label in ["Delete"]:
@@ -771,51 +771,7 @@ class Main(wx.Frame):
         self.schedList.CheckItem(newItem)
         self.schedList.Expand(newItem)
         self.schedList.SetFocus()
-        
-    def OnEdit(self, event):
-        selection = self.schedList.GetSelection()
-        if not selection.IsOk():
-            return
-        
-        itemText = self.schedList.GetItemText(selection, 0)
-        name, params = itemText.split(DELIMITER)
-        params = make_tuple(params)
-        params = {x:y for x,y in params}
-        params["name"] = name
-        
-        # is item top level? i.e. a schedule
-        if self.schedList.GetItemParent(selection) == self.schedList.GetRootItem():
-            schedNames = [s for s in self.GetScheduleNames() if not s == name]
-            dlg = dialogs.schedule.AddSchedule(self, blacklist=schedNames)
-            dlg.SetScheduleName(name)
-            dlg.SetValue(params)
-            if dlg.ShowModal() != wx.ID_OK:
-                return
-            newName, value = dlg.GetValue()
-            value = newName + DELIMITER + value
-            self.schedList.SetItemText(selection, 0, value)
-        else:
-            dlg = self.GetDialog(newName)
-            dlg.SetValue(params)
-            if dlg.ShowModal() != wx.ID_OK:
-                return
-            value = dlg.GetValue()
-            value = newName + DELIMITER + value
-            self.schedList.SetItemText(selection, 0, value)
-                
-        idx = self.schedList.GetItemIndex(selection)
-        groupSel = self.groupList.GetSelection()
-        for n, (j, k) in enumerate(self._data[groupSel]):
-            if not j == idx:
-                continue 
-            self._data[groupSel][n][1]["columns"]["0"] = value
-            break
-          
-        self.schedList.SetFocus()
-
-        # updated information
-        self.info_sched.SetValue(value)    
-
+            
     def OnGroupItemChecked(self, event):
         return
 
@@ -881,6 +837,50 @@ class Main(wx.Frame):
             
         elif label == "Save As...":
             self.SaveFileAs()   
+    
+    def OnScheduleItemEdit(self, event):
+        selection = self.schedList.GetSelection()
+        if not selection.IsOk():
+            return
+        
+        itemText = self.schedList.GetItemText(selection, 0)
+        name, params = itemText.split(DELIMITER)
+        params = make_tuple(params)
+        params = {x:y for x,y in params}
+        params["name"] = name
+        
+        # is item top level? i.e. a schedule
+        if self.schedList.GetItemParent(selection) == self.schedList.GetRootItem():
+            schedNames = [s for s in self.GetScheduleNames() if not s == name]
+            dlg = dialogs.schedule.AddSchedule(self, blacklist=schedNames)
+            dlg.SetScheduleName(name)
+            dlg.SetValue(params)
+            if dlg.ShowModal() != wx.ID_OK:
+                return
+            newName, value = dlg.GetValue()
+            value = newName + DELIMITER + value
+            self.schedList.SetItemText(selection, 0, value)
+        else:
+            dlg = self.GetDialog(newName)
+            dlg.SetValue(params)
+            if dlg.ShowModal() != wx.ID_OK:
+                return
+            value = dlg.GetValue()
+            value = newName + DELIMITER + value
+            self.schedList.SetItemText(selection, 0, value)
+                
+        idx = self.schedList.GetItemIndex(selection)
+        groupSel = self.groupList.GetSelection()
+        for n, (j, k) in enumerate(self._data[groupSel]):
+            if not j == idx:
+                continue 
+            self._data[groupSel][n][1]["columns"]["0"] = value
+            break
+          
+        self.schedList.SetFocus()
+
+        # updated information
+        self.info_sched.SetValue(value)    
 
     def OnScheduleToolBar(self, event):
         e = event.GetEventObject()
