@@ -325,6 +325,8 @@ class Main(wx.Frame):
         # toolbar.SetToolBitmapSize((48,48))
         # toolbar.SetBackgroundColour("white")
         for label, help, state, wxId in [  
+            ("New", "New", True, wx.ID_NEW),
+            ("Open", "Open", True, wx.ID_OPEN),
             ("Save", "Save", True, wx.ID_SAVE),
             ("Save As...", "Save As...", True, wx.ID_SAVEAS),
             ("Add Group", "Add Group", True, wx.ID_ADD),
@@ -943,7 +945,7 @@ class Main(wx.Frame):
             self.Close()
 
         elif label == "Import":
-            self.SaveFile()
+            self.ShowImportDialog()
 
         elif label == "New":
             self.CloseFile()
@@ -990,6 +992,8 @@ class Main(wx.Frame):
             self.EnableScheduleManager()
         elif label == "New":
             self.CloseFile()
+        elif label == "Open":
+            self.OpenFile()    
         elif label == "Remove Group":
             self.ShowRemoveGroupDialog()        
         elif label == "Redo":
@@ -1267,6 +1271,13 @@ class Main(wx.Frame):
         dlg = wx.MessageDialog(self,
                                message,
                                caption="Checking for updates...")
+        dlg.ShowModal()
+        
+    def ShowImportDialog(self):
+        message = "Not yet implemented"
+        dlg = wx.MessageDialog(self,
+                               message,
+                               caption="Import Schedule File")
         dlg.ShowModal()
         
     def ShowRemoveGroupDialog(self):
