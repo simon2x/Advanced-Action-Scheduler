@@ -620,24 +620,59 @@ class Main(wx.Frame):
         if not selection.IsOk():
             return
 
-        # can item the moved down?
+        # can item be moved down?
         next = self.schedList.GetNextSibling(selection)
-        if not next.IsOk():
-            return
-
+        assert next.IsOk(), "Next item is not valid"
+        
+        baseIdx = self.schedList.GetItemIndex(selection)
+        
         self.SaveStateToUndoStack()
-
-        subtree = self.schedList.GetSubTree(selection)
+        
+        subTree = self.schedList.GetSubTree(selection)
+        self.schedList.InsertSubTree(next, subTree)        
         self.schedList.DeleteItem(selection)
-        self.InsertSubTree(next, subtree)
-
-        self.GetScheduleTreeAndWriteData()
-
-        # finally, clear the redo stack
+                
+        # need to reflect these changes in self._data
+        groupSel = self.GetGroupListIndex(self.groupList.GetSelection())
+        groupScheds = self._data[groupSel]
+        
+        baseIdxSplitLen = len(baseIdx.split(",")) - 1
+        nextBaseIdx = baseIdx.split(",")
+        nextBaseIdx[-1] = str(int(nextBaseIdx[-1])+1)
+        nextBaseIdx = ",".join(nextBaseIdx)
+        
+        idxDecr = []
+        idxIncr = []
+        for n, (idx, idxData) in enumerate(groupScheds):
+            if idx.startswith(baseIdx):
+                idxSplit = idx.split(",")
+                idxSplit[baseIdxSplitLen] = str(int(idxSplit[baseIdxSplitLen])+1)
+                idx = ",".join(idxSplit)
+                groupScheds[n] = (idx, idxData)
+                idxIncr.append(n)
+            elif idx.startswith(nextBaseIdx):
+                idxSplit = idx.split(",")
+                idxSplit[baseIdxSplitLen] = str(int(idxSplit[baseIdxSplitLen])-1)
+                idx = ",".join(idxSplit)
+                groupScheds[n] = (idx, idxData)
+                idxDecr.append(n)
+                
+        newScheds = groupScheds[:idxIncr[0]]
+        for x in idxDecr:
+            newScheds.append(groupScheds[x])
+        for x in idxIncr:
+            newScheds.append(groupScheds[x])
+        newScheds += groupScheds[idxDecr[-1]+1:] 
+        self._data[groupSel] = newScheds      
+        
+        self.SaveStateToUndoStack()
+        self.schedList.Select(self.schedList.GetNextSibling(next))
+        self.UpdateScheduleToolbar()
+        # finally, clear the redo stack        
         self._redo_stack = []
     
     def MoveScheduleItemUp(self):
-        """ move then item up by moving the previous item down """
+        """ move item up by moving the previous item down """
 
         # valid item selection?
         selection = self.schedList.GetSelection()
@@ -662,7 +697,7 @@ class Main(wx.Frame):
         prevBaseIdx = baseIdx.split(",")
         prevBaseIdx[-1] = str(int(prevBaseIdx[-1])-1)
         prevBaseIdx = ",".join(prevBaseIdx)
-        print("baseIdx: {0}, prevBaseIdx: {1}".format(baseIdx, prevBaseIdx))
+        
         idxDecr = []
         idxIncr = []
         for n, (idx, idxData) in enumerate(groupScheds):
@@ -687,6 +722,8 @@ class Main(wx.Frame):
             newScheds.append(groupScheds[x])
         newScheds += groupScheds[idxDecr[-1]+1:] 
         self._data[groupSel] = newScheds
+        
+        self.UpdateScheduleToolbar()
          
     def OnClose(self, event):
         # save data before exiting

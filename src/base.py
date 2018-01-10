@@ -232,7 +232,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             idxData["selected"] = self.IsSelected(item)
 
             data.append((idx, idxData))
-            items.append((item, idxData))
+            items.append((item, idx))
             lastItem = item
             item = self.GetNextItem(item)
 
@@ -275,7 +275,6 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
                 self.Select(item)
             expanded = idxData["expanded"]
             if expanded is True:
-                print( expanded )
                 expandedItems.append(item)
             items[idx] = item
 
