@@ -643,10 +643,11 @@ class Main(wx.Frame):
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
             return
-
+        baseIdx = self.schedList.GetItemIndex(selection)
+        
         parent = self.schedList.GetItemParent(selection)        
         previous = self.schedList.GetPreviousSibling(selection)
-        assert previous.IsOk() is True, "Previous item is no valid"
+        assert previous.IsOk() is True, "Previous item is not valid"
         self.SaveStateToUndoStack()
         
         prevSubTree = self.schedList.GetSubTree(previous)
@@ -656,25 +657,37 @@ class Main(wx.Frame):
         # need to reflect these changes in self._data
         groupSel = self.GetGroupListIndex(self.groupList.GetSelection())
         groupScheds = self._data[groupSel]
-        baseIdx = self.schedList.GetItemIndex(selection)
+        
         baseIdxSplitLen = len(baseIdx.split(",")) - 1
         prevBaseIdx = baseIdx.split(",")
         prevBaseIdx[-1] = str(int(prevBaseIdx[-1])-1)
         prevBaseIdx = ",".join(prevBaseIdx)
-        print(baseIdx,prevBaseIdx)
+        print("baseIdx: {0}, prevBaseIdx: {1}".format(baseIdx, prevBaseIdx))
         idxDecr = []
+        idxIncr = []
         for n, (idx, idxData) in enumerate(groupScheds):
             if idx.startswith(baseIdx):
                 idxSplit = idx.split(",")
                 idxSplit[baseIdxSplitLen] = str(int(idxSplit[baseIdxSplitLen])-1)
                 idx = ",".join(idxSplit)
+                groupScheds[n] = (idx, idxData)
+                idxDecr.append(n)
             elif idx.startswith(prevBaseIdx):
                 idxSplit = idx.split(",")
                 idxSplit[baseIdxSplitLen] = str(int(idxSplit[baseIdxSplitLen])+1)
                 idx = ",".join(idxSplit)
-                idxDecr.append(n)
-        print(idxDecr)        
-            
+                groupScheds[n] = (idx, idxData)
+                idxIncr.append(n)
+                
+        print(idxDecr, idxIncr)
+        newScheds = groupScheds[:idxIncr[0]]
+        for x in idxDecr:
+            newScheds.append(groupScheds[x])
+        for x in idxIncr:
+            newScheds.append(groupScheds[x])
+        newScheds += groupScheds[idxDecr[-1]+1:] 
+        self._data[groupSel] = newScheds
+         
     def OnClose(self, event):
         # save data before exiting
         self.WriteData()
@@ -861,7 +874,7 @@ class Main(wx.Frame):
         """ update the schedule item information """
 
         selection = self.schedList.GetSelection()
-
+        print(self.schedList.GetItemIndex(selection ))
         # logging.info("Schedule tree items selected: %s" % str(selection))
         try:
             text = self.schedList.GetItemText(selection)

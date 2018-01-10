@@ -44,6 +44,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
         idx = "0"
         
         root = self.GetRootItem()
+        items = []
         while item.IsOk():
             
             # first top level item
@@ -58,7 +59,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
                 
             # first child of previous item
             elif item == self.GetFirstChild(lastItem):
-                print(self.GetItemText(item, 0))
+                # print(self.GetItemText(item, 0))
                 idx += ",0"
                 
             # sibling of previous item
@@ -77,10 +78,22 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
                 del idx[-1]
                 idx.append(str(next))
                 idx = ",".join(idx)
-
+            
+            else:
+                for itm, itmIdx in items:
+                    if self.GetNextSibling(itm) != item:
+                        continue
+                    idx = itmIdx.split(",")
+                    next = int(idx[-1]) + 1 # ...and increment last
+                    idx = idx[0:-1]
+                    idx.append(str(next))
+                    idx = ",".join(idx)
+                    break
+                        
             if item == selection:
                 break
             lastItem = item
+            items.append((item, idx))
             item = self.GetNextItem(item)
 
         return idx
@@ -155,6 +168,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
     def GetTree(self):
         data = []
         item = self.GetFirstItem()
+        items = []
         lastItem = item
         if not item.IsOk():
             return data
@@ -179,7 +193,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
                 
             # first child of previous item
             elif item == self.GetFirstChild(lastItem):
-                print(self.GetItemText(item, 0))
+                # print(self.GetItemText(item, 0))
                 idx += ",0"
                 
             # sibling of previous item
@@ -198,6 +212,18 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
                 del idx[-1]
                 idx.append(str(next))
                 idx = ",".join(idx)
+            
+            else:
+                for itm, itmIdx in items:
+                    if self.GetNextSibling(itm) != item:
+                        continue
+                    idx = itmIdx.split(",")
+                    next = int(idx[-1]) + 1 # ...and increment last
+                    idx = idx[0:-1]
+                    idx.append(str(next))
+                    idx = ",".join(idx)
+                    break
+                
 
             idxData = {}
             idxData["columns"] = {str(c): self.GetItemText(item, c) for c in range(columnCount)}
@@ -205,8 +231,8 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             idxData["expanded"] = self.IsExpanded(item)
             idxData["selected"] = self.IsSelected(item)
 
-            print(lastItem,item, idx, self.GetItemText(item, 0))
             data.append((idx, idxData))
+            items.append((item, idxData))
             lastItem = item
             item = self.GetNextItem(item)
 
