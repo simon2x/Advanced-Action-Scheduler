@@ -294,14 +294,14 @@ class Main(wx.Frame):
                       ("Save As...", "Save Schedule File As...", True, wx.ID_ANY),
                       ("Close File", "Close Schedule File", False, wx.ID_CLOSE),
                       ("Import", "Import Schedule File", True, wx.ID_ANY),
-                      ("Preferences", "Open Preferences...", True, wx.ID_ANY),
+                      ("Settings", "Open Settings...", True, wx.ID_ANY),
                       ("Exit", "Exit Program", True, wx.ID_ANY)]
         for item, helpStr, state, wxId in file_menus:
             self._menus[item] = menu_file.Append(wxId, item, helpStr)
             self._menus[item].Enable(state)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
 
-            if item == "Preferences":
+            if item == "Settings":
                 menu_file.AppendSeparator()
 
         menu_help = wx.Menu()
