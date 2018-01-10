@@ -206,9 +206,9 @@ class Main(wx.Frame):
 
         infopanel = wx.Panel(self.splitter2)
         infopanelsizer = wx.BoxSizer(wx.VERTICAL)
-        self.info_sched = wx.TextCtrl(infopanel, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH)
+        self.infoSched = wx.TextCtrl(infopanel, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH)
 
-        infopanelsizer.Add(self.info_sched, 1, wx.ALL|wx.EXPAND, 0)
+        infopanelsizer.Add(self.infoSched, 1, wx.ALL|wx.EXPAND, 0)
         infopanel.SetSizer(infopanelsizer)
 
         self.splitter2.SplitHorizontally(self.schedList, infopanel)
@@ -804,7 +804,7 @@ class Main(wx.Frame):
         self.schedBtns["Add Schedule"].Disable()
         self.UpdateScheduleToolbar()
         # # click the information text
-        # self.info_sched.SetValue("")
+        # self.infoSched.SetValue("")
     
     def OnListItemActivated(self, event):
         self.OnAddFunction()
@@ -861,12 +861,12 @@ class Main(wx.Frame):
             value = newName + DELIMITER + value
             self.schedList.SetItemText(selection, 0, value)
         else:
-            dlg = self.GetDialog(newName)
+            dlg = self.GetDialog(name)
             dlg.SetValue(params)
             if dlg.ShowModal() != wx.ID_OK:
                 return
             value = dlg.GetValue()
-            value = newName + DELIMITER + value
+            value = name + DELIMITER + value
             self.schedList.SetItemText(selection, 0, value)
                 
         idx = self.schedList.GetItemIndex(selection)
@@ -880,7 +880,7 @@ class Main(wx.Frame):
         self.schedList.SetFocus()
 
         # updated information
-        self.info_sched.SetValue(value)    
+        self.infoSched.SetValue(value)    
 
     def OnScheduleToolBar(self, event):
         e = event.GetEventObject()
@@ -915,9 +915,9 @@ class Main(wx.Frame):
         # logging.info("Schedule tree items selected: %s" % str(selection))
         try:
             text = self.schedList.GetItemText(selection)
-            self.info_sched.SetValue(text)
+            self.infoSched.SetValue(text)
         except:
-            self.info_sched.SetValue("")
+            self.infoSched.SetValue("")
             
         self.UpdateScheduleToolbar()    
             
