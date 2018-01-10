@@ -1169,7 +1169,8 @@ class Main(wx.Frame):
         """ set the group list tree """
         for idx in sorted([int(x) for x in data.keys()]):
             item = self.groupList.AppendItemToRoot(data[str(idx)]["columns"]["0"])
-            self._data[item] = data[str(idx)]["schedules"] 
+            self.groupList.CheckItem(item, data[str(idx)]["checked"])
+            self._data[item] = data[str(idx)]["schedules"]
         self.groupList.UnselectAll()
         
     def SetScheduleTree(self, data):
