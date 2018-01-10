@@ -292,7 +292,7 @@ class Main(wx.Frame):
                       ("Open...", "Open Schedule File", True, wx.ID_ANY),
                       ("Save", "Save Schedule File", True, wx.ID_ANY),
                       ("Save As...", "Save Schedule File As...", True, wx.ID_ANY),
-                      ("Close", "Close Schedule File", False, wx.ID_CLOSE),
+                      ("Close File", "Close Schedule File", False, wx.ID_CLOSE),
                       ("Import", "Import Schedule File", True, wx.ID_ANY),
                       ("Preferences", "Open Preferences...", True, wx.ID_ANY),
                       ("Exit", "Exit Program", True, wx.ID_ANY)]
@@ -935,7 +935,7 @@ class Main(wx.Frame):
         if label == "About":
             self.ShowAboutDialog()
           
-        elif label == "Close":
+        elif label == "Close File":
             self.CloseFile()  
             
         elif label == "Check for updates":
