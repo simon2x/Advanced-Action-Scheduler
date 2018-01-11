@@ -17,8 +17,8 @@ class AddDelay(wx.Dialog):
         grid = wx.GridBagSizer(5,5)
 
         row = 0
-        self.spinDelay = wx.SpinCtrl(panel, max=60, min=0)
-        self.spinDelay2 = wx.SpinCtrl(panel, max=60, min=0)
+        self.spinDelay = wx.SpinCtrl(panel, max=99, min=0)
+        self.spinDelay2 = wx.SpinCtrl(panel, max=99, min=0)
         self.spinDelay.Bind(wx.EVT_SPINCTRL, self.OnSpinDelay)
         self.spinDelay2.Bind(wx.EVT_SPINCTRL, self.OnSpinDelay)
         self.labelDelayValue = wx.StaticText(panel, label="0.0s")
@@ -45,10 +45,6 @@ class AddDelay(wx.Dialog):
 
         panel.SetSizer(sizer)
         w, h = sizer.Fit(self)
-        #self.SetSize((w*1.5, h))
-        # self.SetMinSize((w, h*1.5))
-
-        # self.SetMaxSize(sizer.Fit(self))
 
         self.Bind(wx.EVT_KEY_UP, self.OnKeyUp)
 
