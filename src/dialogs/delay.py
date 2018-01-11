@@ -12,26 +12,21 @@ class AddDelay(wx.Dialog):
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
         sbox = wx.StaticBox(panel, label="")
         sboxSizer = wx.StaticBoxSizer(sbox, wx.HORIZONTAL)
         grid = wx.GridBagSizer(5,5)
 
         row = 0
-        # row += 1 #let's start at 1, to give some space
-
-        labelDelay = wx.StaticText(panel, label="Add custom delay:")
-        self.spinDelay = wx.SpinCtrl(panel, max=60, min=0, size=(50, -1))
-        self.spinDelay2 = wx.SpinCtrl(panel, max=60, min=0, size=(50, -1))
+        self.spinDelay = wx.SpinCtrl(panel, max=60, min=0)
+        self.spinDelay2 = wx.SpinCtrl(panel, max=60, min=0)
         self.spinDelay.Bind(wx.EVT_SPINCTRL, self.OnSpinDelay)
         self.spinDelay2.Bind(wx.EVT_SPINCTRL, self.OnSpinDelay)
         self.labelDelayValue = wx.StaticText(panel, label="0.0s")
-        grid.Add(labelDelay, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTER, border=5)
-        grid.Add(self.spinDelay, pos=(row,1), flag=wx.ALL|wx.ALIGN_BOTTOM, border=5)
-        grid.Add(self.spinDelay2, pos=(row,2), flag=wx.ALL|wx.ALIGN_BOTTOM, border=5)
-        grid.Add(self.labelDelayValue, pos=(row,3), flag=wx.ALL|wx.ALIGN_CENTER, border=5)
+        grid.Add(self.spinDelay, pos=(row,1), span=(2,2), flag=wx.ALL|wx.ALIGN_BOTTOM, border=5)
+        grid.Add(self.spinDelay2, pos=(row,3), span=(2,2), flag=wx.ALL|wx.ALIGN_BOTTOM, border=5)
+        grid.Add(self.labelDelayValue, pos=(row,5), span=(2,2), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
 
-        sboxSizer.Add(grid, 1, wx.ALL|wx.EXPAND, 5)
+        sboxSizer.Add(grid, 1, wx.ALL|wx.EXPAND, 10)
         sboxSizer.AddSpacer(10)
 
         #-----
@@ -49,9 +44,8 @@ class AddDelay(wx.Dialog):
         sizer.Add(hsizer, 0, wx.ALL|wx.EXPAND, 5)
 
         panel.SetSizer(sizer)
-
         w, h = sizer.Fit(self)
-        self.SetSize((w*1.5, h))
+        #self.SetSize((w*1.5, h))
         # self.SetMinSize((w, h*1.5))
 
         # self.SetMaxSize(sizer.Fit(self))
