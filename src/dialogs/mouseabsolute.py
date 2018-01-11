@@ -9,7 +9,7 @@ PLATFORM = platform.system()
 if PLATFORM == "Windows":
     from windowmanager import windows as winman
 elif PLATFORM == "Linux":
-    from windowmanager import windows as winman
+    from windowmanager import linux as winman
     
 class FindPosition(wx.Dialog):
 
@@ -103,9 +103,9 @@ class MouseClickAbsolute(wx.Dialog):
         btnRefresh = wx.Button(panel, label="Refresh")
         btnRefresh.Bind(wx.EVT_BUTTON, self.OnButton)
 
-        grid.Add(lblFunction, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
+        grid.Add(lblFunction, pos=(row,0), flag=wx.ALL|wx.EXPAND|wx.ALIGN_BOTTOM, border=5)
         grid.Add(self.cboxWindow, pos=(row,1), span=(0,2), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(btnRefresh, pos=(row,3), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(btnRefresh, pos=(row,3), flag=wx.ALL|wx.EXPAND)
 
         row += 1
         self.chkMatchCase = wx.CheckBox(panel, label="Match Case")
@@ -118,7 +118,7 @@ class MouseClickAbsolute(wx.Dialog):
         row += 1
         lblOffsetX = wx.StaticText(panel, label="Offset (x):")
         self.spinOffsetX = wx.SpinCtrl(panel, min=0, max=5000)
-        grid.Add(lblOffsetX, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(lblOffsetX, pos=(row,1), flag=wx.ALL|wx.EXPAND|wx.ALIGN_BOTTOM, border=5)
         grid.Add(self.spinOffsetX, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
 
         row += 1
@@ -134,7 +134,7 @@ class MouseClickAbsolute(wx.Dialog):
         btnGet.Bind(wx.EVT_BUTTON, self.OnButton)
         grid.Add(lblOffsetX, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
         grid.Add(self.spinW, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(btnGet, pos=(row,3), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(btnGet, pos=(row,3), flag=wx.ALL|wx.EXPAND)
 
         row += 1
         lblOffsetY = wx.StaticText(panel, label="Height (h):")
@@ -143,7 +143,7 @@ class MouseClickAbsolute(wx.Dialog):
         btnSet.Bind(wx.EVT_BUTTON, self.OnButton)
         grid.Add(lblOffsetY, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
         grid.Add(self.spinH, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(btnSet, pos=(row,3), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(btnSet, pos=(row,3), flag=wx.ALL|wx.EXPAND)
 
 
         row += 1
@@ -161,12 +161,12 @@ class MouseClickAbsolute(wx.Dialog):
         btnFind.Bind(wx.EVT_BUTTON, self.OnButton)
         grid.Add(lblY, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
         grid.Add(self.spinY, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(btnFind, pos=(row,3), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(btnFind, pos=(row,3), flag=wx.ALL|wx.EXPAND)
 
         grid.AddGrowableCol(1)
 
         sboxSizer.AddSpacer(10)
-        sboxSizer.Add(grid, 1, wx.ALL|wx.EXPAND, 2)
+        sboxSizer.Add(grid, 1, wx.ALL|wx.EXPAND, 5)
         #-----
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         hsizer.AddStretchSpacer()
@@ -179,8 +179,8 @@ class MouseClickAbsolute(wx.Dialog):
         hsizer.Add(self.btnAdd, 0, wx.ALL|wx.EXPAND, 5)
 
         #add to main sizer
-        sizer.Add(sboxSizer, 0, wx.ALL|wx.EXPAND, 2)
-        sizer.Add(hsizer, 0, wx.ALL|wx.EXPAND, 2)
+        sizer.Add(sboxSizer, 0, wx.ALL|wx.EXPAND, 5)
+        sizer.Add(hsizer, 0, wx.ALL|wx.EXPAND, 5)
 
         panel.SetSizer(sizer)
 
