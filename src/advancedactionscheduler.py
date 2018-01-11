@@ -284,8 +284,6 @@ class Main(wx.Frame):
         self.UpdateScheduleToolbar()
         self.UpdateTitlebar()
         
-        self.menubar.FindItemById(wx.ID_CLOSE).Enable(False)
-        
     def CloseFile(self):
         dlg = wx.MessageDialog(self,
                                message="Save file before closing?",
@@ -308,7 +306,7 @@ class Main(wx.Frame):
                      ("Open...", "Open Schedule File", True, wx.ID_ANY),
                      ("Save", "Save Schedule File", True, wx.ID_ANY),
                      ("Save As...", "Save Schedule File As...", True, wx.ID_ANY),
-                     ("Close File", "Close Schedule File", False, wx.ID_CLOSE),
+                     ("Close File", "Close Schedule File", True, wx.ID_ANY),
                      ("Import", "Import Schedule File", True, wx.ID_ANY),
                      ("Settings", "Open Settings...", True, wx.ID_ANY),
                      ("Exit", "Exit Program", True, wx.ID_ANY)]
@@ -634,7 +632,7 @@ class Main(wx.Frame):
             self.SaveDataToJSON("config.json", self._appConfig)
             self.UpdateTitlebar()
             
-            self.menubar.FindItemById(wx.ID_CLOSE).Enable(True)
+            # self.menubar.Enable(wx.ID_CLOSE, True)
             
         except FileNotFoundError:
             return
