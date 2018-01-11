@@ -330,6 +330,7 @@ class Main(wx.Frame):
             ("Open", "Open", True, wx.ID_OPEN),
             ("Save", "Save", True, wx.ID_SAVE),
             ("Save As...", "Save As...", True, wx.ID_SAVEAS),
+            ("Import", "Import", True, wx.ID_ANY),
             ("Add Group", "Add Group", True, wx.ID_ADD),
             ("Remove Group", "Remove Selected Group", False, wx.ID_REMOVE),
             ("Undo", "Undo", False, wx.ID_UNDO),
@@ -939,6 +940,8 @@ class Main(wx.Frame):
             self.DisableScheduleManager()
         elif label == "Enable Schedule Manager":
             self.EnableScheduleManager()
+        elif label == "Import":
+            self.ShowImportDialog()    
         elif label == "New":
             self.CloseFile()
         elif label == "Open":
