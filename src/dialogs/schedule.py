@@ -3,6 +3,7 @@ import sys
 import time
 import wx
 import base
+from ast import literal_eval as make_tuple
 
 DELIMITER = " ➡ "
 
@@ -34,7 +35,6 @@ class AddSchedule(wx.Dialog):
         sboxSizer.Add(hSizer, 0, wx.ALL|wx.EXPAND, 5)
 
         hSizer = wx.BoxSizer(wx.HORIZONTAL)
-
         self.dayOfWeek = {}
         self._dayOfWeek = ["mon","tue","wed","thu","fri","sat","sun"]
         vsizer = wx.BoxSizer(wx.VERTICAL)
@@ -86,6 +86,12 @@ class AddSchedule(wx.Dialog):
 
         sboxSizer.Add(hSizer, 0, wx.ALL, 5)
 
+        hSizerClear = wx.BoxSizer(wx.HORIZONTAL)
+        for label in ["Days","Hours","Minutes","Seconds"]:
+            btn = wx.Button(panel, label="Clear {0}".format(label), name=label)
+            btn.Bind(wx.EVT_BUTTON, self.OnButtonClear)
+            hSizerClear.Add(btn, 0, wx.ALL|wx.EXPAND, 5)
+            
         #-----
         hSizer = wx.BoxSizer(wx.HORIZONTAL)
         hSizer.AddStretchSpacer()
@@ -98,6 +104,7 @@ class AddSchedule(wx.Dialog):
 
         #add to main sizer
         sizer.Add(sboxSizer, 0, wx.ALL|wx.EXPAND, 2)
+        sizer.Add(hSizerClear, 0, wx.ALL|wx.EXPAND, 5)
         sizer.Add(hSizer, 0, wx.ALL|wx.EXPAND, 5)
 
         panel.SetSizer(sizer)
@@ -168,7 +175,27 @@ class AddSchedule(wx.Dialog):
             self.EndModal(id)
         elif label == "Ok":
             self.EndModal(id)
-    
+            
+    def OnButtonClear(self, event):
+        e = event.GetEventObject()
+        name = e.GetName()
+        id = e.GetId()
+
+        _, currentParams = self.GetValue()
+        currentParams = {j:k for j,k in make_tuple(currentParams)}
+        if name == "Days":
+            p = self.dayOfWeek
+        elif name == "Hours":
+            p = self.hours
+        elif name == "Minutes":
+            p = self.mins
+        elif name == "Seconds":
+            p = self.secs
+        
+        for q in p:
+            p[q].SetName("0")
+            p[q].SetBackgroundColour("default")
+            
     def OnScheduleNameEdit(self, event):
         e = event.GetEventObject()
         value = e.GetValue()
@@ -209,7 +236,7 @@ class AddSchedule(wx.Dialog):
         
     def SetValue(self, value):
         params = value
-
+        
         if "name" in params:
             self.textName.SetValue(params["name"])
 
