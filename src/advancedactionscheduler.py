@@ -285,6 +285,8 @@ class Main(wx.Frame):
         self.UpdateTitlebar()
         
     def CloseFile(self):
+        self.groupList.DeleteAllItems()
+        return
         dlg = wx.MessageDialog(self,
                                message="Save file before closing?",
                                caption="Close File",
@@ -858,7 +860,7 @@ class Main(wx.Frame):
         elif label == "Settings":
             self.ShowSettingsDialog() 
     
-    def OnScheduleItemEdit(self, event):
+    def OnScheduleItemEdit(self, event=None):
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
             return
@@ -925,8 +927,8 @@ class Main(wx.Frame):
             self.MoveScheduleItemUp()   
             
     def OnScheduleTreeActivated(self, event):
-        e = event.GetEventObject()
-
+        self.OnScheduleItemEdit(None)        
+        
     def OnScheduleTreeSelectionChanged(self, event=None):
     
         """ update the schedule item information """
