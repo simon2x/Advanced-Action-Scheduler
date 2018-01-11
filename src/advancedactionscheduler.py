@@ -931,6 +931,7 @@ class Main(wx.Frame):
         e = event.GetEventObject()
 
     def OnScheduleTreeSelectionChanged(self, event=None):
+    
         """ update the schedule item information """
 
         selection = self.schedList.GetSelection()
@@ -996,7 +997,7 @@ class Main(wx.Frame):
             self.SaveData()  
             
         # proceed by opening file
-        wildcard = "JSON files (*.json)|"
+        wildcard = "JSON files (*.json)|*.json;"
         dlg = wx.FileDialog(self, 
                             defaultDir="",
                             message="Open Schedule File", 
@@ -1084,7 +1085,7 @@ class Main(wx.Frame):
         else:
             path, name = "", ""
             
-        wildcard = "JSON files (*.json;)|"
+        wildcard = "JSON files (*.json)|*.json;"
         file = wx.FileDialog(self, 
                              defaultDir=path,
                              defaultFile=name,
