@@ -817,17 +817,16 @@ class Main(wx.Frame):
         self.schedList.DeleteAllItems()
         groupSel = self.groupList.GetSelection()
         for item, data in self._data.items():
+            print(groupSel==item)
             if groupSel != item:
                 continue
-            self.toolbar.FindById(wx.ID_REMOVE).Enable(True)  
-            self.toolbar.Realize()
+            self.toolbar.EnableTool(wx.ID_REMOVE, True)
             self.SetScheduleTree(data)
             
             self.schedBtns["Add Schedule"].Enable()
             return
         
-        self.toolbar.FindById(wx.ID_REMOVE).Enable(False)
-        self.toolbar.Realize()
+        self.toolbar.EnableTool(wx.ID_REMOVE, False)
         
         self.schedBtns["Add Schedule"].Disable()
         self.UpdateScheduleToolbar()
@@ -1276,7 +1275,8 @@ class Main(wx.Frame):
         self.schedList.DeleteAllItems()
         self.groupList.DeleteItem(groupIdx)
         del self._data[groupIdx]
-
+        
+        self.toolbar.EnableTool(wx.ID_REMOVE, False)
         self._redo_stack = []
         self.WriteData()
         
