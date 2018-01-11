@@ -1,10 +1,16 @@
 import logging
+import platform
 import sys
 import wx
-import windowmanager
 import wx.lib.agw.floatspin as floatspin
 from ast import literal_eval as make_tuple
 
+PLATFORM = platform.system()
+if PLATFORM == "Windows":
+    from windowmanager import windows as winman
+elif PLATFORM == "Linux":
+    from windowmanager import windows as winman
+    
 class FindPosition(wx.Dialog):
 
     def __init__(self, parent, rect):
@@ -92,7 +98,7 @@ class MouseClickAbsolute(wx.Dialog):
 
         lblFunction = wx.StaticText(panel, label="Window:")
         choices = []
-        choices.extend(windowmanager.GetWindowList())
+        choices.extend(winman.GetWindowList())
         self.cboxWindow = wx.ComboBox(panel, choices=choices)
         btnRefresh = wx.Button(panel, label="Refresh")
         btnRefresh.Bind(wx.EVT_BUTTON, self.OnButton)
@@ -189,7 +195,7 @@ class MouseClickAbsolute(wx.Dialog):
             title, winclass = make_tuple(self.cboxWindow.GetValue())
 
             try:
-                offw, offh, w, h = windowmanager.GetWindowRect(title, winclass)
+                offw, offh, w, h = winman.GetWindowRect(title, winclass)
             except TypeError as e:
                 logging.info(e)
                 return
@@ -208,7 +214,7 @@ class MouseClickAbsolute(wx.Dialog):
             offh = self.spinOffsetY.GetValue()
             w = self.spinW.GetValue()
             h = self.spinH.GetValue()
-            windowmanager.SetWindowSize(title, win_class, offw, offh, w, h)
+            winman.SetWindowSize(title, win_class, offw, offh, w, h)
 
             self.Raise()
 
@@ -252,7 +258,7 @@ class MouseClickAbsolute(wx.Dialog):
             value = self.cboxWindow.GetValue()
             self.cboxWindow.Clear()
             choices = []
-            choices.extend(windowmanager.GetWindowList())
+            choices.extend(winman.GetWindowList())
             self.cboxWindow.Append(choices)
             self.cboxWindow.SetValue(value)
 
