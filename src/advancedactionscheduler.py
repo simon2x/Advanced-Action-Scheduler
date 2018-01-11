@@ -317,7 +317,9 @@ class Main(wx.Frame):
             self._menus[item].Enable(state)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
 
-            if item == "Settings":
+            if item == "Import":
+                menuFile.AppendSeparator()
+            elif item == "Settings":
                 menuFile.AppendSeparator()
 
         menuRun = wx.Menu()
