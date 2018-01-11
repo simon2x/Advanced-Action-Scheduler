@@ -1271,8 +1271,12 @@ class Main(wx.Frame):
         self.WriteData()
         
     def ShowSettingsDialog(self):
-        self._settingsDialog.Show()
-        
+        try:
+            self._settingsDialog.Show()
+        except:
+            self._settingsDialog = SettingsFrame(self)
+            self._settingsDialog.Show()
+            
     def ToggleScheduleSelection(self):
         selection = self.schedList.GetSelection()
         checked = self.schedList.GetCheckedState(selection)
