@@ -42,7 +42,10 @@ class FindPosition(wx.Dialog):
         self.timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
         self.timer.Start(1)
-        
+
+    # def OnKillFocus(self, event):
+        # self.Destroy()
+
     def GetValue(self):
         print(self._absolute_position)
         return self._absolute_position
@@ -177,21 +180,6 @@ class MouseClickAbsolute(wx.Dialog):
 
         w, h = sizer.Fit(self)
 
-    def GetValue(self):
-        data = []
-        data.append(("window", self.cboxWindow.GetValue()))
-        data.append(("matchcase", self.chkMatchCase.GetValue()))
-        data.append(("resize", self.chk_resize.GetValue()))
-
-        data.append(("offsetx", self.spinOffsetX.GetValue()))
-        data.append(("offsety", self.spinOffsetY.GetValue()))
-        data.append(("width", self.spinW.GetValue()))
-        data.append(("height", self.spinH.GetValue()))
-        data.append(("x", self.spinX.GetValue()))
-        data.append(("y", self.spinY.GetValue()))
-
-        return str(data)
-        
     def OnButton(self, event):
         e = event.GetEventObject()
         label = e.GetLabel()
@@ -291,3 +279,18 @@ class MouseClickAbsolute(wx.Dialog):
         y = data["y"]
         self.spinX.SetValue(x)
         self.spinY.SetValue(y)
+
+    def GetValue(self):
+        data = []
+        data.append(("window", self.cboxWindow.GetValue()))
+        data.append(("matchcase", self.chkMatchCase.GetValue()))
+        data.append(("resize", self.chk_resize.GetValue()))
+
+        data.append(("offsetx", self.spinOffsetX.GetValue()))
+        data.append(("offsety", self.spinOffsetY.GetValue()))
+        data.append(("width", self.spinW.GetValue()))
+        data.append(("height", self.spinH.GetValue()))
+        data.append(("x", self.spinX.GetValue()))
+        data.append(("y", self.spinY.GetValue()))
+
+        return str(data)
