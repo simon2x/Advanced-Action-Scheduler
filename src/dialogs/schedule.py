@@ -16,6 +16,7 @@ class AddSchedule(wx.Dialog):
                            title="Add New Schedule")
 
         self.blacklist = blacklist
+        self.resetValue = None
         
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -87,11 +88,14 @@ class AddSchedule(wx.Dialog):
         sboxSizer.Add(hSizer, 0, wx.ALL, 5)
 
         hSizerClear = wx.BoxSizer(wx.HORIZONTAL)
+        btn = wx.Button(panel, label="Reset")
+        btn.Bind(wx.EVT_BUTTON, self.OnButtonReset)
+        hSizerClear.Add(btn, 0, wx.ALL|wx.EXPAND, 5)      
         for label in ["Days","Hours","Minutes","Seconds"]:
             btn = wx.Button(panel, label="Clear {0}".format(label), name=label)
             btn.Bind(wx.EVT_BUTTON, self.OnButtonClear)
-            hSizerClear.Add(btn, 0, wx.ALL|wx.EXPAND, 5)
-            
+            hSizerClear.Add(btn, 0, wx.ALL|wx.EXPAND, 5)      
+        
         #-----
         hSizer = wx.BoxSizer(wx.HORIZONTAL)
         hSizer.AddStretchSpacer()
@@ -195,7 +199,16 @@ class AddSchedule(wx.Dialog):
         for q in p:
             p[q].SetName("0")
             p[q].SetBackgroundColour("default")
-            
+    
+    def OnButtonReset(self, event):
+        for p in [self.dayOfWeek,self.hours,self.mins,self.secs]:
+            for q in p:
+                p[q].SetName("0")
+                p[q].SetBackgroundColour("default")
+                
+        if self.resetValue:
+            self.SetValue(self.resetValue)        
+                
     def OnScheduleNameEdit(self, event):
         e = event.GetEventObject()
         value = e.GetValue()
@@ -211,8 +224,8 @@ class AddSchedule(wx.Dialog):
             return
         
         self.labelError.SetLabel(m)
-        self.btnOk.Disable()    
-            
+        self.btnOk.Disable()   
+        
     def OnScheduleNameEnter(self, event):
         e = event.GetEventObject()
         id = e.GetId()
@@ -236,6 +249,9 @@ class AddSchedule(wx.Dialog):
         
     def SetValue(self, value):
         params = value
+        
+        if not self.resetValue:
+            self.resetValue = value
         
         if "name" in params:
             self.textName.SetValue(params["name"])
