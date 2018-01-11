@@ -818,27 +818,22 @@ class Main(wx.Frame):
 
         if label == "About":
             self.ShowAboutDialog()
-          
         elif label == "Close File":
             self.CloseFile()  
-            
         elif label == "Check for updates":
             self.ShowCheckForUpdatesDialog()  
-            
         elif label == "Exit":
             self.Close()
-
         elif label == "Import":
             self.ShowImportDialog()
-
         elif label == "New":
             self.CloseFile()
-
         elif label == "Open...":
             self.OpenFile()
-            
         elif label == "Save As...":
-            self.SaveFileAs()   
+            self.SaveFileAs()  
+        elif label == "Settings":
+            self.ShowSettingsDialog() 
     
     def OnScheduleItemEdit(self, event):
         selection = self.schedList.GetSelection()
@@ -955,7 +950,9 @@ class Main(wx.Frame):
         elif label == "Save":
             self.SaveData()
         elif label == "Save As...":
-            self.SaveFileAs()      
+            self.SaveFileAs() 
+        elif label == "Settings":
+            self.ShowSettingsDialog()   
         elif label == "Undo":
             self.DoUndo()
         
@@ -1256,6 +1253,9 @@ class Main(wx.Frame):
 
         self._redo_stack = []
         self.WriteData()
+        
+    def ShowSettingsDialog(self):
+        pass 
         
     def ToggleScheduleSelection(self):
         selection = self.schedList.GetSelection()
