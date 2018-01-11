@@ -123,6 +123,7 @@ class Main(wx.Frame):
         self.CreateMenu()
         self.CreateToolbar()
         self.CreateStatusBar()
+        self.SetIcon(wx.Icon("icons/icon.png"))
 
         #-----
         self.splitter = wx.SplitterWindow(self)
