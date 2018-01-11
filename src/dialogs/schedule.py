@@ -201,6 +201,7 @@ class AddSchedule(wx.Dialog):
             p[q].SetBackgroundColour("default")
     
     def OnButtonReset(self, event):
+        """ clear all buttons and, if applicable, revert to original values """ 
         for p in [self.dayOfWeek,self.hours,self.mins,self.secs]:
             for q in p:
                 p[q].SetName("0")

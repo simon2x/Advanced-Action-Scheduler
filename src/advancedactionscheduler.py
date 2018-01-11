@@ -285,8 +285,6 @@ class Main(wx.Frame):
         self.UpdateTitlebar()
         
     def CloseFile(self):
-        self.groupList.DeleteAllItems()
-        return
         dlg = wx.MessageDialog(self,
                                message="Save file before closing?",
                                caption="Close File",
