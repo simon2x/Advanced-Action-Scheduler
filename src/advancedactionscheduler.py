@@ -934,7 +934,6 @@ class Main(wx.Frame):
         """ update the schedule item information """
 
         selection = self.schedList.GetSelection()
-        print(self.schedList.GetItemIndex(selection ))
         # logging.info("Schedule tree items selected: %s" % str(selection))
         try:
             text = self.schedList.GetItemText(selection)

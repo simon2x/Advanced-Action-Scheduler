@@ -36,7 +36,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
         item = self.GetFirstItem()
         lastItem = item
         if not item.IsOk():
-            return data
+            return -1
           
         columnCount = self.GetColumnCount()
         row = 0
