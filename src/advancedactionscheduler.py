@@ -329,6 +329,7 @@ class Main(wx.Frame):
             ("Open", "Open", True, wx.ID_OPEN),
             ("Save", "Save", True, wx.ID_SAVE),
             ("Save As...", "Save As...", True, wx.ID_SAVEAS),
+            ("Close", "Close", True, wx.ID_CLOSE),
             ("Import", "Import", True, wx.ID_ANY),
             ("Add Group", "Add Group", True, wx.ID_ADD),
             ("Remove Group", "Remove Selected Group", False, wx.ID_REMOVE),
@@ -349,7 +350,7 @@ class Main(wx.Frame):
             
             tool.Enable(state)
             
-            if label == "Save As...":
+            if label == "Close":
                 toolbar.AddSeparator()  
             elif label == "Redo":
                 toolbar.AddSeparator()
@@ -934,7 +935,9 @@ class Main(wx.Frame):
         logging.info("OnToolBar event: %s" % label)
 
         if label == "Add Group":
-            self.ShowAddGroupDialog()   
+            self.ShowAddGroupDialog()
+        elif label == "Close":
+            self.CloseFile()    
         elif label == "Disable Schedule Manager":
             self.DisableScheduleManager()
         elif label == "Enable Schedule Manager":
