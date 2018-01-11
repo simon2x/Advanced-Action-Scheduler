@@ -156,7 +156,7 @@ class Main(wx.Frame):
         hsizer_functions = wx.WrapSizer(wx.HORIZONTAL)
         self.schedBtns = {}
         for label in ["Add Schedule", "Up", "Down", "Edit", "Toggle", "Delete"]:
-            btn = wx.Button(schedpanel, label=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
+            btn = wx.Button(schedpanel, label=label, name=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
             btn.Disable()
             self.schedBtns[label] = btn
             img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
@@ -885,24 +885,24 @@ class Main(wx.Frame):
 
     def OnScheduleToolBar(self, event):
         e = event.GetEventObject()
-        label = e.GetLabel()
+        name = e.GetName()
 
-        if label == "Add Function":
+        if name == "Add Function":
             self.OnComboboxFunction()
 
-        elif label == "Add Schedule":
+        elif name == "Add Schedule":
             self.ShowAddScheduleDialog()
                 
-        elif label == "Delete":
+        elif name == "Delete":
             self.DeleteScheduleItem()   
             
-        elif label == "Down":
+        elif name == "Down":
             self.MoveScheduleItemDown()
             
-        elif label == "Toggle":
+        elif name == "Toggle":
             self.ToggleScheduleSelection()
             
-        elif label == "Up":
+        elif name == "Up":
             self.MoveScheduleItemUp()   
             
     def OnScheduleTreeActivated(self, event):
