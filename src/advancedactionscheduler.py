@@ -814,7 +814,6 @@ class Main(wx.Frame):
             
     def OnGroupItemSelected(self, event):
         """ update schedule list """
-        self.schedList.DeleteAllItems()
         groupSel = self.groupList.GetSelection()
         for item, data in self._data.items():
             print(groupSel==item)
