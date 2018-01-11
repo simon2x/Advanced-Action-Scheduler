@@ -132,7 +132,6 @@ class Main(wx.Frame):
         leftsizer = wx.BoxSizer(wx.VERTICAL)
 
         self.groupList = base.TreeListCtrl(leftpanel)
-        # self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self.OnGroupItemSelected)
         self.groupList.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnGroupItemSelected)
         self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_CHECKED, self.OnGroupItemChecked)
         self.groupList.AppendColumn("Group")
