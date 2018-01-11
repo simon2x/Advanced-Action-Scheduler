@@ -334,7 +334,8 @@ def GetWindowList():
             titles.append(buff.value)
         return True
     EnumWindows(EnumWindowsProc(foreach_window), 0)
- 
+    
+    titles = sorted([t for t in titles if t])
     return titles
 
 def GetWindowInfo():
