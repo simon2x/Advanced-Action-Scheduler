@@ -323,8 +323,8 @@ class Main(wx.Frame):
                 menuFile.AppendSeparator()
 
         menuRun = wx.Menu()
-        runMenus = [("Enable Schedule Manager", "Check for updates (Not Yet Implemented)"),
-                    ("Disable Schedule Manager", "Import Images From Folder")]
+        runMenus = [("Enable Schedule Manager", "Enable Schedule Manager"),
+                    ("Disable Schedule Manager", "Disable Schedule Manager")]
         for item, helpStr in runMenus:
             self._menus[item] = menuRun.Append(wx.ID_ANY, item, helpStr)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
