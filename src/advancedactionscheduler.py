@@ -99,7 +99,22 @@ DEFAULTCONFIG = {
     "fileList": [],
     "windowSize": False,
     "windowPos": False,
-}  
+}
+
+class SettingsFrame(wx.Frame):
+
+    def __init__(self, parent):
+
+        self._title = "Settings"
+
+        wx.Frame.__init__(self,
+                          parent=parent,
+                          title=self._title)
+                          
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        panel.SetSizer(sizer)
+        
 class Main(wx.Frame):
 
     def __init__(self):
@@ -111,6 +126,7 @@ class Main(wx.Frame):
                           title=self._title)
 
         self._appConfig = DEFAULTCONFIG 
+        self._settingsDialog = SettingsFrame(self)
         self._data = {}
         self._menus = {}
         self._redo_stack = []
@@ -1255,7 +1271,7 @@ class Main(wx.Frame):
         self.WriteData()
         
     def ShowSettingsDialog(self):
-        pass 
+        self._settingsDialog.Show()
         
     def ToggleScheduleSelection(self):
         selection = self.schedList.GetSelection()
