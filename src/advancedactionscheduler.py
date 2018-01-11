@@ -303,32 +303,40 @@ class Main(wx.Frame):
     def CreateMenu(self):
         menubar = wx.MenuBar()
 
-        menu_file = wx.Menu()
-        file_menus = [("New", "New Schedule File", True, wx.ID_ANY),
-                      ("Open...", "Open Schedule File", True, wx.ID_ANY),
-                      ("Save", "Save Schedule File", True, wx.ID_ANY),
-                      ("Save As...", "Save Schedule File As...", True, wx.ID_ANY),
-                      ("Close File", "Close Schedule File", False, wx.ID_CLOSE),
-                      ("Import", "Import Schedule File", True, wx.ID_ANY),
-                      ("Settings", "Open Settings...", True, wx.ID_ANY),
-                      ("Exit", "Exit Program", True, wx.ID_ANY)]
-        for item, helpStr, state, wxId in file_menus:
-            self._menus[item] = menu_file.Append(wxId, item, helpStr)
+        menuFile = wx.Menu()
+        fileMenus = [("New", "New Schedule File", True, wx.ID_ANY),
+                     ("Open...", "Open Schedule File", True, wx.ID_ANY),
+                     ("Save", "Save Schedule File", True, wx.ID_ANY),
+                     ("Save As...", "Save Schedule File As...", True, wx.ID_ANY),
+                     ("Close File", "Close Schedule File", False, wx.ID_CLOSE),
+                     ("Import", "Import Schedule File", True, wx.ID_ANY),
+                     ("Settings", "Open Settings...", True, wx.ID_ANY),
+                     ("Exit", "Exit Program", True, wx.ID_ANY)]
+        for item, helpStr, state, wxId in fileMenus:
+            self._menus[item] = menuFile.Append(wxId, item, helpStr)
             self._menus[item].Enable(state)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
 
             if item == "Settings":
-                menu_file.AppendSeparator()
+                menuFile.AppendSeparator()
 
-        menu_help = wx.Menu()
-        help_menus = [("Check for updates", "Check for updates (Not Yet Implemented)"),
-                      ("About", "Import Images From Folder")]
-        for item, helpStr in help_menus:
-            self._menus[item] = menu_help.Append(wx.ID_ANY, item, helpStr)
+        menuRun = wx.Menu()
+        runMenus = [("Enable Schedule Manager", "Check for updates (Not Yet Implemented)"),
+                    ("Disable Schedule Manager", "Import Images From Folder")]
+        for item, helpStr in runMenus:
+            self._menus[item] = menuRun.Append(wx.ID_ANY, item, helpStr)
+            self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
+            
+        menuHelp = wx.Menu()
+        helpMenus = [("Check for updates", "Check for updates (Not Yet Implemented)"),
+                     ("About", "Import Images From Folder")]
+        for item, helpStr in helpMenus:
+            self._menus[item] = menuHelp.Append(wx.ID_ANY, item, helpStr)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
 
-        menubar.Append(menu_file, "&File")
-        menubar.Append(menu_help, "&Help")
+        menubar.Append(menuFile, "&File")
+        menubar.Append(menuRun, "&Run")
+        menubar.Append(menuHelp, "&Help")
         self.menubar = menubar
         self.SetMenuBar(menubar)
 
