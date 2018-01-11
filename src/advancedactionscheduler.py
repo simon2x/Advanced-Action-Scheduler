@@ -99,7 +99,22 @@ DEFAULTCONFIG = {
     "fileList": [],
     "windowSize": False,
     "windowPos": False,
-}  
+}
+
+class SettingsFrame(wx.Frame):
+
+    def __init__(self, parent):
+
+        self._title = "Settings"
+
+        wx.Frame.__init__(self,
+                          parent=parent,
+                          title=self._title)
+                          
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        panel.SetSizer(sizer)
+        
 class Main(wx.Frame):
 
     def __init__(self):
@@ -111,6 +126,7 @@ class Main(wx.Frame):
                           title=self._title)
 
         self._appConfig = DEFAULTCONFIG 
+        self._settingsDialog = SettingsFrame(self)
         self._data = {}
         self._menus = {}
         self._redo_stack = []
@@ -123,6 +139,7 @@ class Main(wx.Frame):
         self.CreateMenu()
         self.CreateToolbar()
         self.CreateStatusBar()
+        self.SetIcon(wx.Icon("icons/icon.png"))
 
         #-----
         self.splitter = wx.SplitterWindow(self)
@@ -131,7 +148,6 @@ class Main(wx.Frame):
         leftsizer = wx.BoxSizer(wx.VERTICAL)
 
         self.groupList = base.TreeListCtrl(leftpanel)
-        # self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self.OnGroupItemSelected)
         self.groupList.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnGroupItemSelected)
         self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_CHECKED, self.OnGroupItemChecked)
         self.groupList.AppendColumn("Group")
@@ -155,7 +171,7 @@ class Main(wx.Frame):
         hsizer_functions = wx.WrapSizer(wx.HORIZONTAL)
         self.schedBtns = {}
         for label in ["Add Schedule", "Up", "Down", "Edit", "Toggle", "Delete"]:
-            btn = wx.Button(schedpanel, label=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
+            btn = wx.Button(schedpanel, label=label, name=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
             btn.Disable()
             self.schedBtns[label] = btn
             img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
@@ -268,9 +284,9 @@ class Main(wx.Frame):
         self.UpdateScheduleToolbar()
         self.UpdateTitlebar()
         
-        self.menubar.FindItemById(wx.ID_CLOSE).Enable(False)
-        
     def CloseFile(self):
+        self.groupList.DeleteAllItems()
+        return
         dlg = wx.MessageDialog(self,
                                message="Save file before closing?",
                                caption="Close File",
@@ -287,32 +303,42 @@ class Main(wx.Frame):
     def CreateMenu(self):
         menubar = wx.MenuBar()
 
-        menu_file = wx.Menu()
-        file_menus = [("New", "New Schedule File", True, wx.ID_ANY),
-                      ("Open...", "Open Schedule File", True, wx.ID_ANY),
-                      ("Save", "Save Schedule File", True, wx.ID_ANY),
-                      ("Save As...", "Save Schedule File As...", True, wx.ID_ANY),
-                      ("Close File", "Close Schedule File", False, wx.ID_CLOSE),
-                      ("Import", "Import Schedule File", True, wx.ID_ANY),
-                      ("Settings", "Open Settings...", True, wx.ID_ANY),
-                      ("Exit", "Exit Program", True, wx.ID_ANY)]
-        for item, helpStr, state, wxId in file_menus:
-            self._menus[item] = menu_file.Append(wxId, item, helpStr)
+        menuFile = wx.Menu()
+        fileMenus = [("New", "New Schedule File", True, wx.ID_ANY),
+                     ("Open...", "Open Schedule File", True, wx.ID_ANY),
+                     ("Save", "Save Schedule File", True, wx.ID_ANY),
+                     ("Save As...", "Save Schedule File As...", True, wx.ID_ANY),
+                     ("Close File", "Close Schedule File", True, wx.ID_ANY),
+                     ("Import", "Import Schedule File", True, wx.ID_ANY),
+                     ("Settings", "Open Settings...", True, wx.ID_ANY),
+                     ("Exit", "Exit Program", True, wx.ID_ANY)]
+        for item, helpStr, state, wxId in fileMenus:
+            self._menus[item] = menuFile.Append(wxId, item, helpStr)
             self._menus[item].Enable(state)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
 
-            if item == "Settings":
-                menu_file.AppendSeparator()
+            if item == "Import":
+                menuFile.AppendSeparator()
+            elif item == "Settings":
+                menuFile.AppendSeparator()
 
-        menu_help = wx.Menu()
-        help_menus = [("Check for updates", "Check for updates (Not Yet Implemented)"),
-                      ("About", "Import Images From Folder")]
-        for item, helpStr in help_menus:
-            self._menus[item] = menu_help.Append(wx.ID_ANY, item, helpStr)
+        menuRun = wx.Menu()
+        runMenus = [("Enable Schedule Manager", "Enable Schedule Manager"),
+                    ("Disable Schedule Manager", "Disable Schedule Manager")]
+        for item, helpStr in runMenus:
+            self._menus[item] = menuRun.Append(wx.ID_ANY, item, helpStr)
+            self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
+            
+        menuHelp = wx.Menu()
+        helpMenus = [("Check for updates", "Check for updates (Not Yet Implemented)"),
+                     ("About", "Import Images From Folder")]
+        for item, helpStr in helpMenus:
+            self._menus[item] = menuHelp.Append(wx.ID_ANY, item, helpStr)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
 
-        menubar.Append(menu_file, "&File")
-        menubar.Append(menu_help, "&Help")
+        menubar.Append(menuFile, "&File")
+        menubar.Append(menuRun, "&Run")
+        menubar.Append(menuHelp, "&Help")
         self.menubar = menubar
         self.SetMenuBar(menubar)
 
@@ -329,6 +355,8 @@ class Main(wx.Frame):
             ("Open", "Open", True, wx.ID_OPEN),
             ("Save", "Save", True, wx.ID_SAVE),
             ("Save As...", "Save As...", True, wx.ID_SAVEAS),
+            ("Close", "Close", True, wx.ID_CLOSE),
+            ("Import", "Import", True, wx.ID_ANY),
             ("Add Group", "Add Group", True, wx.ID_ADD),
             ("Remove Group", "Remove Selected Group", False, wx.ID_REMOVE),
             ("Undo", "Undo", False, wx.ID_UNDO),
@@ -348,7 +376,7 @@ class Main(wx.Frame):
             
             tool.Enable(state)
             
-            if label == "Save As...":
+            if label == "Close":
                 toolbar.AddSeparator()  
             elif label == "Redo":
                 toolbar.AddSeparator()
@@ -606,7 +634,7 @@ class Main(wx.Frame):
             self.SaveDataToJSON("config.json", self._appConfig)
             self.UpdateTitlebar()
             
-            self.menubar.FindItemById(wx.ID_CLOSE).Enable(True)
+            # self.menubar.Enable(wx.ID_CLOSE, True)
             
         except FileNotFoundError:
             return
@@ -786,20 +814,18 @@ class Main(wx.Frame):
             
     def OnGroupItemSelected(self, event):
         """ update schedule list """
-        self.schedList.DeleteAllItems()
         groupSel = self.groupList.GetSelection()
         for item, data in self._data.items():
+            print(groupSel==item)
             if groupSel != item:
                 continue
-            self.toolbar.FindById(wx.ID_REMOVE).Enable(True)  
-            self.toolbar.Realize()
+            self.toolbar.EnableTool(wx.ID_REMOVE, True)
             self.SetScheduleTree(data)
             
             self.schedBtns["Add Schedule"].Enable()
             return
         
-        self.toolbar.FindById(wx.ID_REMOVE).Enable(False)
-        self.toolbar.Realize()
+        self.toolbar.EnableTool(wx.ID_REMOVE, False)
         
         self.schedBtns["Add Schedule"].Disable()
         self.UpdateScheduleToolbar()
@@ -816,29 +842,24 @@ class Main(wx.Frame):
 
         if label == "About":
             self.ShowAboutDialog()
-          
         elif label == "Close File":
             self.CloseFile()  
-            
         elif label == "Check for updates":
             self.ShowCheckForUpdatesDialog()  
-            
         elif label == "Exit":
             self.Close()
-
         elif label == "Import":
             self.ShowImportDialog()
-
         elif label == "New":
             self.CloseFile()
-
         elif label == "Open...":
             self.OpenFile()
-            
         elif label == "Save As...":
-            self.SaveFileAs()   
+            self.SaveFileAs()  
+        elif label == "Settings":
+            self.ShowSettingsDialog() 
     
-    def OnScheduleItemEdit(self, event):
+    def OnScheduleItemEdit(self, event=None):
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
             return
@@ -884,34 +905,34 @@ class Main(wx.Frame):
 
     def OnScheduleToolBar(self, event):
         e = event.GetEventObject()
-        label = e.GetLabel()
+        name = e.GetName()
 
-        if label == "Add Function":
+        if name == "Add Function":
             self.OnComboboxFunction()
 
-        elif label == "Add Schedule":
+        elif name == "Add Schedule":
             self.ShowAddScheduleDialog()
                 
-        elif label == "Delete":
+        elif name == "Delete":
             self.DeleteScheduleItem()   
             
-        elif label == "Down":
+        elif name == "Down":
             self.MoveScheduleItemDown()
             
-        elif label == "Toggle":
+        elif name == "Toggle":
             self.ToggleScheduleSelection()
             
-        elif label == "Up":
+        elif name == "Up":
             self.MoveScheduleItemUp()   
             
     def OnScheduleTreeActivated(self, event):
-        e = event.GetEventObject()
-
+        self.OnScheduleItemEdit(None)        
+        
     def OnScheduleTreeSelectionChanged(self, event=None):
+    
         """ update the schedule item information """
 
         selection = self.schedList.GetSelection()
-        print(self.schedList.GetItemIndex(selection ))
         # logging.info("Schedule tree items selected: %s" % str(selection))
         try:
             text = self.schedList.GetItemText(selection)
@@ -933,11 +954,15 @@ class Main(wx.Frame):
         logging.info("OnToolBar event: %s" % label)
 
         if label == "Add Group":
-            self.ShowAddGroupDialog()   
+            self.ShowAddGroupDialog()
+        elif label == "Close":
+            self.CloseFile()    
         elif label == "Disable Schedule Manager":
             self.DisableScheduleManager()
         elif label == "Enable Schedule Manager":
             self.EnableScheduleManager()
+        elif label == "Import":
+            self.ShowImportDialog()    
         elif label == "New":
             self.CloseFile()
         elif label == "Open":
@@ -949,7 +974,9 @@ class Main(wx.Frame):
         elif label == "Save":
             self.SaveData()
         elif label == "Save As...":
-            self.SaveFileAs()      
+            self.SaveFileAs() 
+        elif label == "Settings":
+            self.ShowSettingsDialog()   
         elif label == "Undo":
             self.DoUndo()
         
@@ -968,7 +995,7 @@ class Main(wx.Frame):
             self.SaveData()  
             
         # proceed by opening file
-        wildcard = "JSON files (*.json)|"
+        wildcard = "JSON files (*.json)|*.json;"
         dlg = wx.FileDialog(self, 
                             defaultDir="",
                             message="Open Schedule File", 
@@ -1056,7 +1083,7 @@ class Main(wx.Frame):
         else:
             path, name = "", ""
             
-        wildcard = "JSON files (*.json;)|"
+        wildcard = "JSON files (*.json)|*.json;"
         file = wx.FileDialog(self, 
                              defaultDir=path,
                              defaultFile=name,
@@ -1247,10 +1274,18 @@ class Main(wx.Frame):
         self.schedList.DeleteAllItems()
         self.groupList.DeleteItem(groupIdx)
         del self._data[groupIdx]
-
+        
+        self.toolbar.EnableTool(wx.ID_REMOVE, False)
         self._redo_stack = []
         self.WriteData()
         
+    def ShowSettingsDialog(self):
+        try:
+            self._settingsDialog.Show()
+        except:
+            self._settingsDialog = SettingsFrame(self)
+            self._settingsDialog.Show()
+            
     def ToggleScheduleSelection(self):
         selection = self.schedList.GetSelection()
         checked = self.schedList.GetCheckedState(selection)
