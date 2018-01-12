@@ -187,6 +187,36 @@ class MouseClickAbsolute(wx.Dialog):
         panel.SetSizer(sizer)
         sizer.Fit(self)
 
+    def FindPosition(self):    
+        title, win_class = make_tuple(self.cboxWindow.GetValue())
+        offw = self.spinOffsetX.GetValue()
+        offh = self.spinOffsetY.GetValue()
+        w = self.spinW.GetValue()
+        h = self.spinH.GetValue()
+
+        # resize the target window
+        # windowmanager.SetWindowSize(title, win_class, offw, offh, w, h)
+
+        rect = [offw, offh, w, h]
+        finder = FindPosition(self, rect)
+        def on_finder_close(event):
+            x, y = finder.GetValue()
+            logging.info("Got absolute position: %s" % str((x,y)))
+            self.spinX.SetValue(int(x))
+            self.spinY.SetValue(int(y))
+            event.Skip()
+            finder.Destroy()
+            self.SetFocus()
+
+        finder.Bind(wx.EVT_CLOSE, on_finder_close)
+
+        # finder.SetSize((w,h))
+        # finder.SetPosition((offw,offh))
+        x, y = self.spinX.GetValue(), self.spinY.GetValue()
+        # finder.SetValue((x,y))
+        finder.ShowModal()
+        finder.SetFocus()
+            
     def GetValue(self):
         data = []
         data.append(("window", self.cboxWindow.GetValue()))
@@ -202,82 +232,71 @@ class MouseClickAbsolute(wx.Dialog):
 
         return str(data)
         
+    def GetWindowRect(self):
+        title = self.cboxWindow.GetValue()
+
+        try:
+            offw, offh, w, h = winman.GetWindowRect(title)
+        except TypeError as e:
+            logging.info(e)
+            return
+
+        self.spinOffsetX.SetValue(offw)
+        self.spinOffsetY.SetValue(offh)
+        self.spinW.SetValue(w)
+        self.spinH.SetValue(h)
+
+        self.Raise()
+        
+    def GetWindowSize(self):
+        title = self.cboxWindow.GetValue()
+
+        try:
+            offw, offh, w, h = winman.GetWindowRect(title)
+        except TypeError as e:
+            logging.info(e)
+            return
+
+        self.spinOffsetX.SetValue(offw)
+        self.spinOffsetY.SetValue(offh)
+        self.spinW.SetValue(w)
+        self.spinH.SetValue(h)
+
+        self.Raise()
+        
     def OnButton(self, event):
         e = event.GetEventObject()
         label = e.GetLabel()
         id = e.GetId()
 
-        if label == "Get Window Size":
-            title = self.cboxWindow.GetValue()
-
-            try:
-                offw, offh, w, h = winman.GetWindowRect(title)
-            except TypeError as e:
-                logging.info(e)
-                return
-
-            self.spinOffsetX.SetValue(offw)
-            self.spinOffsetY.SetValue(offh)
-            self.spinW.SetValue(w)
-            self.spinH.SetValue(h)
-
-            self.Raise()
-
-        elif label == "Set Window Size":
-            title, win_class = make_tuple(self.cboxWindow.GetValue())
-
-            offw = self.spinOffsetX.GetValue()
-            offh = self.spinOffsetY.GetValue()
-            w = self.spinW.GetValue()
-            h = self.spinH.GetValue()
-            winman.SetWindowSize(title, win_class, offw, offh, w, h)
-
-            self.Raise()
-
+        if label == "Cancel":
+            self.EndModal(id)
         elif label == "Find Position":
-            title, win_class = make_tuple(self.cboxWindow.GetValue())
-            offw = self.spinOffsetX.GetValue()
-            offh = self.spinOffsetY.GetValue()
-            w = self.spinW.GetValue()
-            h = self.spinH.GetValue()
-
-            # resize the target window
-            # windowmanager.SetWindowSize(title, win_class, offw, offh, w, h)
-
-            rect = [offw, offh, w, h]
-            finder = FindPosition(self, rect)
-            def on_finder_close(event):
-                x, y = finder.GetValue()
-                logging.info("Got absolute position: %s" % str((x,y)))
-                self.spinX.SetValue(int(x))
-                self.spinY.SetValue(int(y))
-                event.Skip()
-                finder.Destroy()
-                self.SetFocus()
-
-            finder.Bind(wx.EVT_CLOSE, on_finder_close)
-
-            # finder.SetSize((w,h))
-            # finder.SetPosition((offw,offh))
-            x, y = self.spinX.GetValue(), self.spinY.GetValue()
-            # finder.SetValue((x,y))
-            finder.ShowModal()
-            finder.SetFocus()
-
-        elif label == "Cancel":
-            self.EndModal(id)
-
+            self.FindPosition() 
+        elif label == "Get Window Rect":
+            self.GetWindowRect()     
+        elif label == "Get Window Size":
+            self.GetWindowSize()
         elif label == "Ok":
-            self.EndModal(id)
-
+            self.EndModal(id)    
         elif label == "Refresh":
-            value = self.cboxWindow.GetValue()
-            self.cboxWindow.Clear()
-            choices = []
-            choices.extend(winman.GetWindowList())
-            self.cboxWindow.Append(choices)
-            self.cboxWindow.SetValue(value)
+            self.RefreshWindowList()  
+        elif label == "Reset":
+            self.ResetValues()     
+        elif label == "Set Window Size":
+            self.SetWindowSize()        
 
+    def RefreshWindowList(self):
+        value = self.cboxWindow.GetValue()
+        self.cboxWindow.Clear()
+        choices = []
+        choices.extend(winman.GetWindowList())
+        self.cboxWindow.Append(choices)
+        self.cboxWindow.SetValue(value)
+        
+    def ResetValues(self):    
+        self.cboxWindow.Clear()
+        
     def SetValue(self, data):
         window = data["window"]
         self.cboxWindow.SetValue(window)
@@ -302,4 +321,14 @@ class MouseClickAbsolute(wx.Dialog):
         self.spinX.SetValue(x)
         self.spinY.SetValue(y)
         
+    def SetWindowSize(self):
+        title, win_class = make_tuple(self.cboxWindow.GetValue())
+
+        offw = self.spinOffsetX.GetValue()
+        offh = self.spinOffsetY.GetValue()
+        w = self.spinW.GetValue()
+        h = self.spinH.GetValue()
+        winman.SetWindowSize(title, win_class, offw, offh, w, h)
+
+        self.Raise()
 #        
