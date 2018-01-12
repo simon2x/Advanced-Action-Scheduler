@@ -91,7 +91,7 @@ class MouseClickAbsolute(wx.Dialog):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         sbox = wx.StaticBox(panel, label="")
-        sboxSizer = wx.StaticBoxSizer(sbox, wx.HORIZONTAL)
+        sboxSizer = wx.StaticBoxSizer(sbox, wx.VERTICAL)
         grid = wx.GridBagSizer(5,5)
 
         row = 0
@@ -117,34 +117,27 @@ class MouseClickAbsolute(wx.Dialog):
 
         row += 1
         lblOffsetX = wx.StaticText(panel, label="Offset (x):")
-        self.spinOffsetX = wx.SpinCtrl(panel, min=0, max=5000)
+        self.spinOffsetX = wx.SpinCtrl(panel, min=-10000, max=10000)
         grid.Add(lblOffsetX, pos=(row,1), flag=wx.ALL|wx.EXPAND|wx.ALIGN_BOTTOM, border=5)
         grid.Add(self.spinOffsetX, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
 
         row += 1
         lblOffsetY = wx.StaticText(panel, label="Offset (y):")
-        self.spinOffsetY = wx.SpinCtrl(panel, min=0, max=5000)
+        self.spinOffsetY = wx.SpinCtrl(panel, min=-10000, max=10000)
         grid.Add(lblOffsetY, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
         grid.Add(self.spinOffsetY, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
 
         row += 1
         lblOffsetX = wx.StaticText(panel, label="Width (w):")
-        self.spinW = wx.SpinCtrl(panel, min=0, max=5000)
-        btnGet = wx.Button(panel, label="Get Window Size")
-        btnGet.Bind(wx.EVT_BUTTON, self.OnButton)
+        self.spinW = wx.SpinCtrl(panel, min=0, max=10000)
         grid.Add(lblOffsetX, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
         grid.Add(self.spinW, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(btnGet, pos=(row,3), flag=wx.ALL|wx.EXPAND)
-
+        
         row += 1
         lblOffsetY = wx.StaticText(panel, label="Height (h):")
-        self.spinH = wx.SpinCtrl(panel, min=0, max=5000)
-        btnSet = wx.Button(panel, label="Set Window Size")
-        btnSet.Bind(wx.EVT_BUTTON, self.OnButton)
+        self.spinH = wx.SpinCtrl(panel, min=0, max=10000)
         grid.Add(lblOffsetY, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
         grid.Add(self.spinH, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(btnSet, pos=(row,3), flag=wx.ALL|wx.EXPAND)
-
 
         row += 1
         lblX = wx.StaticText(panel, label="x:")
@@ -157,25 +150,34 @@ class MouseClickAbsolute(wx.Dialog):
         lblY = wx.StaticText(panel, label="y:")
         self.spinY = floatspin.FloatSpin(panel, min_val=0)
         self.spinY.SetDigits(0)
-        btnFind = wx.Button(panel, label="Find Position")
-        btnFind.Bind(wx.EVT_BUTTON, self.OnButton)
         grid.Add(lblY, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
         grid.Add(self.spinY, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(btnFind, pos=(row,3), flag=wx.ALL|wx.EXPAND)
 
         grid.AddGrowableCol(1)
-
+        
+        hsizerBtns = wx.BoxSizer(wx.HORIZONTAL)
+        for label in ["Reset",
+                      "Get Window Pos",
+                      "Get Window Size",
+                      "Get Window Rect",
+                      "Find Position"]:
+            btn = wx.Button(panel, label=label)
+            btn.Bind(wx.EVT_BUTTON, self.OnButton)
+            hsizerBtns.Add(btn, 1, wx.ALL|wx.EXPAND, 5)
+                
         sboxSizer.AddSpacer(10)
         sboxSizer.Add(grid, 1, wx.ALL|wx.EXPAND, 5)
+        sboxSizer.Add(hsizerBtns, 0, wx.ALL|wx.EXPAND, 5)
+        
         #-----
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         hsizer.AddStretchSpacer()
-        btn_cancel = wx.Button(panel, label="Cancel", id=wx.ID_CANCEL)
-        btn_cancel.Bind(wx.EVT_BUTTON, self.OnButton)
+        btnCancel = wx.Button(panel, label="Cancel", id=wx.ID_CANCEL)
+        btnCancel.Bind(wx.EVT_BUTTON, self.OnButton)
         self.btnAdd = wx.Button(panel, label="Ok", id=wx.ID_OK)
         self.btnAdd.Bind(wx.EVT_BUTTON, self.OnButton)
         
-        hsizer.Add(btn_cancel, 0, wx.ALL|wx.EXPAND, 5)
+        hsizer.Add(btnCancel, 0, wx.ALL|wx.EXPAND, 5)
         hsizer.Add(self.btnAdd, 0, wx.ALL|wx.EXPAND, 5)
 
         #add to main sizer
@@ -183,19 +185,33 @@ class MouseClickAbsolute(wx.Dialog):
         sizer.Add(hsizer, 0, wx.ALL|wx.EXPAND, 5)
 
         panel.SetSizer(sizer)
+        sizer.Fit(self)
 
-        w, h = sizer.Fit(self)
+    def GetValue(self):
+        data = []
+        data.append(("window", self.cboxWindow.GetValue()))
+        data.append(("matchcase", self.chkMatchCase.GetValue()))
+        data.append(("resize", self.chk_resize.GetValue()))
 
+        data.append(("offsetx", self.spinOffsetX.GetValue()))
+        data.append(("offsety", self.spinOffsetY.GetValue()))
+        data.append(("width", self.spinW.GetValue()))
+        data.append(("height", self.spinH.GetValue()))
+        data.append(("x", self.spinX.GetValue()))
+        data.append(("y", self.spinY.GetValue()))
+
+        return str(data)
+        
     def OnButton(self, event):
         e = event.GetEventObject()
         label = e.GetLabel()
         id = e.GetId()
 
         if label == "Get Window Size":
-            title, winclass = make_tuple(self.cboxWindow.GetValue())
+            title = self.cboxWindow.GetValue()
 
             try:
-                offw, offh, w, h = winman.GetWindowRect(title, winclass)
+                offw, offh, w, h = winman.GetWindowRect(title)
             except TypeError as e:
                 logging.info(e)
                 return
@@ -285,18 +301,5 @@ class MouseClickAbsolute(wx.Dialog):
         y = data["y"]
         self.spinX.SetValue(x)
         self.spinY.SetValue(y)
-
-    def GetValue(self):
-        data = []
-        data.append(("window", self.cboxWindow.GetValue()))
-        data.append(("matchcase", self.chkMatchCase.GetValue()))
-        data.append(("resize", self.chk_resize.GetValue()))
-
-        data.append(("offsetx", self.spinOffsetX.GetValue()))
-        data.append(("offsety", self.spinOffsetY.GetValue()))
-        data.append(("width", self.spinW.GetValue()))
-        data.append(("height", self.spinH.GetValue()))
-        data.append(("x", self.spinX.GetValue()))
-        data.append(("y", self.spinY.GetValue()))
-
-        return str(data)
+        
+#        
