@@ -1,6 +1,9 @@
+import platform
 import wx
 import wx.dataview
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin, CheckListCtrlMixin
+
+PLATFORM = platform.system()
 
 class TreeListCtrl(wx.dataview.TreeListCtrl):
 
@@ -21,6 +24,16 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
     def AppendItemToRoot(self, value):
         item = super(TreeListCtrl, self).AppendItem(self.GetRootItem(), value)
         return item 
+        
+    def DeleteAllItems(self):
+        if PLATFORM == "Windows":
+            super(TreeListCtrl, self).DeleteAllItems()
+        else:
+            # workaround for GTK
+            item = self.GetFirstItem()
+            while item.IsOk():
+                self.DeleteItem(item)
+                item = self.GetFirstItem()
         
     def GetItemDepth(self, item):
         """  backwards """
