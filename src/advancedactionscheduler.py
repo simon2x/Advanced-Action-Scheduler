@@ -1,26 +1,24 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
-
+# -*- coding: utf-8 -*
 """
-Copyright (c) <2017> <Advanced Action Scheduler>
+@author Simon Wu <swprojects@runbox.com>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Copyright (c) 2018 by Simon Wu <Advanced Action Scheduler>
+Released subject to the GNU Public License
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
 from apscheduler.triggers.cron import CronTrigger
@@ -46,6 +44,7 @@ from dialogs import *
 from wx.lib.scrolledpanel import ScrolledPanel
 from wx.lib.pubsub import setuparg1
 from wx.lib.pubsub import pub
+from wx.lib.agw import hyperlink
 
 import base
 
@@ -101,6 +100,54 @@ DEFAULTCONFIG = {
     "windowPos": False,
 }
 
+class AboutDialog(wx.Frame):  
+    
+    def __init__(self, parent):                    
+        wx.Frame.__init__(self,
+                          parent,
+                          -1, 
+                          title=__title__)
+                        
+        panel = wx.Panel(self)    
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        
+        sbox1 = wx.StaticBox(panel, label="")
+        sboxSizer1 = wx.StaticBoxSizer(sbox1, wx.HORIZONTAL)
+        grid = wx.GridSizer(cols=2)
+        grid.Add(wx.StaticText(panel, label="Author:"), 0, wx.ALL, 5)
+        link = hyperlink.HyperLinkCtrl(panel, label="www.sanawu.com", URL="www.sanawu.com")
+        grid.Add(link, 0, wx.ALL|wx.EXPAND, 5)
+        grid.Add(wx.StaticText(panel, label="Github:"), 0, wx.ALL, 5)
+        g = "https://github.com/swprojects/Advanced-Action-Scheduler"
+        link = hyperlink.HyperLinkCtrl(panel, label=g, URL=g)
+        grid.Add(link, 1, wx.ALL|wx.EXPAND, 5)
+        grid.Add(wx.StaticText(panel, label="Version:"), 0, wx.ALL, 5)
+        grid.Add(wx.StaticText(panel, label=str(__version__)), 0, wx.ALL, 5)
+        
+        sboxSizer1.Add(grid, 1, wx.ALL|wx.EXPAND, 5)
+        
+        sbox2 = wx.StaticBox(panel, label="License")
+        sboxSizer2 = wx.StaticBoxSizer(sbox2, wx.VERTICAL)  
+              
+        style = wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_CENTRE
+        licenseText = wx.TextCtrl(panel, style=style)
+        cwd = os.getcwd()
+        lpath = os.path.join(cwd, "LICENSE")
+        with open(lpath) as file:
+            for line in file:
+                licenseText.AppendText(line)
+        sboxSizer2.Add(licenseText, 1, wx.ALL|wx.EXPAND, 5)
+        
+        sizer.Add(sboxSizer1, 0, wx.ALL|wx.EXPAND, 5)
+        sizer.Add(sboxSizer2, 1, wx.ALL|wx.EXPAND, 5)
+        
+        panel.SetSizerAndFit(sizer)
+        self.Fit()
+        self.Centre()
+        self.SetMinSize((600, 400))
+        self.SetSize((600, 400))
+        self.Show()
+        
 class SettingsFrame(wx.Frame):
 
     def __init__(self, parent):
@@ -126,7 +173,8 @@ class Main(wx.Frame):
                           title=self._title)
 
         self._appConfig = DEFAULTCONFIG 
-        self._settingsDialog = SettingsFrame(self)
+        self._aboutDialog = None
+        self._settingsDialog = None
         self._data = {}
         self._menus = {}
         self._redo_stack = []
@@ -756,6 +804,13 @@ class Main(wx.Frame):
         self.WriteData()
         event.Skip()
 
+    def OnAboutDialogClose(self, event):
+        try:
+            self._aboutDialog = None
+            event.Skip()
+        except Exception as e:
+            print(e)
+        
     def OnComboboxFunction(self, event=None):
         """ selecting a combobox option automatically raises a corresponding dialog """
 
@@ -1161,14 +1216,11 @@ class Main(wx.Frame):
             event.Skip()     
 
     def ShowAboutDialog(self):
-        message = ("Created by Simon Wu\n"
-                 + "Licensed under the terms of the MIT Licence\n")
-
-        dlg = wx.MessageDialog(self,
-                               message,
-                               caption=self._title)
-        dlg.ShowModal()
-        
+        if not self._aboutDialog:
+            self._aboutDialog = AboutDialog(self)
+            self._aboutDialog.Bind(wx.EVT_CLOSE, self.OnAboutDialogClose)
+        self._aboutDialog.Show()    
+            
     def ShowAddGroupDialog(self):   
         m = "Group Name:"
         
