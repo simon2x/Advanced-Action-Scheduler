@@ -11,22 +11,23 @@ if PLATFORM == "Windows":
 elif PLATFORM == "Linux":
     from windowmanager import linux as winman
     
-class FindPosition(wx.Dialog):
+class FindPosition(wx.Frame):
 
-    def __init__(self, parent, rect):
+    def __init__(self, parent):
 
-        wx.Dialog.__init__(self,
-                           parent=None,
-                           style=~wx.CAPTION)
-
-        # window rect for determining in/out of bound area
-        self._rect = rect
+        wx.Frame.__init__(self,
+                          parent=None,
+                          style=wx.NO_BORDER)
+        
+        self.SetTitle("Absolute Position Finder")
+        self.absolutePos = None                 
+        
         # self.SetSize((25, 25))
         panel = wx.Panel(self)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self._position = wx.StaticText(panel, label="(0,0)")
-        sizer.Add(self._position, 0, wx.ALL)
+        self._position = wx.StaticText(panel, label="(0,0)", )
+        sizer.Add(self._position, 1, wx.ALL|wx.EXPAND|wx.ALIGN_CENTRE)
 
         panel.SetSizer(sizer)
 
@@ -48,21 +49,25 @@ class FindPosition(wx.Dialog):
         self.timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
         self.timer.Start(1)
+        
+        self._position.SetForegroundColour("white")
+        self.SetBackgroundColour("blue")
 
     # def OnKillFocus(self, event):
         # self.Destroy()
 
     def GetValue(self):
-        print(self._absolute_position)
-        return self._absolute_position
+        print(self.absolutePos)
+        return self.absolutePos
     
     def OnLeftUp(self, event):
         x, y = wx.GetMousePosition()
-        self._absolute_position = (x,y)
+        self.absolutePos = (x,y)
         self.Close()
     
     def OnKeyUp(self, event):
         key = event.GetKeyCode()
+        print(key)
         if key == wx.WXK_ESCAPE:
             self.Close()
         if key == wx.WXK_RETURN:
@@ -87,6 +92,8 @@ class MouseClickAbsolute(wx.Dialog):
                            parent,
                            title="Mouse Click Absolute")
 
+        self.resetValue = None 
+        
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -110,10 +117,10 @@ class MouseClickAbsolute(wx.Dialog):
         row += 1
         self.chkMatchCase = wx.CheckBox(panel, label="Match Case")
         self.chkMatchCase.SetValue(True)
-        self.chk_resize = wx.CheckBox(panel, label="Resize Window")
-        self.chk_resize.SetValue(True)
+        self.chkResize = wx.CheckBox(panel, label="Resize Window")
+        self.chkResize.SetValue(True)
         grid.Add(self.chkMatchCase, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(self.chk_resize, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(self.chkResize, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
 
         row += 1
         lblOffsetX = wx.StaticText(panel, label="Offset (x):")
@@ -141,14 +148,14 @@ class MouseClickAbsolute(wx.Dialog):
 
         row += 1
         lblX = wx.StaticText(panel, label="x:")
-        self.spinX = floatspin.FloatSpin(panel, min_val=0)
+        self.spinX = floatspin.FloatSpin(panel, min_val=-10000)
         self.spinX.SetDigits(0)
         grid.Add(lblX, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
         grid.Add(self.spinX, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
 
         row += 1
         lblY = wx.StaticText(panel, label="y:")
-        self.spinY = floatspin.FloatSpin(panel, min_val=0)
+        self.spinY = floatspin.FloatSpin(panel, min_val=-10000)
         self.spinY.SetDigits(0)
         grid.Add(lblY, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
         grid.Add(self.spinY, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
@@ -156,18 +163,27 @@ class MouseClickAbsolute(wx.Dialog):
         grid.AddGrowableCol(1)
         
         hsizerBtns = wx.BoxSizer(wx.HORIZONTAL)
-        for label in ["Reset",
+        for label in ["Reset Values",
                       "Get Window Pos",
                       "Get Window Size",
-                      "Get Window Rect",
-                      "Find Position"]:
+                      "Get Window Pos + Size"]:
             btn = wx.Button(panel, label=label)
             btn.Bind(wx.EVT_BUTTON, self.OnButton)
             hsizerBtns.Add(btn, 1, wx.ALL|wx.EXPAND, 5)
+            
+        hsizerBtns2 = wx.BoxSizer(wx.HORIZONTAL)
+        for label in ["Set Window Pos",
+                      "Set Window Size",
+                      "Set Window Pos + Size",
+                      "Find Position"]:
+            btn = wx.Button(panel, label=label)
+            btn.Bind(wx.EVT_BUTTON, self.OnButton)
+            hsizerBtns2.Add(btn, 1, wx.ALL|wx.EXPAND, 5)    
                 
         sboxSizer.AddSpacer(10)
         sboxSizer.Add(grid, 1, wx.ALL|wx.EXPAND, 5)
         sboxSizer.Add(hsizerBtns, 0, wx.ALL|wx.EXPAND, 5)
+        sboxSizer.Add(hsizerBtns2, 0, wx.ALL|wx.EXPAND, 5)
         
         #-----
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -187,41 +203,37 @@ class MouseClickAbsolute(wx.Dialog):
         panel.SetSizer(sizer)
         sizer.Fit(self)
 
-    def FindPosition(self):    
-        title, win_class = make_tuple(self.cboxWindow.GetValue())
-        offw = self.spinOffsetX.GetValue()
-        offh = self.spinOffsetY.GetValue()
-        w = self.spinW.GetValue()
-        h = self.spinH.GetValue()
-
-        # resize the target window
-        # windowmanager.SetWindowSize(title, win_class, offw, offh, w, h)
-
-        rect = [offw, offh, w, h]
-        finder = FindPosition(self, rect)
+    def FindPosition(self): 
+        try:
+            title, win_class = make_tuple(self.cboxWindow.GetValue())
+            winman.SetForegroundWindow(title, win_class)
+        except:
+            pass 
+            
+        finder = FindPosition(self)
         def on_finder_close(event):
-            x, y = finder.GetValue()
-            logging.info("Got absolute position: %s" % str((x,y)))
-            self.spinX.SetValue(int(x))
-            self.spinY.SetValue(int(y))
-            event.Skip()
+            try:
+                x, y = finder.GetValue()
+                logging.info("Got absolute position: %s" % str((x,y)))
+                self.spinX.SetValue(int(x))
+                self.spinY.SetValue(int(y))
+                event.Skip()
+            except:
+                pass
+                
             finder.Destroy()
             self.SetFocus()
 
         finder.Bind(wx.EVT_CLOSE, on_finder_close)
-
-        # finder.SetSize((w,h))
-        # finder.SetPosition((offw,offh))
         x, y = self.spinX.GetValue(), self.spinY.GetValue()
-        # finder.SetValue((x,y))
-        finder.ShowModal()
+        finder.Show()
         finder.SetFocus()
             
     def GetValue(self):
         data = []
         data.append(("window", self.cboxWindow.GetValue()))
         data.append(("matchcase", self.chkMatchCase.GetValue()))
-        data.append(("resize", self.chk_resize.GetValue()))
+        data.append(("resize", self.chkResize.GetValue()))
 
         data.append(("offsetx", self.spinOffsetX.GetValue()))
         data.append(("offsety", self.spinOffsetY.GetValue()))
@@ -231,37 +243,48 @@ class MouseClickAbsolute(wx.Dialog):
         data.append(("y", self.spinY.GetValue()))
 
         return str(data)
+    
+    def GetWindowPos(self):
+        x1, y1, x2, y2 = self.GetWindowRect()
+        w = x2 - x1
+        h = y2 - y1
+        
+        self.spinOffsetX.SetValue(x1)
+        self.spinOffsetY.SetValue(y1)
+        self.Raise()
         
     def GetWindowRect(self):
-        title = self.cboxWindow.GetValue()
-
         try:
-            offw, offh, w, h = winman.GetWindowRect(title)
+            progName, title = make_tuple(self.cboxWindow.GetValue())
+        except: 
+            return
+            
+        try:
+            x1, y1, x2, y2 = winman.GetWindowRect(progName, title)
         except TypeError as e:
             logging.info(e)
             return
-
-        self.spinOffsetX.SetValue(offw)
-        self.spinOffsetY.SetValue(offh)
+      
+        return x1, y1, x2, y2
+    
+    def GetWindowPosAndSize(self):
+        x1, y1, x2, y2 = self.GetWindowRect()
+        w = x2 - x1
+        h = y2 - y1
+        
+        self.spinOffsetX.SetValue(x1)
+        self.spinOffsetY.SetValue(y1)
         self.spinW.SetValue(w)
         self.spinH.SetValue(h)
-
         self.Raise()
         
     def GetWindowSize(self):
-        title = self.cboxWindow.GetValue()
-
-        try:
-            offw, offh, w, h = winman.GetWindowRect(title)
-        except TypeError as e:
-            logging.info(e)
-            return
-
-        self.spinOffsetX.SetValue(offw)
-        self.spinOffsetY.SetValue(offh)
+        x1, y1, x2, y2 = self.GetWindowRect()
+        w = x2 - x1
+        h = y2 - y1
+        
         self.spinW.SetValue(w)
         self.spinH.SetValue(h)
-
         self.Raise()
         
     def OnButton(self, event):
@@ -273,20 +296,30 @@ class MouseClickAbsolute(wx.Dialog):
             self.EndModal(id)
         elif label == "Find Position":
             self.FindPosition() 
-        elif label == "Get Window Rect":
-            self.GetWindowRect()     
+        elif label == "Get Window Pos":
+            self.GetWindowPos() 
+        elif label == "Get Window Pos + Size":
+            self.GetWindowPosAndSize()    
         elif label == "Get Window Size":
-            self.GetWindowSize()
+            self.GetWindowSize()  
         elif label == "Ok":
             self.EndModal(id)    
         elif label == "Refresh":
             self.RefreshWindowList()  
-        elif label == "Reset":
-            self.ResetValues()     
+        elif label == "Reset Values":
+            self.ResetValues()
+        elif label == "Set Window Pos":
+            self.SetWindowPos()
+        elif label == "Set Window Pos + Size":
+            self.SetWindowPosAndSize()     
         elif label == "Set Window Size":
-            self.SetWindowSize()        
+            self.SetWindowSize()             
 
     def RefreshWindowList(self):
+        """ 
+        In Windows, retrieve a list of titles.
+        In Linux, retrieve a tuple list of (title, winClass)
+        """
         value = self.cboxWindow.GetValue()
         self.cboxWindow.Clear()
         choices = []
@@ -295,16 +328,31 @@ class MouseClickAbsolute(wx.Dialog):
         self.cboxWindow.SetValue(value)
         
     def ResetValues(self):    
-        self.cboxWindow.Clear()
+        self.cboxWindow.SetValue("")
+        self.chkMatchCase.SetValue(True)
+        self.chkResize.SetValue(True)
+
+        self.spinOffsetX.SetValue(0)
+        self.spinOffsetY.SetValue(0)
+        self.spinW.SetValue(0)
+        self.spinH.SetValue(0)
+        self.spinX.SetValue(0)
+        self.spinY.SetValue(0)
+        
+        self.SetValue(self.resetValue)
         
     def SetValue(self, data):
+        
+        if not self.resetValue:
+            self.resetValue = data 
+            
         window = data["window"]
         self.cboxWindow.SetValue(window)
 
         case = data["matchcase"]
         resize = data["resize"]
         self.chkMatchCase.SetValue(case)
-        self.chk_resize.SetValue(resize)
+        self.chkResize.SetValue(resize)
 
         offsetx = data["offsetx"]
         offsety = data["offsety"]
@@ -321,14 +369,48 @@ class MouseClickAbsolute(wx.Dialog):
         self.spinX.SetValue(x)
         self.spinY.SetValue(y)
         
-    def SetWindowSize(self):
-        title, win_class = make_tuple(self.cboxWindow.GetValue())
-
-        offw = self.spinOffsetX.GetValue()
-        offh = self.spinOffsetY.GetValue()
+    def SetWindowPos(self):
+        x1 = self.spinOffsetX.GetValue()
+        y1 = self.spinOffsetY.GetValue()
+        
+        try:
+            title, progName = make_tuple(self.cboxWindow.GetValue())
+            winman.MoveWindow(title, progName, x1, y1, None, None)
+        except Exception as e:
+            print(e)
+            return
+            
+        self.Raise()
+        
+    def SetWindowPosAndSize(self):
+        x1 = self.spinOffsetX.GetValue()
+        y1 = self.spinOffsetY.GetValue()
         w = self.spinW.GetValue()
         h = self.spinH.GetValue()
-        winman.SetWindowSize(title, win_class, offw, offh, w, h)
-
+        x2 = x1 + w
+        y2 = y1 + h
+        
+        try:
+            title, progName = make_tuple(self.cboxWindow.GetValue())
+            winman.MoveWindow(title, progName, x1, y1, w, h)
+        except Exception as e:
+            print(e)
+            return
+            
+        self.Raise()
+        
+    def SetWindowSize(self):
+        x1 = self.spinOffsetX.GetValue()
+        y1 = self.spinOffsetY.GetValue()
+        w = self.spinW.GetValue()
+        h = self.spinH.GetValue()
+        
+        try:
+            title, progName = make_tuple(self.cboxWindow.GetValue())
+            winman.SetWindowSize(title, progName, w, h)
+        except Exception as e:
+            print(e)
+            return
+            
         self.Raise()
 #        

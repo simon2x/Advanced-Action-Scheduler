@@ -3,232 +3,31 @@
 import ctypes
 import logging
 import platform
+import psutil
 import subprocess
 import time
+import win32
+import win32api
+import win32con
+import win32gui
+import win32process
 
-PLATFORM = platform.system()
+from ctypes import pointer, wintypes
 
-def GetHostname():
-    hostname = subprocess.check_output(["hostname"]).decode("utf-8").strip()
-    return hostname
+lpdw_process_id = ctypes.c_ulong()
+GetWindowThreadProcessId = ctypes.windll.user32.GetWindowThreadProcessId
 
-def GetUsername():
-    username = subprocess.check_output(["whoami"]).decode("utf-8").strip()
-    return username
 
-# -----
+ctypes.windll.kernel32.GetModuleHandleW.restype = wintypes.HMODULE
+ctypes.windll.kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
 
-def WmCtrlList():
+hMod = ctypes.windll.kernel32.GetModuleHandleW
 
-    """
-    return output of command 'wmctrl -G -p -l'
-    -G: geometry
-    -p: pid
-    -x: window class
-    """
-
-    basecmd = "wmctrl"
-    flags = ["-G", "-p", "-x", "-l"]
-    output = subprocess.check_output(["wmctrl"] + flags).decode("utf-8").strip()
-
-    return output
-
-def WmCtrlActivate(window_id):
-
-    """ activate (set foreground) window id"""
-
-    cmd = ["wmctrl", "-ia"] + [window_id]
-    output = subprocess.check_output(cmd).decode("utf-8").strip()
-    logging.info("Activated window: %s" % window_id)
-
-def SetForegroundWindow(title, winclass):
-
-    """ activate the first matched window, and if no match found, return None """
-
-    output = WmCtrlList()
-    hostname = GetHostname()
-    row = 0
-    outputparse = []
-    windows = {}
-    lines = output.split("\n")
-    for line in lines:
-        linesplit = line.split(" ")
-        host_idx = linesplit.index(hostname)
-
-        t = " ".join(linesplit[host_idx+1:])
-
-        params = linesplit[:host_idx]
-        params = [e for e in params if e or e is 0]
-        window_id, desktop_id, pid, x, y, w, h, win_class = params
-
-        if t != title:
-            continue
-        if win_class != winclass:
-            continue
-
-        WmCtrlActivate(window_id)
-        return True
-
-    logging.info("Could not set foreground window: %s" % title)
-    return None
-
-def GetWindowId(title, winclass):
-    """ -r <WIN> -e <MVARG> """
-    output = WmCtrlList()
-    hostname = GetHostname()
-    row = 0
-    outputparse = []
-    windows = {}
-    lines = output.split("\n")
-    for line in lines:
-        linesplit = line.split(" ")
-        host_idx = linesplit.index(hostname)
-
-        t = " ".join(linesplit[host_idx+1:])
-
-        params = linesplit[:host_idx]
-        params = [e for e in params if e or e is 0]
-        window_id, desktop_id, pid, x, y, w, h, win_class = params
-
-        if t != title:
-            continue
-        if win_class != winclass:
-            continue
-
-        return window_id
-
-    # window not found!
-    return None
-
-def GetWindowDecorationOffset(title, winclass):
-    """ We move the target window to 0,0. Then get the window position
-        This position is the offset of the window (without decoration)
-    """
-
-    flags = ["-r", ":ACTIVE:", "-b", "remove,maximized_vert,maximized_horz"]
-    output = subprocess.check_output(["wmctrl"] + flags).decode("utf-8").strip()
-
-    # Pass default gravity '0'. Move to top left corner (0,0). Leave size unchanged
-    flags = ["-r", ":ACTIVE:", "-e", "0,0,0,-1,-1"]
-    logging.info("%s" % str(flags))
-    output = subprocess.check_output(["wmctrl"] + flags).decode("utf-8").strip()
-
-    # get the offset position
-    output = WmCtrlList()
-    hostname = GetHostname()
-
-    lines = output.split("\n")
-    for line in lines:
-        linesplit = line.split(" ")
-        host_idx = linesplit.index(hostname)
-
-        t = " ".join(linesplit[host_idx+1:])
-
-        if title != t:
-            continue
-
-        params = linesplit[:host_idx]
-        params = [e for e in params if e]
-        window_id, desktop_id, pid, off_x, off_y, w, h, win_class = params
-
-        if win_class != winclass:
-            continue
-
-        offset = "(%s, %s)" % (off_x, off_y)
-        logging.info("Got window decoration offset (top-left padding): %s" % offset)
-        return off_x, off_y
-
-    return None
-
-def GetWindowRect(title, winclass):
-    output = WmCtrlList()
-    hostname = GetHostname()
-
-    lines = output.split("\n")
-    for line in lines:
-        linesplit = line.split(" ")
-        host_idx = linesplit.index(hostname)
-
-        t = " ".join(linesplit[host_idx+1:])
-
-        if title != t:
-            continue
-
-        params = linesplit[:host_idx]
-        params = [e for e in params if e]
-        window_id, desktop_id, pid, x, y, w, h, win_class = params
-
-        if win_class != winclass:
-            continue
-
-        WmCtrlActivate(window_id)
-        off_x, off_y = GetWindowDecorationOffset(title, win_class)
-
-        # calculate the adjusted offset
-        adj_x, adj_y = int(x)-int(off_x), int(y)-int(off_y)
-
-        # revert back to original window position
-        SetWindowSize(title, win_class, adj_x, adj_y, w, h)
-
-        return [adj_x, adj_y, int(w), int(h)]
-
-# def GetWindowRect(title, winclass):
-    # output = WmCtrlList()
-    # hostname = GetHostname()
-
-    # lines = output.split("\n")
-    # for line in lines:
-        # linesplit = line.split(" ")
-        # host_idx = linesplit.index(hostname)
-
-        # t = " ".join(linesplit[host_idx+1:])
-
-        # if title != t:
-            # continue
-
-        # params = linesplit[:host_idx]
-        # params = [e for e in params if e]
-        # window_id, desktop_id, pid, x, y, w, h, win_class = params
-
-        # if win_class != winclass:
-            # continue
-
-        # WmCtrlActivate(window_id)
-        # off_x, off_y = GetWindowDecorationOffset(title, win_class)
-
-        # # calculate the adjusted offset
-        # adj_x, adj_y = int(x)-int(off_x), int(y)-int(off_y)
-
-        # # revert back to original window position
-        # SetWindowSize(title, win_class, adj_x, adj_y, w, h)
-
-        # return [adj_x, adj_y, int(w), int(h)]
-
-def SetWindowSize(title, win_class, offw, offy, w, h):
-
-    # we always switch to the window since background maximised windows
-    # can't be resized/moved. Though not sure why.
-    success = SetForegroundWindow(title, win_class)
-    if not success:
-        return None
-
-    flags = ["-r", ":ACTIVE:", "-b", "remove,maximized_vert,maximized_horz"]
-    output = subprocess.check_output(["wmctrl"] + flags).decode("utf-8").strip()
-
-    # Pass default gravity '0'
-    flags = ["-r", ":ACTIVE:", "-e", "0,%s,%s,%s,%s" % (offw, offy, w, h)]
-    logging.info("%s" % str(flags))
-    output = subprocess.check_output(["wmctrl"] + flags).decode("utf-8").strip()
-
-def GetClientArea():
-    # centre the dialog
-    desktop = win32gui.GetDesktopWindow()
-    dt_l, dt_t, dt_r, dt_b = win32gui.GetWindowRect(desktop)
-    print(dt_l, dt_t, dt_r, dt_b)
-    # win32gui.MoveWindow(hwnd, centre_x-(r//2), centre_y-(b//2), r-l, b-t, 0)
-    # self._SetupList()
-    # l,t,r,b = win32gui.GetClientRect(self.hwnd)
-    # self._DoSize(r-l,b-t, 1)
+EnumWindows = ctypes.windll.user32.EnumWindows
+EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int))
+GetWindowText = ctypes.windll.user32.GetWindowTextW
+GetWindowTextLength = ctypes.windll.user32.GetWindowTextLengthW
+IsWindowVisible = ctypes.windll.user32.IsWindowVisible
 
 def CloseWindow(title, matchcase=False, matchstring=True):
     """
@@ -279,11 +78,96 @@ def CloseWindow(title, matchcase=False, matchstring=True):
     for hwnd in handles:
         close_window(hwnd)
 
-def MouseClickRelative(x, y, w=None, h=None, originalpos=False):
-    pass
+def GetHandle(progName, title):
+    matchTitle = title
+    foundHandle = []
+    
+    # filter out pids which match executable name
+    pidList = [(p.pid, p.name()) for p in psutil.process_iter() if p.name() == progName]
+    
+    def enumWindowsProc(hwnd, lParam):
+        """ append window titles which match a pid """
+        if (lParam is None) or ((lParam is not None) and (win32process.GetWindowThreadProcessId(hwnd)[1] == lParam)):
+            text = win32gui.GetWindowText(hwnd)
+            if text:
+                wStyle = win32api.GetWindowLong(hwnd, win32con.GWL_STYLE)
+                if wStyle & win32con.WS_VISIBLE:
+                    if text == matchTitle:
+                        foundHandle.append(hwnd)
+                        return
 
-def CloseWindow():
-    cmd = "xkill -i $( xprop -root | awk '/_NET_ACTIVE_WINDOW\(WINDOW\)/{print $NF}' )"
+    def enumProcWnds(pid=None):
+        win32gui.EnumWindows(enumWindowsProc, pid)
+    
+    for pid, pName in pidList:
+        enumProcWnds(pid)
+        if foundHandle:
+            return foundHandle[0]
+    
+    return
+ 
+def GetHostname():
+    hostname = subprocess.check_output(["hostname"]).decode("utf-8").strip()
+    return hostname
+
+def GetProcessName(hwnd):
+    threadID, ProcessID = win32process.GetWindowThreadProcessId(hwnd)
+    procName = psutil.Process(ProcessID)
+    appName = procName.name()
+    return appName
+
+def GetUsername():
+    username = subprocess.check_output(["whoami"]).decode("utf-8").strip()
+    return username
+
+def GetWindowList():
+    """ 
+    returns window title list 
+    based on this answer - https://stackoverflow.com/a/31280850
+    """
+    
+    titles = []
+    t = []
+    pidList = [(p.pid, p.name()) for p in psutil.process_iter()]
+    
+    def enumWindowsProc(hwnd, lParam):
+        """ append window titles which match a pid """
+        if (lParam is None) or ((lParam is not None) and (win32process.GetWindowThreadProcessId(hwnd)[1] == lParam)):
+            text = win32gui.GetWindowText(hwnd)
+            if text:
+                wStyle = win32api.GetWindowLong(hwnd, win32con.GWL_STYLE)
+                if wStyle & win32con.WS_VISIBLE:
+                    t.append("%s" % (text))
+                    return
+
+    def enumProcWnds(pid=None):
+        win32gui.EnumWindows(enumWindowsProc, pid)
+    
+    for pid, pName in pidList:
+        enumProcWnds(pid)
+        if t:
+            for title in t:                
+                titles.append("('{0}', '{1}')".format(pName, title))
+            t = []
+    
+    titles = sorted(titles, key=lambda x: x[0].lower())
+    return titles
+
+# def GetWindowPos(progName, title):
+    # handle = GetHandle(progName, title)
+    # if handle == 0:
+        # return
+    # x, y, w, h = win32gui.GetClientRect(handle)
+    # print(x,y,w,h)
+    # return [x, y, w, h]
+    
+def GetWindowRect(progName, title):
+    handle = GetHandle(progName, title)
+    if handle == 0:
+        return
+    x1, y1, x2, y2 = win32gui.GetWindowRect(handle)
+    print(title, [x1, y1, x2, y2])
+    return [x1, y1, x2, y2]
 
 def KillProcess(pid):
     output = subprocess.check_output(["kill"] + [pid]).decode("utf-8").strip()
@@ -291,82 +175,38 @@ def KillProcess(pid):
         pass
     if "No such process" in output:
         pass
-
-def GetWindowSize(title):
-    hostname = GetHostname()
-    output = WmCtrlList()
-
-    row = 0
-    outputparse = []
-    windows = {}
-    lines = output.split("\n")
-    for line in lines:
-        linesplit = line.split(" ")
-        host_idx = linesplit.index(hostname)
-
-        t = " ".join(linesplit[host_idx+1:])
-
-        if title != t:
-            continue
-
-        id = linesplit[0]
-        params = linesplit[:host_idx]
-        params = [e for e in params if e]
-        desktop_id, pid, client_machine, viewport, w, h = params
-
-        return (0, 0, w, h)
-
-def GetWindowList():
-    """ returns window title list """
+        
+def MouseClickRelative(x, y, w=None, h=None, originalpos=False):
+    pass
     
-    EnumWindows = ctypes.windll.user32.EnumWindows
-    EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int))
-    GetWindowText = ctypes.windll.user32.GetWindowTextW
-    GetWindowTextLength = ctypes.windll.user32.GetWindowTextLengthW
-    IsWindowVisible = ctypes.windll.user32.IsWindowVisible
+def MoveWindow(title, progName, x1, y1, w, h):
+
+    handle = GetHandle(title, progName)
+    print(handle)
+    if not handle:
+        return
+        
+    if w is None: # size not defined
+        tmpX1, tmpY1, tmpX2, tmpY2 = win32gui.GetWindowRect(handle)
+        w = tmpX2 - tmpX1
+        h = tmpY2 - tmpY1
     
-    titles = []
-    def foreach_window(hwnd, lParam):
-        if IsWindowVisible(hwnd):
-            length = GetWindowTextLength(hwnd)
-            buff = ctypes.create_unicode_buffer(length + 1)
-            GetWindowText(hwnd, buff, length + 1)
-            titles.append(buff.value)
-        return True
-    EnumWindows(EnumWindowsProc(foreach_window), 0)
+    win32gui.MoveWindow(handle, x1, y1, w, h, True)
     
-    titles = sorted([t for t in titles if t])
-    return titles
+def SetForegroundWindow(title, progName):
+    """ activate the first matched window, and if no match found, return None """
+    handle = GetHandle(title, progName)
+    print(handle)
+    if not handle:
+        return
+    win32gui.SetForegroundWindow(handle)
 
-def GetWindowInfo():
+def SetWindowSize(title, progName, w, h):
 
-    """ returns all window information in a dictionary """
-
-    output = WmCtrlList()
-    hostname = GetHostname()
-    row = 0
-    outputparse = []
-    windows = {}
-    lines = output.split("\n")
-    for line in lines:
-        linesplit = line.split(" ")
-        host_idx = linesplit.index(hostname)
-
-        title = " ".join(linesplit[host_idx+1:])
-
-        params = linesplit[:host_idx]
-        params = [e for e in params if e or e is 0]
-        print(params)
-        window_id, desktop_id, pid, x, y, w, h, win_class = params
-
-
-        windows[window_id] = {"desktop_id": desktop_id,
-                              "title": title,
-                              "pid": pid,
-                              "client_machine": host_idx,
-                              # "viewport": viewport,
-                              "rect": [int(x), int(y), int(w), int(h)],
-                              "size": (int(w), int(h)),
-                              "win_class": win_class}
-
-    return windows
+    handle = GetHandle(title, progName)
+    print(handle)
+    if not handle:
+        return
+        
+    x1, y1, _, _ = win32gui.GetWindowRect(handle)
+    win32gui.MoveWindow(handle, x1, y1, w, h, True)        
