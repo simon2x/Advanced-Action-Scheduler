@@ -10,8 +10,11 @@ future: remove xdotool dependencs
 """
 
 import logging
+import platform
 import subprocess
 import time
+
+PLATFORM = platform.system()
 
 def GetHostname():
     hostname = subprocess.check_output(["hostname"]).decode("utf-8").strip()

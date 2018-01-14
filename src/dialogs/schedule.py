@@ -3,6 +3,7 @@ import sys
 import time
 import wx
 import base
+from ast import literal_eval as make_tuple
 
 DELIMITER = " ➡ "
 
@@ -15,6 +16,7 @@ class AddSchedule(wx.Dialog):
                            title="Add New Schedule")
 
         self.blacklist = blacklist
+        self.resetValue = None
         
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -29,47 +31,71 @@ class AddSchedule(wx.Dialog):
         self.textName.Bind(wx.EVT_TEXT, self.OnScheduleNameEdit)
         self.labelError = wx.StaticText(panel, label="")
         hSizer.Add(labelName, 0, wx.ALL|wx.ALIGN_CENTRE, 5)
-        hSizer.Add(self.textName, 0, wx.ALL|wx.ALIGN_BOTTOM, 5)
-        hSizer.Add(self.labelError, 0, wx.ALL|wx.ALIGN_CENTRE, 5)
+        hSizer.Add(self.textName, 2, wx.ALL|wx.ALIGN_BOTTOM, 5)
+        hSizer.Add(self.labelError, 2, wx.ALL|wx.ALIGN_CENTRE, 5)
         sboxSizer.Add(hSizer, 0, wx.ALL|wx.EXPAND, 5)
 
         hSizer = wx.BoxSizer(wx.HORIZONTAL)
-
         self.dayOfWeek = {}
         self._dayOfWeek = ["mon","tue","wed","thu","fri","sat","sun"]
+        vsizer = wx.BoxSizer(wx.VERTICAL)
+        labelDay = wx.StaticText(panel, label="Days")
         grid = wx.GridSizer(cols=1)
+        vsizer.Add(labelDay, 0, wx.ALL|wx.ALIGN_CENTRE, 2)
         for label in self._dayOfWeek:
-            self.dayOfWeek[label] = wx.Button(panel, label=str(label), name="0", size=(36,22))
+            self.dayOfWeek[label] = wx.Button(panel, label=str(label), name="0", size=(56,32))
             self.dayOfWeek[label].Bind(wx.EVT_BUTTON, self.OnTimeButton)
             grid.Add(self.dayOfWeek[label], 0, wx.ALL, 0)
-        hSizer.Add(grid, 0, wx.ALL, 2)
+        vsizer.Add(grid, 0, wx.ALL, 2)
+        hSizer.Add(vsizer, 0, wx.ALL, 2)
 
         self.hours = {}
+        vsizer = wx.BoxSizer(wx.VERTICAL)
         grid = wx.GridSizer(cols=4)
+        labelHour = wx.StaticText(panel, label="Hours")
+        vsizer.Add(labelHour, 0, wx.ALL|wx.ALIGN_CENTRE, 2)
         for x in range(24):
-            self.hours[x] = wx.Button(panel, label=str(x), name="0", size=(22,22))
+            self.hours[x] = wx.Button(panel, label=str(x), name="0", size=(32,32))
             self.hours[x].Bind(wx.EVT_BUTTON, self.OnTimeButton)
             grid.Add(self.hours[x], 0, wx.ALL, 0)
-        hSizer.Add(grid, 0, wx.ALL, 2)
+        vsizer.Add(grid, 0, wx.ALL, 2)
+        hSizer.Add(vsizer, 0, wx.ALL, 2)
 
         self.mins = {}
+        vsizer = wx.BoxSizer(wx.VERTICAL)
         grid = wx.GridSizer(cols=10)
+        labelMin = wx.StaticText(panel, label="Minutes")
+        vsizer.Add(labelMin, 0, wx.ALL|wx.ALIGN_CENTRE, 2)
         for x in range(60):
-            self.mins[x] = wx.Button(panel, label=str(x), name="0", size=(22,22))
+            self.mins[x] = wx.Button(panel, label=str(x), name="0", size=(32,32))
             self.mins[x].Bind(wx.EVT_BUTTON, self.OnTimeButton)
             grid.Add(self.mins[x], 0, wx.ALL, 0)
-        hSizer.Add(grid, 1, wx.ALL, 2)
+        vsizer.Add(grid, 0, wx.ALL, 2)
+        hSizer.Add(vsizer, 0, wx.ALL, 2)
 
         self.secs = {}
+        vsizer = wx.BoxSizer(wx.VERTICAL)
         grid = wx.GridSizer(cols=10)
+        labelSec = wx.StaticText(panel, label="Seconds")
+        vsizer.Add(labelSec, 0, wx.ALL|wx.ALIGN_CENTRE, 2)
         for x in range(60):
-            self.secs[x] = wx.Button(panel, label=str(x), name="0", size=(22,22))
+            self.secs[x] = wx.Button(panel, label=str(x), name="0", size=(32,32))
             self.secs[x].Bind(wx.EVT_BUTTON, self.OnTimeButton)
             grid.Add(self.secs[x], 0, wx.ALL, 0)
-        hSizer.Add(grid, 1, wx.ALL, 2)
+        vsizer.Add(grid, 0, wx.ALL, 2)
+        hSizer.Add(vsizer, 0, wx.ALL, 2)
 
         sboxSizer.Add(hSizer, 0, wx.ALL, 5)
 
+        hSizerClear = wx.BoxSizer(wx.HORIZONTAL)
+        btn = wx.Button(panel, label="Reset")
+        btn.Bind(wx.EVT_BUTTON, self.OnButtonReset)
+        hSizerClear.Add(btn, 0, wx.ALL|wx.EXPAND, 5)      
+        for label in ["Days","Hours","Minutes","Seconds"]:
+            btn = wx.Button(panel, label="Clear {0}".format(label), name=label)
+            btn.Bind(wx.EVT_BUTTON, self.OnButtonClear)
+            hSizerClear.Add(btn, 0, wx.ALL|wx.EXPAND, 5)      
+        
         #-----
         hSizer = wx.BoxSizer(wx.HORIZONTAL)
         hSizer.AddStretchSpacer()
@@ -82,6 +108,7 @@ class AddSchedule(wx.Dialog):
 
         #add to main sizer
         sizer.Add(sboxSizer, 0, wx.ALL|wx.EXPAND, 2)
+        sizer.Add(hSizerClear, 0, wx.ALL|wx.EXPAND, 5)
         sizer.Add(hSizer, 0, wx.ALL|wx.EXPAND, 5)
 
         panel.SetSizer(sizer)
@@ -152,7 +179,37 @@ class AddSchedule(wx.Dialog):
             self.EndModal(id)
         elif label == "Ok":
             self.EndModal(id)
+            
+    def OnButtonClear(self, event):
+        e = event.GetEventObject()
+        name = e.GetName()
+        id = e.GetId()
+
+        _, currentParams = self.GetValue()
+        currentParams = {j:k for j,k in make_tuple(currentParams)}
+        if name == "Days":
+            p = self.dayOfWeek
+        elif name == "Hours":
+            p = self.hours
+        elif name == "Minutes":
+            p = self.mins
+        elif name == "Seconds":
+            p = self.secs
+        
+        for q in p:
+            p[q].SetName("0")
+            p[q].SetBackgroundColour("default")
     
+    def OnButtonReset(self, event):
+        """ clear all buttons and, if applicable, revert to original values """ 
+        for p in [self.dayOfWeek,self.hours,self.mins,self.secs]:
+            for q in p:
+                p[q].SetName("0")
+                p[q].SetBackgroundColour("default")
+                
+        if self.resetValue:
+            self.SetValue(self.resetValue)        
+                
     def OnScheduleNameEdit(self, event):
         e = event.GetEventObject()
         value = e.GetValue()
@@ -168,8 +225,8 @@ class AddSchedule(wx.Dialog):
             return
         
         self.labelError.SetLabel(m)
-        self.btnOk.Disable()    
-            
+        self.btnOk.Disable()   
+        
     def OnScheduleNameEnter(self, event):
         e = event.GetEventObject()
         id = e.GetId()
@@ -193,7 +250,10 @@ class AddSchedule(wx.Dialog):
         
     def SetValue(self, value):
         params = value
-
+        
+        if not self.resetValue:
+            self.resetValue = value
+        
         if "name" in params:
             self.textName.SetValue(params["name"])
 
