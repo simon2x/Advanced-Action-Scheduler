@@ -11,10 +11,17 @@ the Free Software Foundation; either version 2 of the License, or
 """
 
 import logging
+import platform
 import sys
 import wx
 import windowmanager
 
+PLATFORM = platform.system()
+if PLATFORM == "Windows":
+    from windowmanager import windows as winman
+elif PLATFORM == "Linux":
+    from windowmanager import linux as winman
+    
 class WindowDialog(wx.Dialog):
 
     def __init__(self, parent, title=""):
@@ -35,7 +42,7 @@ class WindowDialog(wx.Dialog):
 
         lbl_function = wx.StaticText(panel, label="Window:")
         choices = []
-        choices.extend(windowmanager.GetWindows())
+        choices.extend(winman.GetWindowList())
         self.cbox_window = wx.ComboBox(panel, choices=choices)
         btn_refresh = wx.Button(panel, label="Refresh")
         btn_refresh.Bind(wx.EVT_BUTTON, self.OnButton)
@@ -88,7 +95,7 @@ class WindowDialog(wx.Dialog):
             value = self.cbox_window.GetValue()
             self.cbox_window.Clear()
             choices = []
-            choices.extend(windowmanager.GetWindows())
+            choices.extend(winman.GetWindowList())
             self.cbox_window.Append(choices)
             self.cbox_window.SetValue(value)
 
