@@ -35,47 +35,57 @@ class WindowDialog(wx.Dialog):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         sbox = wx.StaticBox(panel, label="")
-        sbox_sizer = wx.StaticBoxSizer(sbox, wx.HORIZONTAL)
+        sboxSizer = wx.StaticBoxSizer(sbox, wx.HORIZONTAL)
         grid = wx.GridBagSizer(5,5)
 
         row = 0
 
-        lbl_function = wx.StaticText(panel, label="Window:")
+        lblFunction = wx.StaticText(panel, label="Window:")
         choices = []
         choices.extend(winman.GetWindowList())
-        self.cbox_window = wx.ComboBox(panel, choices=choices)
-        btn_refresh = wx.Button(panel, label="Refresh")
-        btn_refresh.Bind(wx.EVT_BUTTON, self.OnButton)
+        self.cboxWindow = wx.ComboBox(panel, choices=choices)
+        btnRefresh = wx.Button(panel, label="Refresh")
+        btnRefresh.Bind(wx.EVT_BUTTON, self.OnButton)
 
-        grid.Add(lbl_function, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
-        grid.Add(self.cbox_window, pos=(row,1), span=(0,2), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(btn_refresh, pos=(row,3), flag=wx.ALL|wx.EXPAND, border=5)
-
+        grid.Add(lblFunction, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
+        grid.Add(self.cboxWindow, pos=(row,1), span=(0,2), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(btnRefresh, pos=(row,3), flag=wx.ALL|wx.EXPAND, border=5)
+        
         row += 1
-        self.chk_match_case = wx.CheckBox(panel, label="Match Case")
-        self.chk_match_string = wx.CheckBox(panel, label="Match Whole String")
-        self.chk_match_case.SetValue(True)
-        self.chk_match_string.SetValue(True)
-        grid.Add(self.chk_match_case, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(self.chk_match_string, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
+        lblMatch = wx.StaticText(panel, label="Condition:")
+        choices = ["Match Both Window Class And Title",
+                   "Match Window Class Only",
+                   "Match Window Title Only"]
+        self.cboxMatch = wx.ComboBox(panel, choices=choices, style=wx.CB_READONLY)
+        self.cboxMatch.SetSelection(0)
+        grid.Add(lblMatch, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
+        grid.Add(self.cboxMatch, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
+        
+        row += 1
+        self.chkMatchTitleCase = wx.CheckBox(panel, label="Match Case (Title)")
+        self.chkMatchTitle = wx.CheckBox(panel, label="Match Whole Title")
+        self.chkMatchTitleCase.SetValue(True)
+        self.chkMatchTitle.SetValue(True)
+        grid.Add(self.chkMatchTitleCase, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(self.chkMatchTitle, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
 
         grid.AddGrowableCol(1)
 
-        sbox_sizer.AddSpacer(10)
-        sbox_sizer.Add(grid, 1, wx.ALL|wx.EXPAND, 2)
+        sboxSizer.AddSpacer(10)
+        sboxSizer.Add(grid, 1, wx.ALL|wx.EXPAND, 2)
         #-----
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         hsizer.AddStretchSpacer()
-        btn_cancel = wx.Button(panel, label="Cancel", id=wx.ID_CANCEL)
-        btn_cancel.Bind(wx.EVT_BUTTON, self.OnButton)
-        self.btn_add = wx.Button(panel, label="Ok", id=wx.ID_OK)
-        self.btn_add.Bind(wx.EVT_BUTTON, self.OnButton)
-        # self.btn_add.Disable()
-        hsizer.Add(btn_cancel, 0, wx.ALL|wx.EXPAND, 5)
-        hsizer.Add(self.btn_add, 0, wx.ALL|wx.EXPAND, 5)
+        btnCancel = wx.Button(panel, label="Cancel", id=wx.ID_CANCEL)
+        btnCancel.Bind(wx.EVT_BUTTON, self.OnButton)
+        self.btnOk = wx.Button(panel, label="Ok", id=wx.ID_OK)
+        self.btnOk.Bind(wx.EVT_BUTTON, self.OnButton)
+        
+        hsizer.Add(btnCancel, 0, wx.ALL|wx.EXPAND, 5)
+        hsizer.Add(self.btnOk, 0, wx.ALL|wx.EXPAND, 5)
 
         #add to main sizer
-        sizer.Add(sbox_sizer, 0, wx.ALL|wx.EXPAND, 2)
+        sizer.Add(sboxSizer, 0, wx.ALL|wx.EXPAND, 2)
         sizer.Add(hsizer, 0, wx.ALL|wx.EXPAND, 2)
 
         panel.SetSizer(sizer)
@@ -92,26 +102,26 @@ class WindowDialog(wx.Dialog):
         elif label == "Ok":
             self.EndModal(id)
         elif label == "Refresh":
-            value = self.cbox_window.GetValue()
-            self.cbox_window.Clear()
+            value = self.cboxWindow.GetValue()
+            self.cboxWindow.Clear()
             choices = []
             choices.extend(winman.GetWindowList())
-            self.cbox_window.Append(choices)
-            self.cbox_window.SetValue(value)
+            self.cboxWindow.Append(choices)
+            self.cboxWindow.SetValue(value)
 
     def SetValue(self, data):
         window = data["window"]
-        self.cbox_window.SetValue(window)
-
-        case = data["matchcase"]
-        string = data["matchstring"]
-        self.chk_match_case.SetValue(case)
-        self.chk_match_string.SetValue(string)
+        self.cboxWindow.SetValue(window)
+        
+        self.cboxMatch.SetValue(data["matchcondition"])
+        self.chkMatchTitleCase.SetValue(data["matchcase"])
+        self.chkMatchTitle.SetValue(data["matchstring"])
 
     def GetValue(self):
         data = []
-        data.append(("window", self.cbox_window.GetValue()))
-        data.append(("matchcase", self.chk_match_case.GetValue()))
-        data.append(("matchstring", self.chk_match_string.GetValue()))
+        data.append(("window", self.cboxWindow.GetValue()))
+        data.append(("matchcondition", self.cboxMatch.GetValue()))
+        data.append(("matchcase", self.chkMatchTitleCase.GetValue()))
+        data.append(("matchstring", self.chkMatchTitle.GetValue()))
 
         return str(data)
