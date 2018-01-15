@@ -113,14 +113,14 @@ class WindowDialog(wx.Dialog):
         window = data["window"]
         self.cboxWindow.SetValue(window)
         
-        self.cboxMatch.SetValue(data["matchcondition"])
+        self.cboxMatch.SetSelection(data["matchcondition"])
         self.chkMatchTitleCase.SetValue(data["matchcase"])
         self.chkMatchTitle.SetValue(data["matchstring"])
 
     def GetValue(self):
         data = []
         data.append(("window", self.cboxWindow.GetValue()))
-        data.append(("matchcondition", self.cboxMatch.GetValue()))
+        data.append(("matchcondition", self.cboxMatch.GetSelection()))
         data.append(("matchcase", self.chkMatchTitleCase.GetValue()))
         data.append(("matchstring", self.chkMatchTitle.GetValue()))
 
