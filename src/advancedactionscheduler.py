@@ -94,10 +94,12 @@ FUNCTIONS = ["CloseWindow",
              "SwitchWindow"]
   
 DEFAULTCONFIG = {
-    "currentFile": False,
-    "fileList": [],
-    "windowSize": False,
-    "windowPos": False,
+    "currentFile": False, # the currently opened schedule file
+    "fileList": [], # recently opened schedule files
+    "fileListCount": 5, # number of recently opened files to keep in history
+    "schedManagerSwitchTab": True, # auto switch to Manager tab when schedules enabled
+    "windowSize": False, # the last window size
+    "windowPos": False, # the last window position
 }
 
 class AboutDialog(wx.Frame):  
@@ -179,7 +181,7 @@ class Main(wx.Frame):
         self._menus = {}
         self._redo_stack = []
         self._undo_stack = []
-        self._schedmgr = schedulemanager.Manager(self)
+        self._schedManager = schedulemanager.Manager(self)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         
@@ -443,21 +445,19 @@ class Main(wx.Frame):
         self.UpdateScheduleToolbar()
         self.SaveScheduleTreeToData()
        
-    def DisableScheduleManager(self):
+    def DisableScheduleManager(self, event):
+        e = event.GetEventObject()
+        id = event.GetId()
         tool = e.FindById(id)
-        tool.SetLabel("Disable Schedule Manager")
-        e.SetToolShortHelp(id, "Disable Schedule Manager")
+        tool.SetLabel("Enable Schedule Manager")
+        e.SetToolShortHelp(id, "Enable Schedule Manager")
 
-        img = wx.Image("icons/disableschedulemanager.png")
+        img = wx.Image("icons/enableschedulemanager.png")
         img = img.Rescale(48,48, wx.IMAGE_QUALITY_HIGH)
         bmp = wx.Bitmap(img)
         e.SetToolNormalBitmap(id, bmp)
 
-        self._schedmgr.SetSchedules(self._data)
-        self._schedmgr.Start()
-
-        # switch to the manager when schedules are started
-        self.notebook.SetSelection(1)
+        self._schedManager.Stop()
         
     def DoRedo(self):
         print(self._redo_stack)
@@ -516,17 +516,33 @@ class Main(wx.Frame):
 
             self.WriteData()    
     
-    def EnableScheduleManager(self):
+    def EnableScheduleManager(self, event):
+        e = event.GetEventObject()
+        id = event.GetId()
         tool = e.FindById(id)
-        tool.SetLabel("Enable Schedule Manager")
-        e.SetToolShortHelp(id, "Enable Schedule Manager")
+        tool.SetLabel("Disable Schedule Manager")
+        e.SetToolShortHelp(id, "Disable Schedule Manager")
 
-        img = wx.Image("icons/enableschedulemanager.png")
+        img = wx.Image("icons/disableschedulemanager.png")
         img = img.Rescale(48,48, wx.IMAGE_QUALITY_HIGH)
         bmp = wx.Bitmap(img)
         e.SetToolNormalBitmap(id, bmp)
+        
+        sendData = {}
+        for item, scheds in self._data.items():
+            if self.groupList.GetCheckedState(item) == 0:
+                continue
+            itemText = self.groupList.GetItemText(item)
+            sendData[itemText] = scheds
+            
+        if not sendData:
+            return
+        self._schedManager.SetSchedules(sendData)
+        self._schedManager.Start()
 
-        self._schedmgr.Stop()
+        # switch to the manager when schedules are started
+        if self._appConfig["schedManagerSwitchTab"] is True:
+            self.notebook.SetSelection(1)
         
     def GetDialog(self, label, value=None):
 
@@ -1011,9 +1027,9 @@ class Main(wx.Frame):
         elif label == "Close":
             self.CloseFile()    
         elif label == "Disable Schedule Manager":
-            self.DisableScheduleManager()
+            self.DisableScheduleManager(event)
         elif label == "Enable Schedule Manager":
-            self.EnableScheduleManager()
+            self.EnableScheduleManager(event)
         elif label == "Import":
             self.ShowImportDialog()    
         elif label == "New":

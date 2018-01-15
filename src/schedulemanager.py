@@ -36,100 +36,49 @@ class Manager:
 
         self._parent = parent
         self._schedules = {}
-        self._sched_data = {}
-
-        # populate with group names
-        self._group_names = {}
+        self._schedData = {}
     
-    def AddSchedules(self, groupData):
-        """ this method processes the groups schedules """
-        
-        groupName = groupData["columns"]["0"]
-        groupSchedules = groupData["schedules"]
-
-        groupChecked = groupData["checked"]
-        if groupChecked == "False":
-            return
-
-        _schedules = {groupName: {}}
-        ignore = [] #ignore any children of unchecked items
-        for idx, idxData in groupSchedules:
+    def AddSchedule(self, groupName, schedStr):
+        """ parse the schedule string and add schedule """
             
-            checked = idxData["checked"]
-            if checked == 0:
-                ignore.append(idx+",")
-                continue
-
-            # is a schedule?
-            if "," not in idx:
-                schedStr = idxData["columns"]["0"]
-                schedName, schedTime = schedStr.split(DELIMITER)
-
-                schedTime = make_tuple(schedTime)
-                schedTime = {k:v for k,v in schedTime}
-
-                params = {}
-                for timeVar in ["dof","h","m","s"]:
-                    if timeVar in schedTime:
-                        params[timeVar] = ",".join([t for t in schedTime[timeVar]])
-                    else:
-                        params[timeVar] = "*"
-
-                schedule = BackgroundScheduler()
-                cronTrig = CronTrigger(day_of_week=params["dof"],
-                                       hour=params["h"],
-                                       minute=params["m"],
-                                       second=params["s"])
-
-                args = (groupName, idx, schedName)
-                schedule.add_job(self.OnSchedule, args=[args], trigger=cronTrig)
-
-                # attach a listener to schedule events
-                # schedule.add_listener(self.OnScheduleEvent, apsevents.EVENT_JOB_EXECUTED|apsevents.EVENT_JOB_ERROR)
-                _schedules[groupName][idx] = (schedName, schedule)
-
-            # ...is an action
+        schedName, schedTime = schedStr.split(DELIMITER)
+        schedTime = make_tuple(schedTime)
+        schedTime = {k:v for k,v in schedTime}
+        
+        params = {}
+        for timeVar in ["dof","h","m","s"]:
+            if timeVar in schedTime:
+                params[timeVar] = ",".join([t for t in schedTime[timeVar]])
             else:
-                checked = idxData["checked"]
-                # forget unchecked, because they are never called
+                params[timeVar] = "*"
 
-                if checked == 0:
-                    ignore.append(idx+",")
-                    continue
+        schedule = BackgroundScheduler()
+        cronTrig = CronTrigger(day_of_week=params["dof"],
+                               hour=params["h"],
+                               minute=params["m"],
+                               second=params["s"])
 
-                # is index a child of an unchecked item?
-                isOk = True
-                for g in ignore:
-                    if idx.startswith(g):
-                        isOk = False
-                        break
+        args = (groupName, schedName)
+        schedule.add_job(self.OnSchedule, args=[args], trigger=cronTrig)
 
-                if isOk is False:
-                    continue
+        # attach a listener to schedule events
+        # schedule.add_listener(self.OnScheduleEvent, 
+                              # apsevents.EVENT_JOB_EXECUTED|apsevents.EVENT_JOB_ERROR)
+        try:     
+            self._schedules[groupName].append((schedName, schedule))
+        except:
+            self._schedules[groupName] = [(schedName, schedule)]
+            
+    def AddScheduleItem(self, groupName, schedName, index, schedItemStr):
+        """ parse the schedItemStr to an action """
+        action, paramStr = schedItemStr.split(DELIMITER)
+        params = {k:v for k,v in make_tuple(paramStr)}
+        self._schedData[groupName][schedName].append((index, action, params))
 
-                actionStr = idxData["columns"]["0"]
-                action, params = actionStr.split(DELIMITER)
-                params = make_tuple(params)
-
-                try:
-                    self._sched_data[groupName][idx] = (action, params)
-                except:
-                    self._sched_data[groupName] = {idx: (action, params)}
-
-        # finally, start the checked schedules of the checked groups
-        for groupName, groupScheds in _schedules.items():
-            self._schedules[groupName] = groupScheds
-            for i, sched in groupScheds.items():
-                sched[1].start()
-                self.SendLog(["-","Started schedule %s from %s group" % (sched[0], groupName)])
-    
     def DoAction(self, action, kwargs):
         logging.info("Executing action: %s" % action)
         logging.info("parameters: %s" % str(kwargs))
-
-        #convert tuple list to dictionary
-        kwargs = {k:v for k,v in kwargs}
-
+        return
         if action == "CloseWindow":
             window = kwargs["window"]
             matchcase = kwargs["matchcase"]
@@ -236,39 +185,28 @@ class Manager:
             matchstring = kwargs["matchstring"]
 
         return True
+        
     def GetParent(self):
         return self._parent
 
     def OnSchedule(self, args):
-        group, idx, schedName = args
+        groupName, schedName = args
+         
+        childIgnore = [] 
+        for index, action, params in self._schedData[groupName][schedName]:
+            a = self.DoAction(action, params)
 
-        # sort indices by order of execution
-        indices = [i for i in self._sched_data[group].keys()]
-        indices = sorted(indices)
-
-        while indices:
-            i = indices[0]
-            action, kwargs = self._sched_data[group][i]
-
-            a = self.DoAction(action, kwargs)
-
-            if a is False:
-                # returned false, therefore action condition was not met
-                # we delete the actions children
-                for j,k in enumerate(reversed(indices)):
-                    if not j.startswith(i):
-                        continue
-                    del indices[k]
-                continue
-
-            try:
-                # otherwise, go to next action
-                del indices[0]
-            except:
-                break
+            # if a is False:
+                # # returned false, therefore action condition was not met
+                # # we delete the actions children
+                # for j,k in enumerate(reversed(indices)):
+                    # if not j.startswith(i):
+                        # continue
+                    # del indices[k]
+                # continue
 
         self.SendLog(["",
-                      "Executed schedule %s from group: %s" % (schedName, group)])
+                      "Executed schedule %s from group: %s" % (schedName, groupName)])
 
     def SendLog(self, message):
         """ pass message to schedule manager lis """
@@ -276,33 +214,55 @@ class Manager:
         parent.AppendLogMessage(message)
 
     def SetSchedules(self, data):
-        """ process schedule data """
+        """ 
+        receive a tuple list of (groupName, schedList)
+        """
 
         # stop and remove schedules first
         self.Stop()
+        
+        # process schedule data
+        for groupName, schedList in data.items():
+            self._schedData[groupName] = {}
+            childIgnore = []
+            currentSched = None
+            for index, itemData in schedList:
+                # is a schedule?
+                if "," not in index:
+                    if itemData["checked"] == 0:
+                        childIgnore.append(index+",")
+                        continue
+                    schedStr = itemData["columns"]["0"]
+                    currentSched, _ = schedStr.split(DELIMITER)
+                    self._schedData[groupName][currentSched] = []
+                    self.AddSchedule(groupName, schedStr)
+                    continue
+                for ignore in childIgnore:
+                    if index.startswith(ignore):
+                        continue
+                if itemData["checked"] == 0:
+                    childIgnore.append(index+",")
+                    continue 
+                schedItemStr = itemData["columns"]["0"]    
+                self.AddScheduleItem(groupName, currentSched, index, schedItemStr)
 
-        for idx, groupData in data.items():
-            self.AddSchedules(groupData)
-    
     def Start(self):
-        pass
+        for groupName, groupScheds in self._schedules.items():
+            for schedName, schedule in groupScheds:
+                schedule.start()
+                self.SendLog(["-", "Started schedule {0} from {1} group".format(schedName, groupName)])
 
     def Stop(self):
         """ shutdown all schedules """
-        print(self._schedules)
+        for groupName, groupScheds in self._schedules.items():
+            for schedName, schedule in groupScheds:
+                schedule.shutdown()
+                self.SendLog(["-", "Stopped schedule {0} from {1} group".format(schedName, groupName)])
 
-        for group, data in self._schedules.items():
-            for idx, schedules in data.items():
-                s = schedules[1]
-                s.shutdown()
+        self.SendLog(["-", "All running schedules have been stopped"])
 
-                name = schedules[0]
-                self.SendLog(["-",
-                              "Stopped schedule %s from group %s" % (name, group)])
-
-        self.SendLog(["-","Any running schedules have been stopped"])
-
-        # clear schedules
+        # clear schedules and data
         self._schedules = {}
-    
+        self._schedData = {}
+
 # END
