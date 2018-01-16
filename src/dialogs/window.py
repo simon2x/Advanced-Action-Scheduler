@@ -66,6 +66,9 @@ class WindowDialog(wx.Dialog):
         cboxMatchesLabel = wx.StaticText(panel, label="Matches:")
         self.cboxMatches = floatspin.FloatSpin(panel, min_val=0)
         self.cboxMatches.SetDigits(0)
+        if title in ["If Window Open", "If Window Not Open"]:
+            self.cboxMatches.SetValue(1)
+            self.cboxMatches.Disable()
         cboxMatchesLabel2 = wx.StaticText(panel, label="If 0: Execute Action On All Matches")
         grid.Add(cboxMatchesLabel, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
         grid.Add(self.cboxMatches, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)

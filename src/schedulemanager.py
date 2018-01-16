@@ -90,29 +90,23 @@ class Manager:
 
         elif action == "IfWindowOpen":
             window = kwargs["window"]
-            matchcase = kwargs["matchcase"]
-            matchstring = kwargs["matchstring"]
-
-            if not actman.FindWindow(window, matchcase):
-                # no window found
-                self.SendLog(["-","IfWindowOpen: %s ...found" % window])
+            kwargs["matches"] = 1
+            if not actman.FindWindow(kwargs):
+                self.SendLog(["-","IfWindowOpen: %s ...not found" % window])
                 return False
-
-            self.SendLog(["-","IfWindowOpen: %s ...not found" % window])
+            
+            self.SendLog(["-","IfWindowOpen: %s ...found" % window])
             return True
 
         elif action == "IfWindowNotOpen":
             window = kwargs["window"]
-            matchcase = kwargs["matchcase"]
-            matchstring = kwargs["matchstring"]
-
-            if actman.FindWindow(window, matchcase):
-                # window found
-                self.SendLog(["-","IfWindowNotOpen: %s ...found" % window])
-                return False
-
-            self.SendLog(["-","IfWindowNotOpen: %s ...not found" % window])
-            return True
+            kwargs["matches"] = 1
+            if not actman.FindWindow(kwargs):
+                self.SendLog(["-","IfWindowNotOpen: %s ...not found" % window])
+                return True
+            
+            self.SendLog(["-","IfWindowNotOpen: %s ...found" % window])
+            return False
 
         elif action == "MouseClickAbsolute":
             title, win_class = make_tuple(kwargs["window"])

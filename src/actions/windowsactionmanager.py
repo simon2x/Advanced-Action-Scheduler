@@ -29,6 +29,12 @@ def CloseWindow(kwargs):
         winman.CloseWindow(handle)
     return
 
+def FindWindow(kwargs):
+    progName, title = make_tuple(kwargs["window"])
+    if winman.GetHandles(progName, title, **kwargs) == []:
+        return False
+    return True    
+    
 def GetClientArea():
     # centre the dialog
     desktop = win32gui.GetDesktopWindow()
@@ -264,7 +270,7 @@ def KillProcess(pid):
         pass
     if "No such process" in output:
         pass
-
+    
 def MouseClickRelative(x, y, w=None, h=None, originalpos=False):
     pass
 
