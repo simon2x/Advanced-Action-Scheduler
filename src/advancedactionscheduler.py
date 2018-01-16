@@ -1012,8 +1012,14 @@ class Main(wx.Frame):
         self.UpdateScheduleToolbar()    
             
     def OnScheduleTreeItemChecked(self, event):
-        """ here we just save the new tree """
-        self.GetScheduleTreeAndWriteData()
+        selection = self.schedList.GetSelection()
+        groupSel = self.GetGroupListIndex(self.groupList.GetSelection())
+        idx = self.schedList.GetItemIndex(selection)
+        for n, (j, k) in enumerate(self._data[groupSel]):
+            if not j == idx:
+                continue 
+            self._data[groupSel][n][1]["checked"] = self.schedList.GetCheckedState(selection)
+            break
 
     def OnToolBar(self, event):
         e = event.GetEventObject()
