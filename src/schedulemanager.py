@@ -181,16 +181,20 @@ class Manager:
          
         childIgnore = [] 
         for index, action, params in self._schedData[groupName][schedName]:
+            ignore = False
+            for ig in childIgnore:
+                if not a.startswith(ignore):
+                    continue
+                ignore = True
+                break
+            
+            if ignore is True:
+                continue
+                
             a = self.DoAction(action, params)
 
-            # if a is False:
-                # # returned false, therefore action condition was not met
-                # # we delete the actions children
-                # for j,k in enumerate(reversed(indices)):
-                    # if not j.startswith(i):
-                        # continue
-                    # del indices[k]
-                # continue
+            if a is False:
+                childIgnore.append(index+",")
 
         self.SendLog(["",
                       "Executed schedule %s from group: %s" % (schedName, groupName)])
