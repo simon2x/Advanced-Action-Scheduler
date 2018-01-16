@@ -264,7 +264,15 @@ class MouseClickAbsolute(wx.Dialog):
         x, y = self.spinX.GetValue(), self.spinY.GetValue()
         finder.Show()
         finder.SetFocus()
-            
+    
+    def GetMatchKwargs(self):
+        return {
+            "matchcondition": self.cboxMatch.GetSelection(),
+            "matchcase": self.chkMatchTitleCase.GetValue(),
+            "matchstring": self.chkMatchTitle.GetValue(),
+            "matches": int(self.cboxMatches.GetValue()),
+        }
+        
     def GetValue(self):
         data = []
         data.append(("window", self.cboxWindow.GetValue()))
@@ -283,7 +291,10 @@ class MouseClickAbsolute(wx.Dialog):
         return str(data)
     
     def GetWindowPos(self):
-        x1, y1, x2, y2 = self.GetWindowRect()
+        rect = self.GetWindowRect()
+        if not rect:
+            return
+        x1, y1, x2, y2 = rect
         w = x2 - x1
         h = y2 - y1
         
@@ -297,16 +308,25 @@ class MouseClickAbsolute(wx.Dialog):
         except: 
             return
             
-        try:
-            x1, y1, x2, y2 = winman.GetWindowRect(progName, title)
-        except TypeError as e:
-            logging.info(e)
+        kwargs = {
+            "matchcondition": self.cboxMatch.GetSelection(),
+            "matchcase": self.chkMatchTitleCase.GetValue(),
+            "matchstring": self.chkMatchTitle.GetValue(),
+            "matches": self.cboxMatches.GetValue(),
+        }
+        handles = winman.GetHandles(progName, title, **kwargs)
+        if not handles:
             return
-      
-        return x1, y1, x2, y2
+            
+        for handle in handles:
+            x1, y1, x2, y2 = winman.GetWindowRect(handle)
+            return x1, y1, x2, y2
     
     def GetWindowPosAndSize(self):
-        x1, y1, x2, y2 = self.GetWindowRect()
+        rect = self.GetWindowRect()
+        if not rect:
+            return
+        x1, y1, x2, y2 = rect
         w = x2 - x1
         h = y2 - y1
         
@@ -317,7 +337,10 @@ class MouseClickAbsolute(wx.Dialog):
         self.Raise()
         
     def GetWindowSize(self):
-        x1, y1, x2, y2 = self.GetWindowRect()
+        rect = self.GetWindowRect()
+        if not rect:
+            return
+        x1, y1, x2, y2 = rect
         w = x2 - x1
         h = y2 - y1
         
@@ -365,18 +388,7 @@ class MouseClickAbsolute(wx.Dialog):
         self.cboxWindow.Append(choices)
         self.cboxWindow.SetValue(value)
         
-    def ResetValues(self):    
-        self.cboxWindow.SetValue("")
-        self.chkMatchCase.SetValue(True)
-        self.chkResize.SetValue(True)
-
-        self.spinOffsetX.SetValue(0)
-        self.spinOffsetY.SetValue(0)
-        self.spinW.SetValue(0)
-        self.spinH.SetValue(0)
-        self.spinX.SetValue(0)
-        self.spinY.SetValue(0)
-        
+    def ResetValues(self):
         self.SetValue(self.resetValue)
         
     def SetValue(self, data):
@@ -393,8 +405,8 @@ class MouseClickAbsolute(wx.Dialog):
             ["resize", self.chkResize.SetValue, True],
             ["offsetx", self.spinOffsetX.SetValue, 0],
             ["offsety", self.spinOffsetY.SetValue, 0],
-            ["w", self.spinW.SetValue, 0],
-            ["h", self.spinH.SetValue, 0],
+            ["width", self.spinW.SetValue, 0],
+            ["height", self.spinH.SetValue, 0],
             ["x", self.spinX.SetValue, 0],
             ["y", self.spinY.SetValue, 0]):
             
@@ -409,11 +421,20 @@ class MouseClickAbsolute(wx.Dialog):
         y1 = self.spinOffsetY.GetValue()
         
         try:
-            title, progName = make_tuple(self.cboxWindow.GetValue())
-            winman.MoveWindow(title, progName, x1, y1, None, None)
-        except Exception as e:
-            print(e)
+            progName, title = make_tuple(self.cboxWindow.GetValue())
+        except:
             return
+        kwargs = self.GetMatchKwargs()
+        handles = winman.GetHandles(progName, title, **kwargs)
+        if not handles:
+            return
+            
+        for handle in handles:
+            try:
+                winman.MoveWindow(handle, x1, y1, None, None)
+            except Exception as e:
+                print(e)
+                return
             
         self.Raise()
         
@@ -426,11 +447,20 @@ class MouseClickAbsolute(wx.Dialog):
         y2 = y1 + h
         
         try:
-            title, progName = make_tuple(self.cboxWindow.GetValue())
-            winman.MoveWindow(title, progName, x1, y1, w, h)
-        except Exception as e:
-            print(e)
+            progName, title = make_tuple(self.cboxWindow.GetValue())
+        except:
             return
+        kwargs = self.GetMatchKwargs()    
+        handles = winman.GetHandles(progName, title, **kwargs)
+        if not handles:
+            return
+            
+        for handle in handles:
+            try:
+                winman.MoveWindow(handle, x1, y1, w, h)
+            except Exception as e:
+                print(e)
+                return
             
         self.Raise()
         
@@ -441,11 +471,20 @@ class MouseClickAbsolute(wx.Dialog):
         h = self.spinH.GetValue()
         
         try:
-            title, progName = make_tuple(self.cboxWindow.GetValue())
-            winman.SetWindowSize(title, progName, w, h)
-        except Exception as e:
-            print(e)
+            progName, title = make_tuple(self.cboxWindow.GetValue())
+        except:
             return
+        kwargs = self.GetMatchKwargs()    
+        handles = winman.GetHandles(progName, title, **kwargs)
+        if not handles:
+            return
+            
+        for handle in handles:
+            try:
+                winman.SetWindowSize(handle, w, h)
+            except Exception as e:
+                print(e)
+                return
             
         self.Raise()
 #        

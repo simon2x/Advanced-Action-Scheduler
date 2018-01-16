@@ -281,14 +281,22 @@ class MouseClickRelative(wx.Dialog):
         finder.SetBounds(x1, y1, w, h)        
         finder.Show()
         finder.SetFocus()
-            
+    
+    def GetMatchKwargs(self):
+        return {
+            "matchcondition": self.cboxMatch.GetSelection(),
+            "matchcase": self.chkMatchTitleCase.GetValue(),
+            "matchstring": self.chkMatchTitle.GetValue(),
+            "matches": int(self.cboxMatches.GetValue()),
+        }
+        
     def GetValue(self):
         data = []
         data.append(("window", self.cboxWindow.GetValue()))
         data.append(("matchcondition", self.cboxMatch.GetSelection()))
         data.append(("matchcase", self.chkMatchTitleCase.GetValue()))
         data.append(("matchstring", self.chkMatchTitle.GetValue()))
-        data.append(("matches", self.cboxMatches.GetValue()))
+        data.append(("matches", int(self.cboxMatches.GetValue())))
         data.append(("resize", self.chkResize.GetValue()))
         data.append(("offsetx", self.spinOffsetX.GetValue()))
         data.append(("offsety", self.spinOffsetY.GetValue()))
@@ -300,7 +308,10 @@ class MouseClickRelative(wx.Dialog):
         return str(data)
     
     def GetWindowPos(self):
-        x1, y1, x2, y2 = self.GetWindowRect()
+        rect = self.GetWindowRect()
+        if not rect:
+            return
+        x1, y1, x2, y2 = rect
         w = x2 - x1
         h = y2 - y1
         
@@ -314,16 +325,20 @@ class MouseClickRelative(wx.Dialog):
         except: 
             return
             
-        try:
-            x1, y1, x2, y2 = winman.GetWindowRect(progName, title)
-        except TypeError as e:
-            logging.info(e)
+        kwargs = self.GetMatchKwargs()
+        handles = winman.GetHandles(progName, title, **kwargs)
+        if not handles:
             return
-      
-        return x1, y1, x2, y2
+            
+        for handle in handles:
+            x1, y1, x2, y2 = winman.GetWindowRect(handle)
+            return x1, y1, x2, y2
     
     def GetWindowPosAndSize(self):
-        x1, y1, x2, y2 = self.GetWindowRect()
+        rect = self.GetWindowRect()
+        if not rect:
+            return
+        x1, y1, x2, y2 = rect
         w = x2 - x1
         h = y2 - y1
         
@@ -334,7 +349,10 @@ class MouseClickRelative(wx.Dialog):
         self.Raise()
         
     def GetWindowSize(self):
-        x1, y1, x2, y2 = self.GetWindowRect()
+        rect = self.GetWindowRect()
+        if not rect:
+            return
+        x1, y1, x2, y2 = rect
         w = x2 - x1
         h = y2 - y1
         
@@ -382,18 +400,7 @@ class MouseClickRelative(wx.Dialog):
         self.cboxWindow.Append(choices)
         self.cboxWindow.SetValue(value)
         
-    def ResetValues(self):    
-        self.cboxWindow.SetValue("")
-        self.chkMatchCase.SetValue(True)
-        self.chkResize.SetValue(True)
-
-        self.spinOffsetX.SetValue(0)
-        self.spinOffsetY.SetValue(0)
-        self.spinW.SetValue(0)
-        self.spinH.SetValue(0)
-        self.spinX.SetValue(0)
-        self.spinY.SetValue(0)
-        
+    def ResetValues(self):
         self.SetValue(self.resetValue)
         
     def SetValue(self, data):
@@ -403,15 +410,15 @@ class MouseClickRelative(wx.Dialog):
             
         for arg, func, default in (
             ["window", self.cboxWindow.SetValue, ""],
-            ["matchcondition", self.cboxMatch.SetSelection, True],
+            ["matchcondition", self.cboxMatch.SetSelection, 0],
             ["matchcase", self.chkMatchTitleCase.SetValue, True],
             ["matchstring", self.chkMatchTitle.SetValue, True],
             ["matches", self.cboxMatches.SetValue, 0],
             ["resize", self.chkResize.SetValue, True],
             ["offsetx", self.spinOffsetX.SetValue, 0],
             ["offsety", self.spinOffsetY.SetValue, 0],
-            ["w", self.spinW.SetValue, 0],
-            ["h", self.spinH.SetValue, 0],
+            ["width", self.spinW.SetValue, 0],
+            ["height", self.spinH.SetValue, 0],
             ["x", self.spinX.SetValue, 0],
             ["y", self.spinY.SetValue, 0]):
             
@@ -426,11 +433,20 @@ class MouseClickRelative(wx.Dialog):
         y1 = self.spinOffsetY.GetValue()
         
         try:
-            title, progName = make_tuple(self.cboxWindow.GetValue())
-            winman.MoveWindow(title, progName, x1, y1, None, None)
-        except Exception as e:
-            print(e)
+            progName, title = make_tuple(self.cboxWindow.GetValue())
+        except:
             return
+        kwargs = self.GetMatchKwargs()
+        handles = winman.GetHandles(progName, title, **kwargs)
+        if not handles:
+            return
+            
+        for handle in handles:
+            try:
+                winman.MoveWindow(handle, x1, y1, None, None)
+            except Exception as e:
+                print(e)
+                return
             
         self.Raise()
         
@@ -443,11 +459,20 @@ class MouseClickRelative(wx.Dialog):
         y2 = y1 + h
         
         try:
-            title, progName = make_tuple(self.cboxWindow.GetValue())
-            winman.MoveWindow(title, progName, x1, y1, w, h)
-        except Exception as e:
-            print(e)
+            progName, title = make_tuple(self.cboxWindow.GetValue())
+        except:
             return
+        kwargs = self.GetMatchKwargs()    
+        handles = winman.GetHandles(progName, title, **kwargs)
+        if not handles:
+            return
+            
+        for handle in handles:
+            try:
+                winman.MoveWindow(handle, x1, y1, w, h)
+            except Exception as e:
+                print(e)
+                return
             
         self.Raise()
         
@@ -458,11 +483,20 @@ class MouseClickRelative(wx.Dialog):
         h = self.spinH.GetValue()
         
         try:
-            title, progName = make_tuple(self.cboxWindow.GetValue())
-            winman.SetWindowSize(title, progName, w, h)
-        except Exception as e:
-            print(e)
+            progName, title = make_tuple(self.cboxWindow.GetValue())
+        except:
             return
+        kwargs = self.GetMatchKwargs()    
+        handles = winman.GetHandles(progName, title, **kwargs)
+        if not handles:
+            return
+            
+        for handle in handles:
+            try:
+                winman.SetWindowSize(handle, w, h)
+            except Exception as e:
+                print(e)
+                return
             
         self.Raise()
 #        
