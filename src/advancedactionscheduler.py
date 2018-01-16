@@ -82,7 +82,7 @@ logger.addHandler(ch)
 DELIMITER = " ➡ "
 FUNCTIONS = ["CloseWindow",
              "Delay",
-             "KillProcess",
+             # "KillProcess",
              "IfWindowOpen",
              "IfWindowNotOpen",
              "MouseClickAbsolute",

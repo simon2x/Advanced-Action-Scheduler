@@ -88,9 +88,6 @@ class Manager:
             time.sleep(value) #remove the 's'
             self.SendLog(["-","Delayed for %s" % delay])
 
-        elif action == "KillProcess":
-            pass
-
         elif action == "IfWindowOpen":
             window = kwargs["window"]
             matchcase = kwargs["matchcase"]
