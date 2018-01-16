@@ -127,13 +127,37 @@ class MouseClickAbsolute(wx.Dialog):
         grid.Add(btnRefresh, pos=(row,3), flag=wx.ALL|wx.EXPAND)
 
         row += 1
-        self.chkMatchCase = wx.CheckBox(panel, label="Match Case")
-        self.chkMatchCase.SetValue(True)
+        lblMatch = wx.StaticText(panel, label="Condition:")
+        choices = ["Match Both Window Class And Title",
+                   "Match Window Class Only",
+                   "Match Window Title Only"]
+        self.cboxMatch = wx.ComboBox(panel, choices=choices, style=wx.CB_READONLY)
+        self.cboxMatch.SetSelection(0)
+        grid.Add(lblMatch, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
+        grid.Add(self.cboxMatch, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
+        
+        row += 1
+        cboxMatchesLabel = wx.StaticText(panel, label="Matches:")
+        self.cboxMatches = floatspin.FloatSpin(panel, min_val=0)
+        self.cboxMatches.SetDigits(0)
+        cboxMatchesLabel2 = wx.StaticText(panel, label="If 0: Execute Action On All Matches")
+        grid.Add(cboxMatchesLabel, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
+        grid.Add(self.cboxMatches, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(cboxMatchesLabel2, pos=(row,2), flag=wx.ALL|wx.ALIGN_CENTRE|wx.ALIGN_LEFT, border=5)
+        
+        row += 1
+        self.chkMatchTitleCase = wx.CheckBox(panel, label="Match Case (Title)")
+        self.chkMatchTitle = wx.CheckBox(panel, label="Match Whole Title")
+        self.chkMatchTitleCase.SetValue(True)
+        self.chkMatchTitle.SetValue(True)
+        grid.Add(self.chkMatchTitleCase, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(self.chkMatchTitle, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
+        
+        row += 1
         self.chkResize = wx.CheckBox(panel, label="Resize Window")
         self.chkResize.SetValue(True)
-        grid.Add(self.chkMatchCase, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(self.chkResize, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
-
+        grid.Add(self.chkResize, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
+        
         row += 1
         lblOffsetX = wx.StaticText(panel, label="Offset (x):")
         self.spinOffsetX = wx.SpinCtrl(panel, min=-10000, max=10000)
@@ -244,9 +268,11 @@ class MouseClickAbsolute(wx.Dialog):
     def GetValue(self):
         data = []
         data.append(("window", self.cboxWindow.GetValue()))
-        data.append(("matchcase", self.chkMatchCase.GetValue()))
+        data.append(("matchcondition", self.cboxMatch.GetSelection()))
+        data.append(("matchcase", self.chkMatchTitleCase.GetValue()))
+        data.append(("matchstring", self.chkMatchTitle.GetValue()))
+        data.append(("matches", self.cboxMatches.GetValue()))
         data.append(("resize", self.chkResize.GetValue()))
-
         data.append(("offsetx", self.spinOffsetX.GetValue()))
         data.append(("offsety", self.spinOffsetY.GetValue()))
         data.append(("width", self.spinW.GetValue()))
@@ -357,29 +383,26 @@ class MouseClickAbsolute(wx.Dialog):
         
         if not self.resetValue:
             self.resetValue = data 
+                    
+        for arg, func, default in (
+            ["window", self.cboxWindow.SetValue, ""],
+            ["matchcondition", self.cboxMatch.SetSelection, True],
+            ["matchcase", self.chkMatchTitleCase.SetValue, True],
+            ["matchstring", self.chkMatchTitle.SetValue, True],
+            ["matches", self.cboxMatches.SetValue, 0],
+            ["resize", self.chkResize.SetValue, True],
+            ["offsetx", self.spinOffsetX.SetValue, 0],
+            ["offsety", self.spinOffsetY.SetValue, 0],
+            ["w", self.spinW.SetValue, 0],
+            ["h", self.spinH.SetValue, 0],
+            ["x", self.spinX.SetValue, 0],
+            ["y", self.spinY.SetValue, 0]):
             
-        window = data["window"]
-        self.cboxWindow.SetValue(window)
-
-        case = data["matchcase"]
-        resize = data["resize"]
-        self.chkMatchCase.SetValue(case)
-        self.chkResize.SetValue(resize)
-
-        offsetx = data["offsetx"]
-        offsety = data["offsety"]
-        self.spinOffsetX.SetValue(offsetx)
-        self.spinOffsetY.SetValue(offsety)
-
-        width = data["width"]
-        height = data["height"]
-        self.spinW.SetValue(width)
-        self.spinH.SetValue(height)
-
-        x = data["x"]
-        y = data["y"]
-        self.spinX.SetValue(x)
-        self.spinY.SetValue(y)
+            try:
+                func(data[arg])
+            except Exception as e:
+                print(e)
+                func(default)
         
     def SetWindowPos(self):
         x1 = self.spinOffsetX.GetValue()
