@@ -78,14 +78,10 @@ class Manager:
     def DoAction(self, action, kwargs):
         logging.info("Executing action: %s" % action)
         logging.info("parameters: %s" % str(kwargs))
-        return
+        
         if action == "CloseWindow":
-            window = kwargs["window"]
-            matchcase = kwargs["matchcase"]
-            matchstring = kwargs["matchstring"]
-
-            actman.CloseWindow(window, matchcase, matchstring)
-
+            actman.CloseWindow(kwargs)
+            
         elif action == "Delay":
             delay = kwargs["delay"]
             value = float(delay[:-1])
