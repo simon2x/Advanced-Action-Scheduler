@@ -183,7 +183,7 @@ class Manager:
         for index, action, params in self._schedData[groupName][schedName]:
             ignore = False
             for ig in childIgnore:
-                if not a.startswith(ignore):
+                if not index.startswith(ignore):
                     continue
                 ignore = True
                 break
