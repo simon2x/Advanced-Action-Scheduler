@@ -10,63 +10,24 @@ the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version. 
 """
 
-"""
-windowsactionmanager.py
-
-"""
-
 import logging
 import subprocess
 import time
+from ast import literal_eval as make_tuple
 
-def CloseWindow(title, matchcase=False, matchstring=True):
+from windowmanager import windows as winman
+
+def CloseWindow(kwargs):
     """
     Get handles and their respective titles. If condition is
     matched, try to close window by handle
     """
-
-    titles = []
-    def callback(hwnd, strings):
-        if win32gui.IsWindowVisible(hwnd):
-            window_title = win32gui.GetWindowText(hwnd)
-            # left, top, right, bottom = win32gui.GetWindowRect(hwnd)
-            # if window_title and right-left and bottom-top:
-                # strings.append('0x{:08x}: "{}"'.format(hwnd, window_title))
-            logging.info("hwnd: %s, title: %s" % (hwnd, window_title))
-            titles.append((hwnd, window_title))
-        return True
-    win32gui.EnumWindows(callback, titles)
-
-    def close_window(hwnd):
-        try:
-            win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
-            # win32gui.PostQuitMessage(hwnd)
-        except:
-            pass
-
-    handles = []
-    if matchcase and matchstring:
-        for hwnd, t in titles:
-            if title == t:
-                handles.append(hwnd)
-
-    elif matchcase and not matchstring:
-        for hwnd, t in titles:
-            if title in t:
-                handles.append(hwnd)
-
-    elif not matchcase and not matchstring:
-        for hwnd, t in titles:
-            if title.lower() in t.lower():
-                handles.append(hwnd)
-
-    elif not matchcase and matchstring:
-        for hwnd, t in titles:
-            if title.lower() == t.lower():
-                handles.append(hwnd)
-
-    for hwnd in handles:
-        close_window(hwnd)
+    progName, title = make_tuple(kwargs["window"])
+    handles = winman.GetHandles(progName, title, **kwargs)
+    print("handles", handles)
+    for handle in handles:
+        winman.CloseWindow(handle)
+    return
 
 def GetClientArea():
     # centre the dialog
