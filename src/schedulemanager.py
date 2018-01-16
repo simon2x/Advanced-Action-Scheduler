@@ -84,15 +84,15 @@ class Manager:
             
         elif action == "Delay":
             delay = kwargs["delay"]
-            time.sleep(delay) #remove the 's'
+            time.sleep(float(delay)) #remove the 's'
             self.SendLog(["-","Delayed for {0} seconds".format(delay)])
-
+            
         elif action == "IfWindowOpen":
             window = kwargs["window"]
             kwargs["matches"] = 1
             if not actman.FindWindow(kwargs):
                 self.SendLog(["-","IfWindowOpen: %s ...not found" % window])
-                return False
+                return
             
             self.SendLog(["-","IfWindowOpen: %s ...found" % window])
             return True
@@ -105,7 +105,7 @@ class Manager:
                 return True
             
             self.SendLog(["-","IfWindowNotOpen: %s ...found" % window])
-            return False
+            return
 
         elif action == "MouseClickAbsolute":
             title, win_class = make_tuple(kwargs["window"])
@@ -178,22 +178,14 @@ class Manager:
     def OnSchedule(self, args):
         groupName, schedName = args
          
-        childIgnore = [] 
+        childIgnore = () 
         for index, action, params in self._schedData[groupName][schedName]:
-            ignore = False
-            for ig in childIgnore:
-                if not index.startswith(ignore):
-                    continue
-                ignore = True
-                break
-            
-            if ignore is True:
+            if childIgnore and not index.startswith(childIgnore):
                 continue
-                
+            
             a = self.DoAction(action, params)
-
-            if a is False:
-                childIgnore.append(index+",")
+            if not a:
+                childIgnore + (index+",",)
 
         self.SendLog(["",
                       "Executed schedule %s from group: %s" % (schedName, groupName)])
