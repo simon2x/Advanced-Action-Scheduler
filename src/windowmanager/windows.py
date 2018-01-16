@@ -74,10 +74,10 @@ def GetHandle(progName, title):
 def GetHandles(progName, matchTitle, **kwargs):
     match = {"matchcondition":0,
              "matchcase": True,
-             "matchstring": True}
+             "matchstring": True,
+             "matches": 0}
     match.update(**kwargs)
     handles = []
-    
     
     if match["matchcondition"] == 0:
         # match both window class and title
@@ -124,6 +124,9 @@ def GetHandles(progName, matchTitle, **kwargs):
     
     for pid, pName in pidList:
         enumProcWnds(pid)
+        if len(handles) == match["matches"] and match["matches"] != 0:
+            break
+        
     return handles
     
 def GetHostname():
