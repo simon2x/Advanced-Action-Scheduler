@@ -84,9 +84,8 @@ class Manager:
             
         elif action == "Delay":
             delay = kwargs["delay"]
-            value = float(delay[:-1])
-            time.sleep(value) #remove the 's'
-            self.SendLog(["-","Delayed for %s" % delay])
+            time.sleep(delay) #remove the 's'
+            self.SendLog(["-","Delayed for {0} seconds".format(delay)])
 
         elif action == "IfWindowOpen":
             window = kwargs["window"]
