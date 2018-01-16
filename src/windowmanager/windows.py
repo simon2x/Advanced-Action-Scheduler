@@ -175,21 +175,10 @@ def GetWindowList():
     
     titles = sorted(titles, key=lambda x: x[0].lower())
     return titles
-
-# def GetWindowPos(progName, title):
-    # handle = GetHandle(progName, title)
-    # if handle == 0:
-        # return
-    # x, y, w, h = win32gui.GetClientRect(handle)
-    # print(x,y,w,h)
-    # return [x, y, w, h]
     
-def GetWindowRect(progName, title):
-    handle = GetHandle(progName, title)
-    if handle == 0:
-        return
+def GetWindowRect(handle):
     x1, y1, x2, y2 = win32gui.GetWindowRect(handle)
-    print(title, [x1, y1, x2, y2])
+    # print([x1, y1, x2, y2])
     return [x1, y1, x2, y2]
 
 def KillProcess(pid):
@@ -199,16 +188,8 @@ def KillProcess(pid):
     if "No such process" in output:
         pass
         
-def MouseClickRelative(x, y, w=None, h=None, originalpos=False):
-    pass
-    
-def MoveWindow(title, progName, x1, y1, w, h):
+def MoveWindow(handle, x1, y1, w, h):
 
-    handle = GetHandle(title, progName)
-    print(handle)
-    if not handle:
-        return
-        
     if w is None: # size not defined
         tmpX1, tmpY1, tmpX2, tmpY2 = win32gui.GetWindowRect(handle)
         w = tmpX2 - tmpX1
@@ -216,20 +197,9 @@ def MoveWindow(title, progName, x1, y1, w, h):
     
     win32gui.MoveWindow(handle, x1, y1, w, h, True)
     
-def SetForegroundWindow(title, progName):
-    """ activate the first matched window, and if no match found, return None """
-    handle = GetHandle(title, progName)
-    print(handle)
-    if not handle:
-        return
+def SetForegroundWindow(handle):
     win32gui.SetForegroundWindow(handle)
 
-def SetWindowSize(title, progName, w, h):
-
-    handle = GetHandle(title, progName)
-    print(handle)
-    if not handle:
-        return
-        
+def SetWindowSize(handle, w, h):        
     x1, y1, _, _ = win32gui.GetWindowRect(handle)
     win32gui.MoveWindow(handle, x1, y1, w, h, True)        
