@@ -15,6 +15,7 @@ import platform
 import sys
 import wx
 import windowmanager
+import wx.lib.agw.floatspin as floatspin
 
 PLATFORM = platform.system()
 if PLATFORM == "Windows":
@@ -60,6 +61,15 @@ class WindowDialog(wx.Dialog):
         self.cboxMatch.SetSelection(0)
         grid.Add(lblMatch, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
         grid.Add(self.cboxMatch, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
+        
+        row += 1
+        cboxMatchesLabel = wx.StaticText(panel, label="Matches:")
+        self.cboxMatches = floatspin.FloatSpin(panel, min_val=0)
+        self.cboxMatches.SetDigits(0)
+        cboxMatchesLabel2 = wx.StaticText(panel, label="If 0: Execute Action On All Matches")
+        grid.Add(cboxMatchesLabel, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
+        grid.Add(self.cboxMatches, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(cboxMatchesLabel2, pos=(row,2), flag=wx.ALL|wx.ALIGN_CENTRE|wx.ALIGN_LEFT, border=5)
         
         row += 1
         self.chkMatchTitleCase = wx.CheckBox(panel, label="Match Case (Title)")
@@ -109,19 +119,26 @@ class WindowDialog(wx.Dialog):
             self.cboxWindow.Append(choices)
             self.cboxWindow.SetValue(value)
 
-    def SetValue(self, data):
-        window = data["window"]
-        self.cboxWindow.SetValue(window)
+    def SetValue(self, data):        
+        for arg, func, default in (
+            ["window", self.cboxWindow.SetValue, ""],
+            ["matchcondition", self.cboxMatch.SetSelection, True],
+            ["matchcase", self.chkMatchTitleCase.SetValue, True],
+            ["matchstring", self.chkMatchTitle.SetValue, True],
+            ["matches", self.cboxMatches.SetValue, 0]):
+            
+            try:
+                func(data[arg])
+            except Exception as e:
+                print(e)
+                func(default)
         
-        self.cboxMatch.SetSelection(data["matchcondition"])
-        self.chkMatchTitleCase.SetValue(data["matchcase"])
-        self.chkMatchTitle.SetValue(data["matchstring"])
-
     def GetValue(self):
         data = []
         data.append(("window", self.cboxWindow.GetValue()))
         data.append(("matchcondition", self.cboxMatch.GetSelection()))
         data.append(("matchcase", self.chkMatchTitleCase.GetValue()))
         data.append(("matchstring", self.chkMatchTitle.GetValue()))
-
+        data.append(("matches", self.cboxMatches.GetValue()))
+        
         return str(data)
