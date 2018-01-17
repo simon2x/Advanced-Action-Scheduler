@@ -109,9 +109,10 @@ class AboutDialog(wx.Frame):
     def __init__(self, parent):                    
         wx.Frame.__init__(self,
                           parent,
-                          -1, 
+                          style=wx.DEFAULT_FRAME_STYLE|wx.FRAME_NO_TASKBAR,
                           title=__title__)
-                        
+        
+        self.SetIcon(wx.Icon("icons/icon.png"))                
         panel = wx.Panel(self)    
         sizer = wx.BoxSizer(wx.VERTICAL)
         
@@ -148,7 +149,6 @@ class AboutDialog(wx.Frame):
         panel.SetSizerAndFit(sizer)
         self.Fit()
         self.Centre()
-        self.SetMinSize((600, 400))
         self.SetSize((600, 400))
         self.Show()
         
@@ -160,11 +160,19 @@ class SettingsFrame(wx.Frame):
 
         wx.Frame.__init__(self,
                           parent=parent,
+                          style=wx.DEFAULT_FRAME_STYLE|wx.FRAME_NO_TASKBAR,
                           title=self._title)
-                          
+        
+        self.SetIcon(wx.Icon("icons/icon.png"))                  
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
+        
+        
+        
+        
+        
         panel.SetSizer(sizer)
+        
         
 class Main(wx.Frame):
 
