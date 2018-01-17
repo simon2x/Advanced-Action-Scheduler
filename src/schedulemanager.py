@@ -13,7 +13,6 @@ the Free Software Foundation; either version 2 of the License, or
 import base
 import logging
 import platform
-import pyautogui
 import time
 import webbrowser
 
@@ -78,76 +77,45 @@ class Manager:
     def DoAction(self, action, kwargs):
         logging.info("Executing action: %s" % action)
         logging.info("parameters: %s" % str(kwargs))
-        return
+        
         if action == "CloseWindow":
-            window = kwargs["window"]
-            matchcase = kwargs["matchcase"]
-            matchstring = kwargs["matchstring"]
-
-            actman.CloseWindow(window, matchcase, matchstring)
-
+            actman.CloseWindow(kwargs)
+            
         elif action == "Delay":
             delay = kwargs["delay"]
-            value = float(delay[:-1])
-            time.sleep(value) #remove the 's'
-            self.SendLog(["-","Delayed for %s" % delay])
-
-        elif action == "KillProcess":
-            pass
-
+            time.sleep(float(delay)) #remove the 's'
+            self.SendLog("Delayed for {0} seconds".format(delay))
+            
         elif action == "IfWindowOpen":
             window = kwargs["window"]
-            matchcase = kwargs["matchcase"]
-            matchstring = kwargs["matchstring"]
-
-            if not actman.FindWindow(window, matchcase):
-                # no window found
-                self.SendLog(["-","IfWindowOpen: %s ...found" % window])
-                return False
-
-            self.SendLog(["-","IfWindowOpen: %s ...not found" % window])
+            kwargs["matches"] = 1
+            if not actman.FindWindow(kwargs):
+                self.SendLog("IfWindowOpen: %s ...not found" % window)
+                return
+            
+            self.SendLog("IfWindowOpen: %s ...found" % window)
             return True
 
         elif action == "IfWindowNotOpen":
             window = kwargs["window"]
-            matchcase = kwargs["matchcase"]
-            matchstring = kwargs["matchstring"]
+            kwargs["matches"] = 1
+            if not actman.FindWindow(kwargs):
+                self.SendLog("IfWindowNotOpen: %s ...not found" % window)
+                return True
 
-            if actman.FindWindow(window, matchcase):
-                # window found
-                self.SendLog(["-","IfWindowNotOpen: %s ...found" % window])
-                return False
-
-            self.SendLog(["-","IfWindowNotOpen: %s ...not found" % window])
-            return True
+            self.SendLog("IfWindowNotOpen: %s ...found" % window)
+            return
 
         elif action == "MouseClickAbsolute":
-            title, win_class = make_tuple(kwargs["window"])
-            matchcase = kwargs["matchcase"]
-            resize = kwargs["resize"]
-            offsetx = kwargs["offsetx"]
-            offsety = kwargs["offsety"]
-            width = kwargs["width"]
-            height = kwargs["height"]
-            x = kwargs["x"]
-            y = kwargs["y"]
-
-            actman.SetWindowSize(title, win_class, offsetx, offsety, width, height)
-            pyautogui.click(x=x, y=y)
-
+            window = kwargs["window"]
+            actman.MouseClickAbsolute(kwargs)
+            self.SendLog("MouseClickAbsolute: {0}".format(window))   
+                       
         elif action == "MouseClickRelative":
             window = kwargs["window"]
-            matchcase = kwargs["matchcase"]
-            resize = kwargs["resize"]
-            offsetx = kwargs["offsetx"]
-            offsety = kwargs["offsety"]
-            width = kwargs["width"]
-            height = kwargs["height"]
-            x = kwargs["x"]
-            y = kwargs["y"]
-
-            actman.MouseClickRelative(title, win_class, offsetx, offsety, width, height)
-
+            actman.MouseClickRelative(kwargs)
+            self.SendLog("MouseClickRelative: {0}".format(window))   
+            
         elif action == "OpenURL":
             url = kwargs["url"]
             browser = kwargs["browser"]
@@ -180,9 +148,8 @@ class Manager:
             schedule = kwargs["schedule"]
 
         elif action == "SwitchWindow":
-            window = kwargs["window"]
-            matchcase = kwargs["matchcase"]
-            matchstring = kwargs["matchstring"]
+            kwargs["matches"] = 1
+            actman.SwitchWindow(kwargs)
 
         return True
         
@@ -192,26 +159,21 @@ class Manager:
     def OnSchedule(self, args):
         groupName, schedName = args
          
-        childIgnore = [] 
+        childIgnore = () 
         for index, action, params in self._schedData[groupName][schedName]:
+            if childIgnore and not index.startswith(childIgnore):
+                continue
+            
             a = self.DoAction(action, params)
+            if not a:
+                childIgnore + (index+",",)
 
-            # if a is False:
-                # # returned false, therefore action condition was not met
-                # # we delete the actions children
-                # for j,k in enumerate(reversed(indices)):
-                    # if not j.startswith(i):
-                        # continue
-                    # del indices[k]
-                # continue
-
-        self.SendLog(["",
-                      "Executed schedule %s from group: %s" % (schedName, groupName)])
+        self.SendLog("Executed schedule %s from group: %s" % (schedName, groupName))
 
     def SendLog(self, message):
         """ pass message to schedule manager lis """
         parent = self.GetParent()
-        parent.AppendLogMessage(message)
+        parent.AddLogMessage(message)
 
     def SetSchedules(self, data):
         """ 
@@ -221,27 +183,25 @@ class Manager:
         # stop and remove schedules first
         self.Stop()
         
+        childIgnore = ()
         # process schedule data
         for groupName, schedList in data.items():
             self._schedData[groupName] = {}
-            childIgnore = []
             currentSched = None
             for index, itemData in schedList:
                 # is a schedule?
                 if "," not in index:
                     if itemData["checked"] == 0:
-                        childIgnore.append(index+",")
+                        childIgnore += (index+",",)
                         continue
                     schedStr = itemData["columns"]["0"]
                     currentSched, _ = schedStr.split(DELIMITER)
                     self._schedData[groupName][currentSched] = []
                     self.AddSchedule(groupName, schedStr)
                     continue
-                for ignore in childIgnore:
-                    if index.startswith(ignore):
-                        continue
-                if itemData["checked"] == 0:
-                    childIgnore.append(index+",")
+                    
+                if itemData["checked"] == 0 or index.startswith(childIgnore):
+                    childIgnore += (index+",",)
                     continue 
                 schedItemStr = itemData["columns"]["0"]    
                 self.AddScheduleItem(groupName, currentSched, index, schedItemStr)
@@ -250,16 +210,16 @@ class Manager:
         for groupName, groupScheds in self._schedules.items():
             for schedName, schedule in groupScheds:
                 schedule.start()
-                self.SendLog(["-", "Started schedule {0} from {1} group".format(schedName, groupName)])
+                self.SendLog("Started schedule {0} from {1} group".format(schedName, groupName))
 
     def Stop(self):
         """ shutdown all schedules """
         for groupName, groupScheds in self._schedules.items():
             for schedName, schedule in groupScheds:
-                schedule.shutdown()
-                self.SendLog(["-", "Stopped schedule {0} from {1} group".format(schedName, groupName)])
+                schedule.shutdown(wait=False)
+                self.SendLog("Stopped schedule {0} from {1} group".format(schedName, groupName))
 
-        self.SendLog(["-", "All running schedules have been stopped"])
+        self.SendLog("All running schedules have been stopped")
 
         # clear schedules and data
         self._schedules = {}

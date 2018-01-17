@@ -23,6 +23,7 @@ import win32gui
 import win32process
 
 from ctypes import pointer, wintypes
+from ast import literal_eval as make_tuple
 
 lpdw_process_id = ctypes.c_ulong()
 GetWindowThreadProcessId = ctypes.windll.user32.GetWindowThreadProcessId
@@ -39,55 +40,9 @@ GetWindowText = ctypes.windll.user32.GetWindowTextW
 GetWindowTextLength = ctypes.windll.user32.GetWindowTextLengthW
 IsWindowVisible = ctypes.windll.user32.IsWindowVisible
 
-def CloseWindow(title, matchcase=False, matchstring=True):
-    """
-    Get handles and their respective titles. If condition is
-    matched, try to close window by handle
-    """
-
-    titles = []
-    def callback(hwnd, strings):
-        if win32gui.IsWindowVisible(hwnd):
-            window_title = win32gui.GetWindowText(hwnd)
-            # left, top, right, bottom = win32gui.GetWindowRect(hwnd)
-            # if window_title and right-left and bottom-top:
-                # strings.append('0x{:08x}: "{}"'.format(hwnd, window_title))
-            logging.info("hwnd: %s, title: %s" % (hwnd, window_title))
-            titles.append((hwnd, window_title))
-        return True
-    win32gui.EnumWindows(callback, titles)
-
-    def close_window(hwnd):
-        try:
-            win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
-            # win32gui.PostQuitMessage(hwnd)
-        except:
-            pass
-
-    handles = []
-    if matchcase and matchstring:
-        for hwnd, t in titles:
-            if title == t:
-                handles.append(hwnd)
-
-    elif matchcase and not matchstring:
-        for hwnd, t in titles:
-            if title in t:
-                handles.append(hwnd)
-
-    elif not matchcase and not matchstring:
-        for hwnd, t in titles:
-            if title.lower() in t.lower():
-                handles.append(hwnd)
-
-    elif not matchcase and matchstring:
-        for hwnd, t in titles:
-            if title.lower() == t.lower():
-                handles.append(hwnd)
-
-    for hwnd in handles:
-        close_window(hwnd)
-
+def CloseWindow(handle):
+    win32gui.PostMessage(handle, win32con.WM_CLOSE, 0, 0)
+    
 def GetHandle(progName, title):
     matchTitle = title
     foundHandle = []
@@ -115,7 +70,65 @@ def GetHandle(progName, title):
             return foundHandle[0]
     
     return
- 
+    
+def GetHandles(progName, matchTitle, **kwargs):
+    match = {"matchcondition":0,
+             "matchcase": True,
+             "matchstring": True,
+             "matches": 0}
+    match.update(**kwargs)
+    handles = []
+    
+    if match["matchcondition"] == 0:
+        # match both window class and title
+        pidList = [(p.pid, p.name()) for p in psutil.process_iter() if p.name() == progName]
+    elif match["matchcondition"] == 1:
+        # match window class only
+        pidList = [(p.pid, p.name()) for p in psutil.process_iter() if p.name() == progName]
+    elif match["matchcondition"] == 2:
+        # match title only
+        pidList = [(p.pid, p.name()) for p in psutil.process_iter()]
+        
+    def isMatch(title):
+        print(title, matchTitle)
+        if match["matchcase"] is True:
+            if match["matchstring"] is True:
+                if title == matchTitle:
+                    return True
+            else:
+                if title in matchTitle:
+                    return True
+        else:
+            title = title.lower()
+            if match["matchstring"] is True:
+                if title == matchTitle.lower():
+                    return True
+            else:
+                if title in matchTitle.lower():
+                    return True
+        
+        return False           
+    
+    def enumWindowsProc(hwnd, lParam):
+        """ append window titles which match a pid """
+        if (lParam is None) or ((lParam is not None) and (win32process.GetWindowThreadProcessId(hwnd)[1] == lParam)):
+            text = win32gui.GetWindowText(hwnd) # window title
+            if text:
+                wStyle = win32api.GetWindowLong(hwnd, win32con.GWL_STYLE)
+                if wStyle & win32con.WS_VISIBLE:
+                    if isMatch(text) is True:
+                        handles.append(hwnd)
+                        
+    def enumProcWnds(pid=None):
+        win32gui.EnumWindows(enumWindowsProc, pid)
+    
+    for pid, pName in pidList:
+        enumProcWnds(pid)
+        if len(handles) == match["matches"] and match["matches"] != 0:
+            break
+        
+    return handles
+    
 def GetHostname():
     hostname = subprocess.check_output(["hostname"]).decode("utf-8").strip()
     return hostname
@@ -162,21 +175,10 @@ def GetWindowList():
     
     titles = sorted(titles, key=lambda x: x[0].lower())
     return titles
-
-# def GetWindowPos(progName, title):
-    # handle = GetHandle(progName, title)
-    # if handle == 0:
-        # return
-    # x, y, w, h = win32gui.GetClientRect(handle)
-    # print(x,y,w,h)
-    # return [x, y, w, h]
     
-def GetWindowRect(progName, title):
-    handle = GetHandle(progName, title)
-    if handle == 0:
-        return
+def GetWindowRect(handle):
     x1, y1, x2, y2 = win32gui.GetWindowRect(handle)
-    print(title, [x1, y1, x2, y2])
+    # print([x1, y1, x2, y2])
     return [x1, y1, x2, y2]
 
 def KillProcess(pid):
@@ -186,16 +188,20 @@ def KillProcess(pid):
     if "No such process" in output:
         pass
         
-def MouseClickRelative(x, y, w=None, h=None, originalpos=False):
-    pass
-    
-def MoveWindow(title, progName, x1, y1, w, h):
-
-    handle = GetHandle(title, progName)
-    print(handle)
-    if not handle:
-        return
+def LeftMouseClick(x, y):
+    win32api.SetCursorPos((x,y))
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,0,0)
+    time.sleep(0.1)
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,0,0)
         
+def MaximizeWindow(handle):
+    win32gui.ShowWindow(handle, win32con.SW_SHOW)
+ 
+def MinimizeWindow(handle):
+    win32gui.ShowWindow(handle, win32con.SW_HIDE)
+    
+def MoveWindow(handle, x1, y1, w, h):
+
     if w is None: # size not defined
         tmpX1, tmpY1, tmpX2, tmpY2 = win32gui.GetWindowRect(handle)
         w = tmpX2 - tmpX1
@@ -203,20 +209,16 @@ def MoveWindow(title, progName, x1, y1, w, h):
     
     win32gui.MoveWindow(handle, x1, y1, w, h, True)
     
-def SetForegroundWindow(title, progName):
-    """ activate the first matched window, and if no match found, return None """
-    handle = GetHandle(title, progName)
-    print(handle)
-    if not handle:
-        return
+def RestoreWindow(handle):
+    win32gui.ShowWindow(handle, win32con.SW_RESTORE)
+    
+def SetForegroundWindow(handle):
     win32gui.SetForegroundWindow(handle)
 
-def SetWindowSize(title, progName, w, h):
-
-    handle = GetHandle(title, progName)
-    print(handle)
-    if not handle:
-        return
-        
+def SetWindowSize(handle, w, h):        
     x1, y1, _, _ = win32gui.GetWindowRect(handle)
-    win32gui.MoveWindow(handle, x1, y1, w, h, True)        
+    win32gui.MoveWindow(handle, x1, y1, w, h, True)
+    
+def ShowWindow(handle):
+    win32gui.ShowWindow(handle, win32con.SW_SHOW)
+    

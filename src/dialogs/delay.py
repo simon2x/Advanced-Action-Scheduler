@@ -12,6 +12,7 @@ the Free Software Foundation; either version 2 of the License, or
 
 import wx
 import base
+import wx.lib.agw.floatspin as floatspin
 
 class AddDelay(wx.Dialog):
 
@@ -29,14 +30,10 @@ class AddDelay(wx.Dialog):
         grid = wx.GridBagSizer(5,5)
 
         row = 0
-        self.spinDelay = wx.SpinCtrl(panel, max=99, min=0)
-        self.spinDelay2 = wx.SpinCtrl(panel, max=99, min=0)
-        self.spinDelay.Bind(wx.EVT_SPINCTRL, self.OnSpinDelay)
-        self.spinDelay2.Bind(wx.EVT_SPINCTRL, self.OnSpinDelay)
-        self.labelDelayValue = wx.StaticText(panel, label="0.0s")
+        self.spinDelay = floatspin.FloatSpin(panel, min_val=0, max_val=10000, digits=5, increment=0.1)
+        self.labelDelay = wx.StaticText(panel, label="seconds")
         grid.Add(self.spinDelay, pos=(row,1), span=(2,2), flag=wx.ALL|wx.ALIGN_BOTTOM, border=5)
-        grid.Add(self.spinDelay2, pos=(row,3), span=(2,2), flag=wx.ALL|wx.ALIGN_BOTTOM, border=5)
-        grid.Add(self.labelDelayValue, pos=(row,5), span=(2,2), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
+        grid.Add(self.labelDelay, pos=(row,3), span=(2,2), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
 
         sboxSizer.Add(grid, 1, wx.ALL|wx.EXPAND, 10)
         sboxSizer.AddSpacer(10)
@@ -61,7 +58,7 @@ class AddDelay(wx.Dialog):
         self.Bind(wx.EVT_KEY_UP, self.OnKeyUp)
 
     def GetValue(self):
-        data = [("delay",str(self.labelDelayValue.GetLabel()))]
+        data = [("delay", str(self.spinDelay.GetValue()))]
         data = str(data)
         return data
         
@@ -80,21 +77,9 @@ class AddDelay(wx.Dialog):
         print(event)
         if key == wx.KEY_ESCAPE:
             self.EndModal(wx.ID_CANCEL)
-
-    def OnSpinDelay(self, event=None):
-        s0 = self.spinDelay.GetValue()
-        s1 = self.spinDelay2.GetValue()
-
-        label = str(s0) + "." + str(s1) + "s"
-        self.labelDelayValue.SetLabel(label)
         
     def SetValue(self, data):
-        delay = data["delay"]
-
-        self.labelDelayValue.SetLabel(delay)
-
-        #increment delay
-        spin1, spin2 = delay[:-1].split(".")
-
-        self.spinDelay.SetValue(spin1)
-        self.spinDelay2.SetValue(spin2)
+        try:
+            self.spinDelay.SetValue(float(data["delay"]))
+        except Exception as e:
+            print(e)
