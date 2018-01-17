@@ -179,8 +179,8 @@ class Main(wx.Frame):
         self._settingsDialog = None
         self._data = {}
         self._menus = {}
-        self._redo_stack = []
-        self._undo_stack = []
+        self._redoStack = []
+        self._undoStack = []
         self._schedManager = schedulemanager.Manager(self)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
@@ -194,34 +194,34 @@ class Main(wx.Frame):
         #-----
         self.splitter = wx.SplitterWindow(self)
 
-        leftpanel = wx.Panel(self.splitter)
-        leftsizer = wx.BoxSizer(wx.VERTICAL)
+        leftPanel = wx.Panel(self.splitter)
+        leftSizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.groupList = base.TreeListCtrl(leftpanel)
+        self.groupList = base.TreeListCtrl(leftPanel)
         self.groupList.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnGroupItemSelected)
         self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_CHECKED, self.OnGroupItemChecked)
         self.groupList.AppendColumn("Group")
         self.groupList_root = self.groupList.GetRootItem()
 
-        leftsizer.Add(self.groupList, 1, wx.ALL|wx.EXPAND, 5)
-        leftpanel.SetSizer(leftsizer)
+        leftSizer.Add(self.groupList, 1, wx.ALL|wx.EXPAND, 5)
+        leftPanel.SetSizer(leftSizer)
 
         # ----- rhs layout -----
 
-        nbpanel = wx.Panel(self.splitter)
-        self.notebook = wx.Notebook(nbpanel)
-        nbsizer = wx.BoxSizer(wx.VERTICAL)
-        nbsizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 2)
+        nbPanel = wx.Panel(self.splitter)
+        self.notebook = wx.Notebook(nbPanel)
+        nbSizer = wx.BoxSizer(wx.VERTICAL)
+        nbSizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 2)
 
         # the schedule panel/tab page
-        schedpanel = wx.Panel(self.notebook)
-        schedsizer = wx.BoxSizer(wx.VERTICAL)
+        schedPanel = wx.Panel(self.notebook)
+        schedSizer = wx.BoxSizer(wx.VERTICAL)
 
         # -----
-        hsizer_functions = wx.WrapSizer(wx.HORIZONTAL)
+        hSizerFunctions = wx.WrapSizer(wx.HORIZONTAL)
         self.schedBtns = {}
         for label in ["Add Schedule", "Up", "Down", "Edit", "Toggle", "Delete"]:
-            btn = wx.Button(schedpanel, label=label, name=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
+            btn = wx.Button(schedPanel, label=label, name=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
             btn.Disable()
             self.schedBtns[label] = btn
             img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
@@ -232,37 +232,37 @@ class Main(wx.Frame):
             else:
                 btn.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
             if label in ["Delete"]:
-                hsizer_functions.AddStretchSpacer()
+                hSizerFunctions.AddStretchSpacer()
 
             btn.SetBitmap(bmp)
 
             tooltip = wx.ToolTip(label)
             btn.SetToolTip(tooltip)
-            hsizer_functions.Add(btn, 0, wx.ALL|wx.EXPAND, 2)
-        schedsizer.Add(hsizer_functions, 0, wx.ALL|wx.EXPAND, 2)
+            hSizerFunctions.Add(btn, 0, wx.ALL|wx.EXPAND, 2)
+        schedSizer.Add(hSizerFunctions, 0, wx.ALL|wx.EXPAND, 2)
 
-        schedsizer.Add(wx.StaticLine(schedpanel), 0, wx.ALL|wx.EXPAND, 2)
-
-        # -----
-        hsizer_functions2 = wx.BoxSizer(wx.HORIZONTAL)
-
-        self.cbox_functions = wx.ComboBox(schedpanel, style=wx.CB_READONLY, choices=FUNCTIONS)
-        self.cbox_functions.SetSelection(0)
-        self.cbox_functions.Bind(wx.EVT_COMBOBOX, self.OnComboboxFunction)
-
-        btn_addfn = wx.Button(schedpanel, label="Add Function", size=(-1, -1))
-        btn_addfn.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
-
-        hsizer_functions2.Add(self.cbox_functions, 0, wx.ALL|wx.CENTRE, 5)
-        hsizer_functions2.Add(btn_addfn, 0, wx.ALL|wx.CENTRE, 5)
-
-        schedsizer.Add(hsizer_functions2, 0, wx.ALL, 0)
-
-        # schedsizer.Add(wx.StaticLine(schedpanel), 0, wx.ALL|wx.EXPAND, 0)
+        schedSizer.Add(wx.StaticLine(schedPanel), 0, wx.ALL|wx.EXPAND, 2)
 
         # -----
+        hSizerFunctions2 = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.splitter2 = wx.SplitterWindow(schedpanel)
+        self.cboxFunctions = wx.ComboBox(schedPanel, style=wx.CB_READONLY, choices=FUNCTIONS)
+        self.cboxFunctions.SetSelection(0)
+        self.cboxFunctions.Bind(wx.EVT_COMBOBOX, self.OnComboboxFunction)
+
+        btnAddFunction = wx.Button(schedPanel, label="Add Function", size=(-1, -1))
+        btnAddFunction.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
+
+        hSizerFunctions2.Add(self.cboxFunctions, 0, wx.ALL|wx.CENTRE, 5)
+        hSizerFunctions2.Add(btnAddFunction, 0, wx.ALL|wx.CENTRE, 5)
+
+        schedSizer.Add(hSizerFunctions2, 0, wx.ALL, 0)
+
+        # schedSizer.Add(wx.StaticLine(schedPanel), 0, wx.ALL|wx.EXPAND, 0)
+
+        # -----
+
+        self.splitter2 = wx.SplitterWindow(schedPanel)
 
         self.schedList = base.TreeListCtrl(self.splitter2, style=wx.dataview.TL_CHECKBOX)
         self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self.OnScheduleTreeActivated)
@@ -270,45 +270,45 @@ class Main(wx.Frame):
         self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_CHECKED, self.OnScheduleTreeItemChecked)
         self.schedList.AppendColumn("Schedule")
 
-        infopanel = wx.Panel(self.splitter2)
-        infopanelsizer = wx.BoxSizer(wx.VERTICAL)
-        self.infoSched = wx.TextCtrl(infopanel, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH)
+        infoPanel = wx.Panel(self.splitter2)
+        infoPanelSizer = wx.BoxSizer(wx.VERTICAL)
+        self.infoSched = wx.TextCtrl(infoPanel, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH)
 
-        infopanelsizer.Add(self.infoSched, 1, wx.ALL|wx.EXPAND, 0)
-        infopanel.SetSizer(infopanelsizer)
+        infoPanelSizer.Add(self.infoSched, 1, wx.ALL|wx.EXPAND, 0)
+        infoPanel.SetSizer(infoPanelSizer)
 
-        self.splitter2.SplitHorizontally(self.schedList, infopanel)
+        self.splitter2.SplitHorizontally(self.schedList, infoPanel)
         self.splitter2.SetSashGravity(0.8)
 
-        schedsizer.Add(self.splitter2, 1, wx.ALL|wx.EXPAND, 5)
-        schedpanel.SetSizer(schedsizer)
+        schedSizer.Add(self.splitter2, 1, wx.ALL|wx.EXPAND, 5)
+        schedPanel.SetSizer(schedSizer)
 
         # the schedule manager panel/tab page
-        mgrpanel = wx.Panel(self.notebook)
-        mgrsizer = wx.BoxSizer(wx.VERTICAL)
-        mgrpanel.SetSizer(mgrsizer)
+        schedManagerPanel = wx.Panel(self.notebook)
+        schedManagerSizer = wx.BoxSizer(wx.VERTICAL)
+        schedManagerPanel.SetSizer(schedManagerSizer)
 
-        mgrhsizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.chkboxes = {}
+        schedManagerHsizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.chkBoxes = {}
         for lbl in ["All","Schedules","Actions","Errors"]:
-            chkbox = wx.CheckBox(mgrpanel, label=lbl)
-            self.chkboxes[lbl] = chkbox
-            mgrhsizer.Add(chkbox, 0, wx.ALL, 5)
-        self.chkboxes["All"].SetValue(True)
-        mgrsizer.Add(mgrhsizer, 0, wx.ALL, 0)
+            chkBox = wx.CheckBox(schedManagerPanel, label=lbl)
+            self.chkBoxes[lbl] = chkBox
+            schedManagerHsizer.Add(chkBox, 0, wx.ALL, 5)
+        self.chkBoxes["All"].SetValue(True)
+        schedManagerSizer.Add(schedManagerHsizer, 0, wx.ALL, 0)
 
-        self.schedlog = base.BaseList(mgrpanel)
-        self.schedlog.InsertColumn(0, "#")
-        self.schedlog.InsertColumn(1, "Time")
-        self.schedlog.InsertColumn(2, "Message")
-        mgrsizer.Add(self.schedlog, 1, wx.ALL|wx.EXPAND, 0)
+        self.schedLog = base.BaseList(schedManagerPanel)
+        self.schedLog.InsertColumn(0, "#")
+        self.schedLog.InsertColumn(1, "Time")
+        self.schedLog.InsertColumn(2, "Message")
+        schedManagerSizer.Add(self.schedLog, 1, wx.ALL|wx.EXPAND, 0)
 
-        self.notebook.AddPage(schedpanel, "Schedules")
-        self.notebook.AddPage(mgrpanel, "Manager")
+        self.notebook.AddPage(schedPanel, "Schedules")
+        self.notebook.AddPage(schedManagerPanel, "Manager")
 
-        nbpanel.SetSizer(nbsizer)
+        nbPanel.SetSizer(nbSizer)
 
-        self.splitter.SplitVertically(leftpanel, nbpanel)
+        self.splitter.SplitVertically(leftPanel, nbPanel)
         self.splitter.SetSashGravity(0.2)
 
         self.SetMinSize((700, 600))
@@ -322,8 +322,8 @@ class Main(wx.Frame):
         
     def AppendLogMessage(self, message):
         """ append log message to schedule messenger list """
-        i = self.schedlog.GetItemCount()
-        self.schedlog.Append([str(i)] + message)
+        i = self.schedLog.GetItemCount()
+        self.schedLog.Append([str(i)] + message)
 
     def ClearUI(self):
         """ clears lists and set toolbar/button states appropriately """
@@ -460,12 +460,12 @@ class Main(wx.Frame):
         self._schedManager.Stop()
         
     def DoRedo(self):
-        print(self._redo_stack)
+        print(self._redoStack)
         # can we redo?
         try:
-            state = self._redo_stack[-1]
-            # self._undo_stack.append(state)
-            del self._redo_stack[-1]
+            state = self._redoStack[-1]
+            # self._undoStack.append(state)
+            del self._redoStack[-1]
         except:
             logging.info("No redo operations are possible")
             return
@@ -491,9 +491,9 @@ class Main(wx.Frame):
     def DoUndo(self):
         # can we undo?
             try:
-                state = self._undo_stack[-1]
-                # self._redo_stack.append(state)
-                del self._undo_stack[-1]
+                state = self._undoStack[-1]
+                # self._redoStack.append(state)
+                del self._undoStack[-1]
             except:
                 logging.info("No undo operations are possible")
                 return
@@ -759,7 +759,7 @@ class Main(wx.Frame):
         self.schedList.Select(self.schedList.GetNextSibling(next))
         self.UpdateScheduleToolbar()
         # finally, clear the redo stack        
-        self._redo_stack = []
+        self._redoStack = []
     
     def MoveScheduleItemUp(self):
         """ move item up by moving the previous item down """
@@ -834,10 +834,10 @@ class Main(wx.Frame):
         if not schedSel.IsOk():
             return
             
-        index = self.cbox_functions.GetSelection()
+        index = self.cboxFunctions.GetSelection()
         if index == -1:
             return
-        label = self.cbox_functions.GetStringSelection()
+        label = self.cboxFunctions.GetStringSelection()
         logging.info("OnComboboxFunction event: %s" % label)
         logging.debug(index)        
 
@@ -1194,7 +1194,7 @@ class Main(wx.Frame):
             data[k] = dict(v)
 
         state = {"data": data, "groupIdx": groupIdx}
-        self._redo_stack.append(state)
+        self._redoStack.append(state)
 
         self.WriteData()
 
@@ -1211,7 +1211,7 @@ class Main(wx.Frame):
         state = {"data": data,
                  "groupIdx": groupIdx}
 
-        self._undo_stack.append(state)
+        self._undoStack.append(state)
 
         self.WriteData()
     
@@ -1281,7 +1281,7 @@ class Main(wx.Frame):
             self.groupList.Select(newItem)
             self.groupList.SetFocus()
 
-            self._redo_stack = []
+            self._redoStack = []
             return
             
     def ShowAddScheduleDialog(self):   
@@ -1348,7 +1348,7 @@ class Main(wx.Frame):
         del self._data[groupIdx]
         
         self.toolbar.EnableTool(wx.ID_REMOVE, False)
-        self._redo_stack = []
+        self._redoStack = []
         self.WriteData()
         
     def ShowSettingsDialog(self):
