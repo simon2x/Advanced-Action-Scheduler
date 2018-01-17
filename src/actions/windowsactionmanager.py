@@ -61,9 +61,9 @@ def MouseClickRelative(kwargs):
     x, y = x1 + int(kwargs["%width"] * w * 0.01), y1 + int(kwargs["%height"] * h * 0.01)
     for handle in handles:
         winman.RestoreWindow(handle)
+        winman.SetForegroundWindow(handle)
         if kwargs["resize"] is True:
             winman.MoveWindow(handle, x1, y1, w, h)
-            winman.SetForegroundWindow(handle)
         else:
             # calculate new relative positon
             x1, y1, w, h = winman.GetWindowRect(handle)

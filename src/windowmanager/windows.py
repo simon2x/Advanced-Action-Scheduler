@@ -213,10 +213,7 @@ def RestoreWindow(handle):
     win32gui.ShowWindow(handle, win32con.SW_RESTORE)
     
 def SetForegroundWindow(handle):
-    try:
-        win32gui.SetForegroundWindow(handle)
-    except Exception as e:
-        print(e)
+    win32gui.SetForegroundWindow(handle)
 
 def SetWindowSize(handle, w, h):        
     x1, y1, _, _ = win32gui.GetWindowRect(handle)
