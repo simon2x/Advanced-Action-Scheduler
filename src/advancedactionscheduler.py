@@ -96,8 +96,9 @@ FUNCTIONS = ["CloseWindow",
   
 DEFAULTCONFIG = {
     "currentFile": False, # the currently opened schedule file
+    "loadLastFile": True, # the currently opened schedule file
     "fileList": [], # recently opened schedule files
-    "fileListCount": 5, # number of recently opened files to keep in history
+    "keepFileList": True,
     "schedManagerLogCount": 10, # number of logs before clearing table
     "schedManagerSwitchTab": True, # auto switch to Manager tab when schedules enabled
     "windowPos": False, # the last window position
@@ -167,12 +168,82 @@ class SettingsFrame(wx.Frame):
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
         
+        sbox = wx.StaticBox(panel, label="")
+        sboxSizer = wx.StaticBoxSizer(sbox, wx.HORIZONTAL)
+        gridBag = wx.GridBagSizer(5,5)
         
+        row = 0        
+        self.chkLoadLastFile = wx.CheckBox(panel, label="Load Last Opened File")
+        gridBag.Add(self.chkLoadLastFile, pos=(row,0), flag=wx.ALL, border=5)
+         
+        row += 1
+        self.chkRecentFiles = wx.CheckBox(panel, label="Remember Recently Opened Files")
+        gridBag.Add(self.chkRecentFiles, pos=(row,0), flag=wx.ALL, border=5)
         
+        row += 1        
+        self.chkSchedMgrSwitch = wx.CheckBox(panel, label="Automatically Switch To Manager Tab On Enable")
+        gridBag.Add(self.chkSchedMgrSwitch, pos=(row,0), flag=wx.ALL, border=5)
         
+        row += 1
+        lblSchedMgrLogCount = wx.StaticText(panel, label="Schedule Manager Log Count")
+        self.chkSchedMgrLogCount = wx.SpinCtrl(panel, min=-1, max=1000)
+        gridBag.Add(lblSchedMgrLogCount, pos=(row,0), flag=wx.ALL, border=5)
+        gridBag.Add(self.chkSchedMgrLogCount, pos=(row,1), flag=wx.ALL, border=5)
         
+        hSizer = wx.BoxSizer(wx.HORIZONTAL)
+        btn = wx.Button(panel, label="Cancel", id=wx.ID_CANCEL)
+        btn.Bind(wx.EVT_BUTTON, self.OnButton)
+        hSizer.Add(btn, flag=wx.ALL, border=5)
+        btn = wx.Button(panel, label="Ok", id=wx.ID_OK)
+        btn.Bind(wx.EVT_BUTTON, self.OnButton)
+        hSizer.Add(btn, flag=wx.ALL, border=5)
+        
+        sboxSizer.Add(gridBag, 1, wx.ALL|wx.EXPAND, 5)
+        sizer.Add(sboxSizer, 1, wx.ALL|wx.EXPAND, 5)
+        sizer.Add(hSizer, 0, wx.ALL|wx.ALIGN_RIGHT, 5)
         panel.SetSizer(sizer)
+        sizer.Fit(self)
         
+        self.SetMinSize(self.GetSize())
+        self.SetMaxSize(self.GetSize())
+        
+        self.SetDefaults()
+     
+    def GetValue(self):
+        data = {}
+        data["loadLastFile"] = self.chkLoadLastFile.GetValue()
+        data["keepFileList"] = self.chkRecentFiles.GetValue()
+        data["schedManagerSwitchTab"] = self.chkSchedMgrSwitch.GetValue()
+        data["schedManagerLogCount"] = self.chkSchedMgrLogCount.GetValue()
+        return data
+        
+    def OnButton(self, event):
+        e = event.GetEventObject()
+        id = e.GetId()
+        if id == wx.ID_CANCEL:
+            self.Destroy()
+        elif id == wx.ID_OK:
+            self.GetParent().UpdateSettingsDict(self.GetValue())
+            self.Destroy()
+            
+    def SetDefaults(self):
+        self.chkLoadLastFile.SetValue(True)
+        self.chkRecentFiles.SetValue(True)
+        self.chkSchedMgrSwitch.SetValue(True)
+        self.chkSchedMgrLogCount.SetValue(100)
+        
+    def SetValue(self, data):
+        for arg, func, default in (
+            ["loadLastFile", self.chkLoadLastFile.SetValue, False],
+            ["keepFileList", self.chkRecentFiles.SetValue, True],
+            ["schedManagerSwitchTab", self.chkSchedMgrSwitch.SetValue, True],
+            ["schedManagerLogCount", self.chkSchedMgrLogCount.SetValue, 100]):
+            
+            try:
+                func(data[arg])
+            except Exception as e:
+                print(e)
+                func(default)
         
 class Main(wx.Frame):
 
@@ -1038,7 +1109,7 @@ class Main(wx.Frame):
                 continue 
             self._data[groupSel][n][1]["checked"] = self.schedList.GetCheckedState(selection)
             break
-
+      
     def OnToolBar(self, event):
         e = event.GetEventObject()
         id = event.GetId()
@@ -1374,7 +1445,9 @@ class Main(wx.Frame):
             self._settingsDialog.Show()
         except:
             self._settingsDialog = SettingsFrame(self)
-            self._settingsDialog.Show()
+            self._settingsDialog.SetValue(self._appConfig)    
+            self._settingsDialog.Show()            
+        
         self._settingsDialog.Raise()    
             
     def ToggleScheduleSelection(self):
@@ -1411,6 +1484,10 @@ class Main(wx.Frame):
         else:
             self.schedBtns["Up"].Disable()
             
+    def UpdateSettingsDict(self, data):
+        self._appConfig.update(data)
+        self.SaveDataToJSON("config.json", self._appConfig)
+        
     def UpdateTitlebar(self):
         try:
             _, name = os.path.split(self._appConfig["currentFile"])
