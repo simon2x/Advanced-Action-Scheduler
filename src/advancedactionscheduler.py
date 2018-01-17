@@ -430,7 +430,7 @@ class Main(wx.Frame):
                                style=wx.YES_NO|wx.CANCEL|wx.CANCEL_DEFAULT)
         ret = dlg.ShowModal()                 
         if ret == wx.ID_CANCEL:
-            return
+            return wx.ID_CANCEL
         
         if ret == wx.ID_YES:
             self.SaveData()
@@ -905,6 +905,10 @@ class Main(wx.Frame):
         self.UpdateScheduleToolbar()
          
     def OnClose(self, event):
+        if self.CloseFile() == wx.ID_CANCEL:
+            return
+        
+        self._schedManager.Stop()
         # save data before exiting
         self.WriteData()
         event.Skip()
