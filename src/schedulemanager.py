@@ -173,7 +173,7 @@ class Manager:
     def SendLog(self, message):
         """ pass message to schedule manager lis """
         parent = self.GetParent()
-        parent.AppendLogMessage(message)
+        parent.AddLogMessage(message)
 
     def SetSchedules(self, data):
         """ 

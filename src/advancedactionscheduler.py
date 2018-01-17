@@ -323,8 +323,8 @@ class Main(wx.Frame):
         #load settings
         self.LoadConfig()
         
-    def AppendLogMessage(self, message):
-        """ append log message to schedule messenger list """
+    def AddLogMessage(self, message):
+        """ insert log message as first item to schedule messenger list """
         if self.schedLog.GetItemCount() == self._appConfig["schedManagerLogCount"]:
             self.schedLog.DeleteAllItems()
             
