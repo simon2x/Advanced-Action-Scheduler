@@ -1367,6 +1367,7 @@ class Main(wx.Frame):
         except:
             self._settingsDialog = SettingsFrame(self)
             self._settingsDialog.Show()
+        self._settingsDialog.Raise()    
             
     def ToggleScheduleSelection(self):
         selection = self.schedList.GetSelection()
