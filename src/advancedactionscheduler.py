@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.schedulers.background import BackgroundScheduler
 from ast import literal_eval as make_tuple
+from time import gmtime, strftime
 
 import psutil
 import json
@@ -302,6 +303,7 @@ class Main(wx.Frame):
         self.schedLog.InsertColumn(0, "#")
         self.schedLog.InsertColumn(1, "Time")
         self.schedLog.InsertColumn(2, "Message")
+        self.schedLog.InsertColumn(3, "Date")
         schedManagerSizer.Add(self.schedLog, 1, wx.ALL|wx.EXPAND, 0)
 
         self.notebook.AddPage(schedPanel, "Schedules")
@@ -325,9 +327,14 @@ class Main(wx.Frame):
         """ append log message to schedule messenger list """
         if self.schedLog.GetItemCount() == self._appConfig["schedManagerLogCount"]:
             self.schedLog.DeleteAllItems()
+            
         i = self.schedLog.GetItemCount()
-        self.schedLog.Append([str(i)] + message)
-
+        item = self.schedLog.InsertItem(0, str(i))
+        dt = gmtime() 
+        self.schedLog.SetItem(item, 1, strftime("%H:%M:%S", dt))
+        self.schedLog.SetItem(item, 2, message)
+        self.schedLog.SetItem(item, 3, strftime("%d-%m-%Y", dt))
+        
     def ClearUI(self):
         """ clears lists and set toolbar/button states appropriately """
         self.groupList.DeleteAllItems()

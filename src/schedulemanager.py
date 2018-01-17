@@ -84,37 +84,37 @@ class Manager:
         elif action == "Delay":
             delay = kwargs["delay"]
             time.sleep(float(delay)) #remove the 's'
-            self.SendLog(["-","Delayed for {0} seconds".format(delay)])
+            self.SendLog("Delayed for {0} seconds".format(delay))
             
         elif action == "IfWindowOpen":
             window = kwargs["window"]
             kwargs["matches"] = 1
             if not actman.FindWindow(kwargs):
-                self.SendLog(["-","IfWindowOpen: %s ...not found" % window])
+                self.SendLog("IfWindowOpen: %s ...not found" % window)
                 return
             
-            self.SendLog(["-","IfWindowOpen: %s ...found" % window])
+            self.SendLog("IfWindowOpen: %s ...found" % window)
             return True
 
         elif action == "IfWindowNotOpen":
             window = kwargs["window"]
             kwargs["matches"] = 1
             if not actman.FindWindow(kwargs):
-                self.SendLog(["-","IfWindowNotOpen: %s ...not found" % window])
+                self.SendLog("IfWindowNotOpen: %s ...not found" % window)
                 return True
 
-            self.SendLog(["-","IfWindowNotOpen: %s ...found" % window])
+            self.SendLog("IfWindowNotOpen: %s ...found" % window)
             return
 
         elif action == "MouseClickAbsolute":
             window = kwargs["window"]
             actman.MouseClickAbsolute(kwargs)
-            self.SendLog(["-", "MouseClickAbsolute: {0}".format(window)])   
+            self.SendLog("MouseClickAbsolute: {0}".format(window))   
                        
         elif action == "MouseClickRelative":
             window = kwargs["window"]
             actman.MouseClickRelative(kwargs)
-            self.SendLog(["-", "MouseClickRelative: {0}".format(window)])   
+            self.SendLog("MouseClickRelative: {0}".format(window))   
             
         elif action == "OpenURL":
             url = kwargs["url"]
@@ -168,8 +168,7 @@ class Manager:
             if not a:
                 childIgnore + (index+",",)
 
-        self.SendLog(["",
-                      "Executed schedule %s from group: %s" % (schedName, groupName)])
+        self.SendLog("Executed schedule %s from group: %s" % (schedName, groupName))
 
     def SendLog(self, message):
         """ pass message to schedule manager lis """
@@ -211,16 +210,16 @@ class Manager:
         for groupName, groupScheds in self._schedules.items():
             for schedName, schedule in groupScheds:
                 schedule.start()
-                self.SendLog(["-", "Started schedule {0} from {1} group".format(schedName, groupName)])
+                self.SendLog("Started schedule {0} from {1} group".format(schedName, groupName))
 
     def Stop(self):
         """ shutdown all schedules """
         for groupName, groupScheds in self._schedules.items():
             for schedName, schedule in groupScheds:
                 schedule.shutdown(wait=False)
-                self.SendLog(["-", "Stopped schedule {0} from {1} group".format(schedName, groupName)])
+                self.SendLog("Stopped schedule {0} from {1} group".format(schedName, groupName))
 
-        self.SendLog(["-", "All running schedules have been stopped"])
+        self.SendLog("All running schedules have been stopped")
 
         # clear schedules and data
         self._schedules = {}
