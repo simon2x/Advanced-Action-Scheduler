@@ -217,7 +217,7 @@ class Manager:
         """ shutdown all schedules """
         for groupName, groupScheds in self._schedules.items():
             for schedName, schedule in groupScheds:
-                schedule.shutdown()
+                schedule.shutdown(wait=False)
                 self.SendLog(["-", "Stopped schedule {0} from {1} group".format(schedName, groupName)])
 
         self.SendLog(["-", "All running schedules have been stopped"])
