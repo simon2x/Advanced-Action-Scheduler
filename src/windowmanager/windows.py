@@ -188,6 +188,18 @@ def KillProcess(pid):
     if "No such process" in output:
         pass
         
+def LeftMouseClick(x, y):
+    win32api.SetCursorPos((x,y))
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,0,0)
+    time.sleep(0.1)
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,0,0)
+        
+def MaximizeWindow(handle):
+    win32gui.ShowWindow(handle, win32con.SW_SHOW)
+ 
+def MinimizeWindow(handle):
+    win32gui.ShowWindow(handle, win32con.SW_HIDE)
+    
 def MoveWindow(handle, x1, y1, w, h):
 
     if w is None: # size not defined
@@ -197,9 +209,19 @@ def MoveWindow(handle, x1, y1, w, h):
     
     win32gui.MoveWindow(handle, x1, y1, w, h, True)
     
+def RestoreWindow(handle):
+    win32gui.ShowWindow(handle, win32con.SW_RESTORE)
+    
 def SetForegroundWindow(handle):
-    win32gui.SetForegroundWindow(handle)
+    try:
+        win32gui.SetForegroundWindow(handle)
+    except Exception as e:
+        print(e)
 
 def SetWindowSize(handle, w, h):        
     x1, y1, _, _ = win32gui.GetWindowRect(handle)
-    win32gui.MoveWindow(handle, x1, y1, w, h, True)        
+    win32gui.MoveWindow(handle, x1, y1, w, h, True)
+    
+def ShowWindow(handle):
+    win32gui.ShowWindow(handle, win32con.SW_SHOW)
+    
