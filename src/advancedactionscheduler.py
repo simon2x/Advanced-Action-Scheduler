@@ -97,9 +97,10 @@ DEFAULTCONFIG = {
     "currentFile": False, # the currently opened schedule file
     "fileList": [], # recently opened schedule files
     "fileListCount": 5, # number of recently opened files to keep in history
+    "schedManagerLogCount": 10, # number of logs before clearing table
     "schedManagerSwitchTab": True, # auto switch to Manager tab when schedules enabled
-    "windowSize": False, # the last window size
     "windowPos": False, # the last window position
+    "windowSize": False, # the last window size
 }
 
 class AboutDialog(wx.Frame):  
@@ -322,6 +323,8 @@ class Main(wx.Frame):
         
     def AppendLogMessage(self, message):
         """ append log message to schedule messenger list """
+        if self.schedLog.GetItemCount() == self._appConfig["schedManagerLogCount"]:
+            self.schedLog.DeleteAllItems()
         i = self.schedLog.GetItemCount()
         self.schedLog.Append([str(i)] + message)
 
