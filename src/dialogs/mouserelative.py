@@ -419,8 +419,8 @@ class MouseClickRelative(wx.Dialog):
             ["offsety", self.spinOffsetY.SetValue, 0],
             ["width", self.spinW.SetValue, 0],
             ["height", self.spinH.SetValue, 0],
-            ["x", self.spinX.SetValue, 0],
-            ["y", self.spinY.SetValue, 0]):
+            ["%width", self.spinX.SetValue, 0],
+            ["%height", self.spinY.SetValue, 0]):
             
             try:
                 func(data[arg])

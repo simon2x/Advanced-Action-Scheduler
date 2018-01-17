@@ -51,21 +51,22 @@ def MouseClickAbsolute(kwargs):
         winman.RestoreWindow(handle)
         if kwargs["resize"] is True:
             winman.MoveWindow(handle, x1, y1, w, h)
+            winman.SetForegroundWindow(handle)
         winman.LeftMouseClick(x, y)
     
 def MouseClickRelative(kwargs):
     progName, title = make_tuple(kwargs["window"])
     handles = winman.GetHandles(progName, title, **kwargs)
     x1, y1, w, h = kwargs["offsetx"], kwargs["offsety"], kwargs["width"], kwargs["height"]
-    x, y = int(kwargs["%width"] * w * 0.01), int(kwargs["%height"] * h * 0.01)
+    x, y = x1 + int(kwargs["%width"] * w * 0.01), y1 + int(kwargs["%height"] * h * 0.01)
     for handle in handles:
         winman.RestoreWindow(handle)
         if kwargs["resize"] is True:
             winman.MoveWindow(handle, x1, y1, w, h)
+            winman.SetForegroundWindow(handle)
         else:
+            # calculate new relative positon
             x1, y1, w, h = winman.GetWindowRect(handle)
-            x, y = int(kwargs["%width"] * w * 0.01), int(kwargs["%height"] * h * 0.01)
+            x, y = x1 + int(kwargs["%width"] * w * 0.01), y1 + int(kwargs["%height"] * h * 0.01)
             
-        winman.LeftMouseClick(relX, relY)
-
-    
+        winman.LeftMouseClick(x, y)

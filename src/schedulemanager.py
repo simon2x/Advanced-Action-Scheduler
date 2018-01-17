@@ -201,9 +201,7 @@ class Manager:
                     self.AddSchedule(groupName, schedStr)
                     continue
                     
-                print(childIgnore)    
                 if itemData["checked"] == 0 or index.startswith(childIgnore):
-                    print("ignore", index)
                     childIgnore += (index+",",)
                     continue 
                 schedItemStr = itemData["columns"]["0"]    
