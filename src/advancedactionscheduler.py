@@ -180,7 +180,11 @@ class SettingsFrame(wx.Frame):
         
         row = 0        
         self.chkShowTray = wx.CheckBox(panel, label="Show Tray Icon")
-        gridBag.Add(self.chkShowTray, pos=(row,0), flag=wx.ALL, border=5)         
+        gridBag.Add(self.chkShowTray, pos=(row,0), flag=wx.ALL, border=5)   
+
+        row += 1        
+        self.chkShowSplash = wx.CheckBox(panel, label="Show Splash Screen")
+        gridBag.Add(self.chkShowSplash, pos=(row,0), flag=wx.ALL, border=5)       
          
         row += 1     
         lblTrayLeft = wx.StaticText(panel, label="On Tray Icon Left Click")
@@ -236,6 +240,7 @@ class SettingsFrame(wx.Frame):
     def GetValue(self):
         data = {}
         data["showTrayIcon"] = self.chkShowTray.GetValue()
+        data["showSplashScreen"] = self.chkShowSplash.GetValue()
         data["onTrayIconLeft"] = self.cboxTrayLeft.GetSelection()
         data["toolbarSize"] = self.cboxToolbarSize.GetValue()
         data["loadLastFile"] = self.chkLoadLastFile.GetValue()
@@ -255,6 +260,7 @@ class SettingsFrame(wx.Frame):
             
     def SetDefaults(self):
         self.cboxTrayLeft.SetSelection(0)
+        self.chkShowSplash.SetValue(True)
         self.cboxToolbarSize.SetValue("48")
         self.chkShowTray.SetValue(True)
         self.chkLoadLastFile.SetValue(True)
@@ -265,6 +271,7 @@ class SettingsFrame(wx.Frame):
     def SetValue(self, data):
         for arg, func, default in (
             ["toolbarSize", self.cboxToolbarSize.SetValue, "48"],
+            ["showSplashScreen", self.chkShowSplash.SetValue, True],
             ["showTrayIcon", self.chkShowTray.SetValue, True],
             ["onTrayIconLeft", self.cboxTrayLeft.SetSelection, 0],
             ["loadLastFile", self.chkLoadLastFile.SetValue, False],
@@ -277,6 +284,75 @@ class SettingsFrame(wx.Frame):
             except Exception as e:
                 print(e)
                 func(default)
+                
+class SplashScreen(wx.adv.SplashScreen):
+        
+    def __init__(self, timeout=800):  
+        splash_style = wx.adv.SPLASH_CENTRE_ON_SCREEN|wx.adv.SPLASH_TIMEOUT
+        bmp = wx.Bitmap("splash.png")
+        wx.adv.SplashScreen.__init__(self, bmp, splash_style, timeout, None)                
+        
+class TaskBarIcon(wx.adv.TaskBarIcon):
+
+    def __init__(self, parent):    
+        wx.adv.TaskBarIcon.__init__(self)
+        
+        self.parent = parent
+        self.parent.taskBarIcon = self
+        
+        self.tooltip = "{0} {1}".format(__title__, __version__)
+        self.SetTrayIcon()  
+        self.trayMenu = self.CreateTrayMenu()
+        self.Bind(wx.adv.EVT_TASKBAR_LEFT_DOWN, self.OnTrayLeft)        
+        self.Bind(wx.adv.EVT_TASKBAR_RIGHT_DOWN, self.OnTrayRight) 
+    
+    @property
+    def appConfig(self):
+        return self.parent.GetAppConfig()
+        
+    def CreateMenuItem(self, trayMenu, label, func):
+        item = wx.MenuItem(trayMenu, -1, label)
+        trayMenu.Bind(wx.EVT_MENU, func, id=item.GetId())
+        trayMenu.Append(item)
+        return item
+            
+    def CreateTrayMenu(self):
+        trayMenu = wx.Menu()
+        self.CreateMenuItem(trayMenu, "Settings", self.OnSettings)
+        self.CreateMenuItem(trayMenu, "About", self.OnAbout)
+        trayMenu.AppendSeparator()
+        self.CreateMenuItem(trayMenu, "Exit", self.parent.OnClose)
+        return trayMenu
+        
+    def OnAbout(self, event):
+        self.parent.ShowAboutDialog()
+
+    def OnSettings(self, event):
+        self.parent.ShowSettingsDialog()
+        
+    def OnTrayLeft(self, event):
+    
+        # show/hide window
+        if self.appConfig["onTrayIconLeft"] == 1:
+            if self.parent.IsShown():
+                self.parent.Hide()
+            else:
+                self.parent.Show()
+                
+        # toggle schedule manager
+        elif self.appConfig["onTrayIconLeft"] == 2:
+            self.parent.ToggleScheduleManager()
+    
+    def OnTrayRight(self, event):
+        self.PopupMenu(self.trayMenu)
+        
+    def RemoveTray(self, event=None):
+        self.RemoveIcon()
+        self.Destroy()
+        
+    def SetTrayIcon(self):
+        icon = wx.Icon(wx.Bitmap("icons/icon.png"))
+        self.SetIcon(icon, self.tooltip)
         
 class Main(wx.Frame):
 
@@ -303,7 +379,7 @@ class Main(wx.Frame):
         self.toolbar = None 
         
         self.Bind(wx.EVT_CLOSE, self.OnClose)
-        
+        self.Bind(wx.EVT_SIZE, self.OnSize)
         #-----
         self.CreateMenu()
         self.CreateToolbar()
@@ -433,14 +509,9 @@ class Main(wx.Frame):
         self.SetMinSize((700, 600))
         self.SetSize((700, 600))
 
-        #-----
-        self.Show()
-            
         #load settings
         self.LoadConfig()
         
-        self.Bind(wx.EVT_SIZE, self.OnSize)
-    
     @property
     def taskBarIcon(self):
         return self._taskBarIcon
@@ -813,8 +884,12 @@ class Main(wx.Frame):
             else:
                self._appConfig["currentFile"] = False
                
+        if self._appConfig["showSplashScreen"] is True:
+            SplashScreen(800)
+            
         self.UpdateTrayIcon()
         self.UpdateToolbar()
+        wx.CallLater(800, self.Show)
         
     def LoadFile(self, filePath):
         """ load a schedule file by file path """
@@ -1649,70 +1724,8 @@ class Main(wx.Frame):
             if self.taskBarIcon:
                 self.taskBarIcon.RemoveTray()
                 self.taskBarIcon = None
-            
-class TaskBarIcon(wx.adv.TaskBarIcon):
-
-    def __init__(self, parent):    
-        wx.adv.TaskBarIcon.__init__(self)
-        
-        self.parent = parent
-        self.parent.taskBarIcon = self
-        
-        self.tooltip = "{0} {1}".format(__title__, __version__)
-        self.SetTrayIcon()  
-        self.trayMenu = self.CreateTrayMenu()
-        self.Bind(wx.adv.EVT_TASKBAR_LEFT_DOWN, self.OnTrayLeft)        
-        self.Bind(wx.adv.EVT_TASKBAR_RIGHT_DOWN, self.OnTrayRight) 
-    
-    @property
-    def appConfig(self):
-        return self.parent.GetAppConfig()
-        
-    def CreateMenuItem(self, trayMenu, label, func):
-        item = wx.MenuItem(trayMenu, -1, label)
-        trayMenu.Bind(wx.EVT_MENU, func, id=item.GetId())
-        trayMenu.Append(item)
-        return item
-            
-    def CreateTrayMenu(self):
-        trayMenu = wx.Menu()
-        self.CreateMenuItem(trayMenu, "Settings", self.OnSettings)
-        self.CreateMenuItem(trayMenu, "About", self.OnAbout)
-        trayMenu.AppendSeparator()
-        self.CreateMenuItem(trayMenu, "Exit", self.parent.OnClose)
-        return trayMenu
-        
-    def OnAbout(self, event):
-        self.parent.ShowAboutDialog()
-
-    def OnSettings(self, event):
-        self.parent.ShowSettingsDialog()
-        
-    def OnTrayLeft(self, event):
-    
-        # show/hide window
-        if self.appConfig["onTrayIconLeft"] == 1:
-            if self.parent.IsShown():
-                self.parent.Hide()
-            else:
-                self.parent.Show()
-                
-        # toggle schedule manager
-        elif self.appConfig["onTrayIconLeft"] == 2:
-            self.parent.ToggleScheduleManager()
-    
-    def OnTrayRight(self, event):
-        self.PopupMenu(self.trayMenu)
-        
-    def RemoveTray(self, event=None):
-        self.RemoveIcon()
-        self.Destroy()
-        
-    def SetTrayIcon(self):
-        icon = wx.Icon(wx.Bitmap("icons/icon.png"))
-        self.SetIcon(icon, self.tooltip)
    
 if __name__ == "__main__":
-    app = wx.App()
+    app = wx.App()    
     mainFrame = Main()
     app.MainLoop()
