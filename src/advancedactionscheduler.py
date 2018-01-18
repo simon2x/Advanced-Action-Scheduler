@@ -156,7 +156,10 @@ class AboutDialog(wx.Frame):
         panel.SetSizerAndFit(sizer)
         self.Fit()
         self.Centre()
-        self.SetSize((600, 400))
+        w, h = self.GetSize()
+        self.SetSize(w, h*2)
+        self.SetMinSize(self.GetSize())
+        self.SetMaxSize(self.GetSize())
         self.Show()
         
 class SettingsFrame(wx.Frame):
