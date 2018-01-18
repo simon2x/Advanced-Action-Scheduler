@@ -430,7 +430,7 @@ class Main(wx.Frame):
                                style=wx.YES_NO|wx.CANCEL|wx.CANCEL_DEFAULT)
         ret = dlg.ShowModal()                 
         if ret == wx.ID_CANCEL:
-            return
+            return wx.ID_CANCEL
         
         if ret == wx.ID_YES:
             self.SaveData()
@@ -465,6 +465,8 @@ class Main(wx.Frame):
         for item, helpStr in runMenus:
             self._menus[item] = menuRun.Append(wx.ID_ANY, item, helpStr)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
+            
+        self._menus["Disable Schedule Manager"].Enable(False)
             
         menuHelp = wx.Menu()
         helpMenus = [("Check for updates", "Check for updates (Not Yet Implemented)"),
@@ -769,10 +771,11 @@ class Main(wx.Frame):
             with open("config.json", 'w') as file:
                 json.dump(self._appConfig, file, sort_keys=True, indent=2)
         
-        if os.path.exists(self._appConfig["currentFile"]):
-            self.LoadFile(self._appConfig["currentFile"])
-        else:
-           self._appConfig["currentFile"] = False
+        if self._appConfig["loadLastFile"] is True:
+            if os.path.exists(self._appConfig["currentFile"]):
+                self.LoadFile(self._appConfig["currentFile"])
+            else:
+               self._appConfig["currentFile"] = False
            
     def LoadFile(self, filePath):
         try:
@@ -905,6 +908,10 @@ class Main(wx.Frame):
         self.UpdateScheduleToolbar()
          
     def OnClose(self, event):
+        if self.CloseFile() == wx.ID_CANCEL:
+            return
+        
+        self._schedManager.Stop()
         # save data before exiting
         self.WriteData()
         event.Skip()
@@ -1486,6 +1493,8 @@ class Main(wx.Frame):
             
     def UpdateSettingsDict(self, data):
         self._appConfig.update(data)
+        if self._appConfig["loadLastFile"] == False:
+            self._appConfig["currentFile"] = False
         self.SaveDataToJSON("config.json", self._appConfig)
         
     def UpdateTitlebar(self):
