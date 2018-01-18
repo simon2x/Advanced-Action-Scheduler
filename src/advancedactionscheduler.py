@@ -42,6 +42,7 @@ import wx.dataview #for TreeListCtrl
 import wx.lib.agw.aui as aui
 
 from dialogs import *
+import wx.adv
 from wx.lib.scrolledpanel import ScrolledPanel
 from wx.lib.pubsub import setuparg1
 from wx.lib.pubsub import pub
@@ -99,8 +100,13 @@ DEFAULTCONFIG = {
     "loadLastFile": True, # the currently opened schedule file
     "fileList": [], # recently opened schedule files
     "keepFileList": True,
+    "onClose": 0, # on close window
+    "onTrayIconLeft": 0,
     "schedManagerLogCount": 10, # number of logs before clearing table
     "schedManagerSwitchTab": True, # auto switch to Manager tab when schedules enabled
+    "showSplashScreen": True,
+    "showTrayIcon": True,
+    "toolbarSize": 48, # maximum toolbar size
     "windowPos": False, # the last window position
     "windowSize": False, # the last window size
 }
@@ -150,7 +156,10 @@ class AboutDialog(wx.Frame):
         panel.SetSizerAndFit(sizer)
         self.Fit()
         self.Centre()
-        self.SetSize((600, 400))
+        w, h = self.GetSize()
+        self.SetSize(w, h*2)
+        self.SetMinSize(self.GetSize())
+        self.SetMaxSize(self.GetSize())
         self.Show()
         
 class SettingsFrame(wx.Frame):
@@ -173,6 +182,28 @@ class SettingsFrame(wx.Frame):
         gridBag = wx.GridBagSizer(5,5)
         
         row = 0        
+        self.chkShowTray = wx.CheckBox(panel, label="Show Tray Icon")
+        gridBag.Add(self.chkShowTray, pos=(row,0), flag=wx.ALL, border=5)   
+
+        row += 1        
+        self.chkShowSplash = wx.CheckBox(panel, label="Show Splash Screen")
+        gridBag.Add(self.chkShowSplash, pos=(row,0), flag=wx.ALL, border=5)       
+         
+        row += 1     
+        lblTrayLeft = wx.StaticText(panel, label="On Tray Icon Left Click")
+        choices = ["Do Nothing","Show/Hide Main Window","Enable/Disable Schedule Manager"]
+        self.cboxTrayLeft = wx.ComboBox(panel, choices=choices, style=wx.CB_READONLY)
+        gridBag.Add(lblTrayLeft, pos=(row,0), flag=wx.ALL, border=5)  
+        gridBag.Add(self.cboxTrayLeft, pos=(row,1), flag=wx.ALL, border=5)  
+        
+        row += 1        
+        lblToolbarSize = wx.StaticText(panel, label="Maximum Toolbar Icon Size")
+        choices = ["16","32","48","64","128","256"]
+        self.cboxToolbarSize = wx.ComboBox(panel, choices=choices, style=wx.CB_READONLY)
+        gridBag.Add(lblToolbarSize, pos=(row,0), flag=wx.ALL, border=5)  
+        gridBag.Add(self.cboxToolbarSize, pos=(row,1), flag=wx.ALL, border=5)
+
+        row += 1        
         self.chkLoadLastFile = wx.CheckBox(panel, label="Load Last Opened File")
         gridBag.Add(self.chkLoadLastFile, pos=(row,0), flag=wx.ALL, border=5)
          
@@ -211,6 +242,10 @@ class SettingsFrame(wx.Frame):
      
     def GetValue(self):
         data = {}
+        data["showTrayIcon"] = self.chkShowTray.GetValue()
+        data["showSplashScreen"] = self.chkShowSplash.GetValue()
+        data["onTrayIconLeft"] = self.cboxTrayLeft.GetSelection()
+        data["toolbarSize"] = self.cboxToolbarSize.GetValue()
         data["loadLastFile"] = self.chkLoadLastFile.GetValue()
         data["keepFileList"] = self.chkRecentFiles.GetValue()
         data["schedManagerSwitchTab"] = self.chkSchedMgrSwitch.GetValue()
@@ -227,6 +262,10 @@ class SettingsFrame(wx.Frame):
             self.Destroy()
             
     def SetDefaults(self):
+        self.cboxTrayLeft.SetSelection(0)
+        self.chkShowSplash.SetValue(True)
+        self.cboxToolbarSize.SetValue("48")
+        self.chkShowTray.SetValue(True)
         self.chkLoadLastFile.SetValue(True)
         self.chkRecentFiles.SetValue(True)
         self.chkSchedMgrSwitch.SetValue(True)
@@ -234,6 +273,10 @@ class SettingsFrame(wx.Frame):
         
     def SetValue(self, data):
         for arg, func, default in (
+            ["toolbarSize", self.cboxToolbarSize.SetValue, "48"],
+            ["showSplashScreen", self.chkShowSplash.SetValue, True],
+            ["showTrayIcon", self.chkShowTray.SetValue, True],
+            ["onTrayIconLeft", self.cboxTrayLeft.SetSelection, 0],
             ["loadLastFile", self.chkLoadLastFile.SetValue, False],
             ["keepFileList", self.chkRecentFiles.SetValue, True],
             ["schedManagerSwitchTab", self.chkSchedMgrSwitch.SetValue, True],
@@ -244,28 +287,108 @@ class SettingsFrame(wx.Frame):
             except Exception as e:
                 print(e)
                 func(default)
+                
+class SplashScreen(wx.adv.SplashScreen):
         
+    def __init__(self, timeout=800):  
+        splash_style = wx.adv.SPLASH_CENTRE_ON_SCREEN|wx.adv.SPLASH_TIMEOUT
+        bmp = wx.Bitmap("splash.png")
+        wx.adv.SplashScreen.__init__(self, bmp, splash_style, timeout, None)                
+        
+class TaskBarIcon(wx.adv.TaskBarIcon):
+
+    def __init__(self, parent):    
+        wx.adv.TaskBarIcon.__init__(self)
+        
+        self.parent = parent
+        self.parent.taskBarIcon = self
+        
+        self.iconNormal = wx.Icon(wx.Bitmap("icons/iconnormal.png"))
+        self.iconRunning = wx.Icon(wx.Bitmap("icons/iconrunning.png"))
+        
+        self.tooltip = "{0} {1}".format(__title__, __version__)
+        self.SetTrayIcon(running=False)  
+        self.trayMenu = self.CreateTrayMenu()
+        self.Bind(wx.adv.EVT_TASKBAR_LEFT_DOWN, self.OnTrayLeft)        
+        self.Bind(wx.adv.EVT_TASKBAR_RIGHT_DOWN, self.OnTrayRight) 
+    
+    @property
+    def appConfig(self):
+        return self.parent.GetAppConfig()
+        
+    def CreateMenuItem(self, trayMenu, label, func):
+        item = wx.MenuItem(trayMenu, -1, label)
+        trayMenu.Bind(wx.EVT_MENU, func, id=item.GetId())
+        trayMenu.Append(item)
+        return item
+            
+    def CreateTrayMenu(self):
+        trayMenu = wx.Menu()
+        self.CreateMenuItem(trayMenu, "Settings", self.OnSettings)
+        self.CreateMenuItem(trayMenu, "About", self.OnAbout)
+        trayMenu.AppendSeparator()
+        self.CreateMenuItem(trayMenu, "Exit", self.parent.OnClose)
+        return trayMenu
+        
+    def OnAbout(self, event):
+        self.parent.ShowAboutDialog()
+
+    def OnSettings(self, event):
+        self.parent.ShowSettingsDialog()
+        
+    def OnTrayLeft(self, event):
+    
+        # show/hide window
+        if self.appConfig["onTrayIconLeft"] == 1:
+            if self.parent.IsShown():
+                self.parent.Hide()
+            else:
+                self.parent.Show()
+                self.parent.Raise()
+                
+        # toggle schedule manager
+        elif self.appConfig["onTrayIconLeft"] == 2:
+            self.parent.ToggleScheduleManager()
+    
+    def OnTrayRight(self, event):
+        self.PopupMenu(self.trayMenu)
+        
+    def RemoveTray(self, event=None):
+        self.RemoveIcon()
+        self.Destroy()
+        
+    def SetTrayIcon(self, running):
+        if running:
+            self.SetIcon(self.iconRunning, self.tooltip)
+        else:    
+            self.SetIcon(self.iconNormal, self.tooltip)
+            
 class Main(wx.Frame):
 
-    def __init__(self):
+    def __init__(self, parent=None):
 
         self._title = "{0} {1}".format(__title__, __version__)
 
         wx.Frame.__init__(self,
-                          parent=None,
+                          parent=parent,
                           title=self._title)
 
         self._appConfig = DEFAULTCONFIG 
         self._aboutDialog = None
         self._settingsDialog = None
+        self._fileList = []
+        self._fileListMenuItems = {}
+        self._overrideToolSize = None
         self._data = {}
         self._menus = {}
         self._redoStack = []
         self._undoStack = []
         self._schedManager = schedulemanager.Manager(self)
-
-        self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self._taskBarIcon = None
+        self.toolbar = None 
         
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
         #-----
         self.CreateMenu()
         self.CreateToolbar()
@@ -329,17 +452,16 @@ class Main(wx.Frame):
 
         self.cboxFunctions = wx.ComboBox(schedPanel, style=wx.CB_READONLY, choices=FUNCTIONS)
         self.cboxFunctions.SetSelection(0)
+        self.cboxFunctions.Disable()
         self.cboxFunctions.Bind(wx.EVT_COMBOBOX, self.OnComboboxFunction)
 
-        btnAddFunction = wx.Button(schedPanel, label="Add Function", size=(-1, -1))
-        btnAddFunction.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
-
+        self.btnAddFunction = wx.Button(schedPanel, label="Add Function", size=(-1, -1))
+        self.btnAddFunction.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
+        self.btnAddFunction.Disable()
         hSizerFunctions2.Add(self.cboxFunctions, 0, wx.ALL|wx.CENTRE, 5)
-        hSizerFunctions2.Add(btnAddFunction, 0, wx.ALL|wx.CENTRE, 5)
+        hSizerFunctions2.Add(self.btnAddFunction, 0, wx.ALL|wx.CENTRE, 5)
 
         schedSizer.Add(hSizerFunctions2, 0, wx.ALL, 0)
-
-        # schedSizer.Add(wx.StaticLine(schedPanel), 0, wx.ALL|wx.EXPAND, 0)
 
         # -----
 
@@ -396,15 +518,20 @@ class Main(wx.Frame):
         self.SetMinSize((700, 600))
         self.SetSize((700, 600))
 
-        #-----
-        self.Show()
-            
         #load settings
         self.LoadConfig()
         
+    @property
+    def taskBarIcon(self):
+        return self._taskBarIcon
+        
+    @taskBarIcon.setter
+    def taskBarIcon(self, value):
+        self._taskBarIcon = value
+        
     def AddLogMessage(self, message):
         """ insert log message as first item to schedule messenger list """
-        if self.schedLog.GetItemCount() == self._appConfig["schedManagerLogCount"]:
+        if self.schedLog.GetItemCount() >= self._appConfig["schedManagerLogCount"]:
             self.schedLog.DeleteAllItems()
             
         i = self.schedLog.GetItemCount()
@@ -414,6 +541,12 @@ class Main(wx.Frame):
         self.schedLog.SetItem(item, 2, message)
         self.schedLog.SetItem(item, 3, strftime("%d-%m-%Y", dt))
         
+    def ClearRecentFiles(self):
+        for item in self._fileListMenuItems.values():
+            self.menuFile.Delete(item)
+        self._fileListMenuItems = {}
+        self._fileList = []
+    
     def ClearUI(self):
         """ clears lists and set toolbar/button states appropriately """
         self.groupList.DeleteAllItems()
@@ -435,6 +568,14 @@ class Main(wx.Frame):
         if ret == wx.ID_YES:
             self.SaveData()
         
+        if self._appConfig["loadLastFile"] == False:
+            self._appConfig["currentFile"] = False # clear
+        if self._appConfig["keepFileList"] == False:
+            self._appConfig["fileList"] = []
+        else: 
+            self._appConfig["fileList"] = self._fileList
+        self.SaveDataToJSON("config.json", self._appConfig)
+            
         self.ClearUI()
         
     def CreateMenu(self):
@@ -458,7 +599,8 @@ class Main(wx.Frame):
                 menuFile.AppendSeparator()
             elif item == "Settings":
                 menuFile.AppendSeparator()
-
+        self.menuFile = menuFile
+        
         menuRun = wx.Menu()
         runMenus = [("Enable Schedule Manager", "Enable Schedule Manager"),
                     ("Disable Schedule Manager", "Disable Schedule Manager")]
@@ -482,13 +624,10 @@ class Main(wx.Frame):
         self.SetMenuBar(menubar)
 
     def CreateToolbar(self):
-        # toolbar = wx.ToolBar(self, style=wx.TB_TEXT|wx.TB_FLAT)
-        # toolbar = wx.ToolBar(self, style=wx.TB_TEXT)
+        self._tools = {}
         toolbar = wx.ToolBar(self, style=wx.TB_FLAT)
-        # toolbar.AddTool(wx.ID _ANY, "t")#,  wx.BitmapFromBuffer(wx.ART_FILE_OPEN))
-        toolbar.SetToolBitmapSize((48,48))
-        # toolbar.SetToolBitmapSize((48,48))
-        # toolbar.SetBackgroundColour("white")
+        toolSize = int(self._appConfig["toolbarSize"]), int(self._appConfig["toolbarSize"])
+        toolbar.SetToolBitmapSize(toolSize)
         for label, help, state, wxId in [  
             ("New", "New", True, wx.ID_NEW),
             ("Open", "Open", True, wx.ID_OPEN),
@@ -505,14 +644,15 @@ class Main(wx.Frame):
 
             try:
                 img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "").replace(".","")))
-                img.Rescale(48,48, wx.IMAGE_QUALITY_HIGH)
+                img.Rescale(toolSize[0],toolSize[1], wx.IMAGE_QUALITY_HIGH)
                 bmp = wx.Bitmap(img)
                 tool = toolbar.AddTool(wxId, label=label, bitmap=bmp, shortHelp=help)
             except:
-                bmp = wx.Bitmap(48,48)
+                bmp = wx.Bitmap(toolSize)
                 tool = toolbar.AddTool(wxId, label=label, bitmap=bmp, shortHelp=help)
             self.Bind(wx.EVT_TOOL, self.OnToolBar, tool)
             
+            self._tools[label] = tool
             tool.Enable(state)
             
             if label == "Close":
@@ -526,6 +666,11 @@ class Main(wx.Frame):
         self.toolbar = toolbar
         self.SetToolBar(toolbar)
 
+    def CreateTrayIcon(self):   
+        if self.taskBarIcon:
+            self.taskBarIcon.RemoveTray()
+        self.taskBarIcon = TaskBarIcon(self)
+        
     def DeleteScheduleItem(self):   
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
@@ -536,19 +681,25 @@ class Main(wx.Frame):
         self.UpdateScheduleToolbar()
         self.SaveScheduleTreeToData()
        
-    def DisableScheduleManager(self, event):
-        e = event.GetEventObject()
-        id = event.GetId()
-        tool = e.FindById(id)
-        tool.SetLabel("Enable Schedule Manager")
-        e.SetToolShortHelp(id, "Enable Schedule Manager")
-
-        img = wx.Image("icons/enableschedulemanager.png")
-        img = img.Rescale(48,48, wx.IMAGE_QUALITY_HIGH)
+    def DisableScheduleManager(self):
+        # Enable/Disable menu item accordingly
+        self._menus["Disable Schedule Manager"].Enable(False)
+        self._menus["Enable Schedule Manager"].Enable(True)
+        
+        self._tools["Enable Schedule Manager"].SetLabel("Enable Schedule Manager")
+        self._tools["Enable Schedule Manager"].SetShortHelp("Enable Schedule Manager")
+        width, height = self.toolbar.GetToolBitmapSize()
+        
+        img = wx.Image("icons/enableschedulemanager.png")            
+        img = img.Rescale(width, height, wx.IMAGE_QUALITY_HIGH)
         bmp = wx.Bitmap(img)
-        e.SetToolNormalBitmap(id, bmp)
+        self._tools["Enable Schedule Manager"].SetNormalBitmap(bmp)
+        self.toolbar.Realize()
 
         self._schedManager.Stop()
+        
+        if self.taskBarIcon:
+            self.taskBarIcon.SetTrayIcon(running=False)
         
     def DoRedo(self):
         print(self._redoStack)
@@ -577,8 +728,6 @@ class Main(wx.Frame):
 
         self.groupList.Select(state["groupIdx"])
 
-        self.WriteData()
-
     def DoUndo(self):
         # can we undo?
             try:
@@ -605,19 +754,21 @@ class Main(wx.Frame):
 
             self.groupList.Select(state["groupIdx"])
 
-            self.WriteData()    
-    
-    def EnableScheduleManager(self, event):
-        e = event.GetEventObject()
-        id = event.GetId()
-        tool = e.FindById(id)
-        tool.SetLabel("Disable Schedule Manager")
-        e.SetToolShortHelp(id, "Disable Schedule Manager")
-
+    def EnableScheduleManager(self):
+        # Enable/Disable menu item accordingly
+        self._menus["Disable Schedule Manager"].Enable(True)
+        self._menus["Enable Schedule Manager"].Enable(False)
+        
+        self._tools["Enable Schedule Manager"].SetLabel("Disable Schedule Manager")
+        self._tools["Enable Schedule Manager"].SetShortHelp("Disable Schedule Manager")
+        width, height = self.toolbar.GetToolBitmapSize()
+        
         img = wx.Image("icons/disableschedulemanager.png")
-        img = img.Rescale(48,48, wx.IMAGE_QUALITY_HIGH)
+        toolSize = int(self._appConfig["toolbarSize"]), int(self._appConfig["toolbarSize"])
+        img = img.Rescale(width, height, wx.IMAGE_QUALITY_HIGH)
         bmp = wx.Bitmap(img)
-        e.SetToolNormalBitmap(id, bmp)
+        self._tools["Enable Schedule Manager"].SetNormalBitmap(bmp)
+        self.toolbar.Realize()
         
         sendData = {}
         for item, scheds in self._data.items():
@@ -627,6 +778,7 @@ class Main(wx.Frame):
             sendData[itemText] = scheds
             
         if not sendData:
+            self.DisableScheduleManager()
             return
         self._schedManager.SetSchedules(sendData)
         self._schedManager.Start()
@@ -634,6 +786,12 @@ class Main(wx.Frame):
         # switch to the manager when schedules are started
         if self._appConfig["schedManagerSwitchTab"] is True:
             self.notebook.SetSelection(1)
+        
+        if self.taskBarIcon:
+            self.taskBarIcon.SetTrayIcon(running=True)    
+            
+    def GetAppConfig(self):
+        return self._appConfig
         
     def GetDialog(self, label, value=None):
 
@@ -682,6 +840,7 @@ class Main(wx.Frame):
             n += 1    
             child = self.groupList.GetNextSibling(child)
             
+        jsonData["__version__"] = __version__        
         return jsonData
         
     def GetGroupListIndex(self, item):
@@ -721,44 +880,6 @@ class Main(wx.Frame):
         data = self.schedList.GetTree()
         return data
     
-    def GetScheduleTreeAndWriteData(self):
-        # save tree to data
-        #self.schedList.DeleteAllItems()
-        # update schedule list
-        groupIdx = self.groupList.GetSelection()
-
-        # checked = self.groupList.GetCheckedState(selection)
-        schedules = self.schedList.GetTree()
-        self._data[groupIdx]["schedules"] = schedules
-        print(self._data)
-        self.WriteData()
-
-    def GetTopLevel(self):
-        """ return sequence tree top-level """
-        try:
-            selection = item = self.schedList.GetSelection()
-        except:
-            return False
-
-        if not selection.IsOk():
-            return False
-
-        text = self.schedList.GetItemText(selection)
-
-        # root = self.schedList.GetRootItem()
-        # parent = self.schedList.GetItemParent(selection)
-
-        parents = [item]
-        # get item parents
-        while self.schedList.GetItemParent(item).IsOk():
-            parent = self.schedList.GetItemParent(item)
-            parents.append(parent)
-            item = parent
-
-        parents = [self.schedList.GetItemText(itm) for itm in parents if itm.IsOk()]
-        print( parents )
-        return parents[-2]
-    
     def LoadConfig(self):
         """ load application config and restore config settings """
         try:
@@ -771,13 +892,23 @@ class Main(wx.Frame):
             with open("config.json", 'w') as file:
                 json.dump(self._appConfig, file, sort_keys=True, indent=2)
         
+        self.SetRecentFiles()
+        
         if self._appConfig["loadLastFile"] is True:
             if os.path.exists(self._appConfig["currentFile"]):
                 self.LoadFile(self._appConfig["currentFile"])
             else:
                self._appConfig["currentFile"] = False
-           
+               
+        if self._appConfig["showSplashScreen"] is True:
+            SplashScreen(800)
+            
+        self.UpdateTrayIcon()
+        self.UpdateToolbar()
+        wx.CallLater(800, self.Show)
+        
     def LoadFile(self, filePath):
+        """ load a schedule file by file path """
         try:
             with open(filePath, 'r') as file:
                 fileData = json.load(file)
@@ -791,11 +922,27 @@ class Main(wx.Frame):
             # self.menubar.Enable(wx.ID_CLOSE, True)
             
         except FileNotFoundError:
+            logging.error("{0}".format(FileNotFoundError))
             return
         except json.JSONDecodeError:
             # TODO: raise corrupt/invalid file error
+            logging.error("{0}".format(json.JSONDecodeError))
             return
-    
+            
+        if self._appConfig["keepFileList"] == False:
+            return
+            
+        if filePath in self._fileList:
+            self.menuFile.Delete(self._fileListMenuItems[filePath])
+            del self._fileListMenuItems[filePath]
+            del self._fileList[self._fileList.index(filePath)]
+            
+        self._fileListMenuItems[filePath] = item = wx.MenuItem(id=wx.ID_ANY, text=filePath)
+        self.Bind(wx.EVT_MENU, self.OnRecentFile, item)
+        item.SetHelp("Open File: {0}".format(filePath))
+        self.menuFile.Insert(self.menuFile.GetMenuItemCount()-len(self._fileList)-1, item)
+        self._fileList.insert(0, filePath)
+        
     def MoveScheduleItemDown(self):
         # valid item selection?
         selection = self.schedList.GetSelection()
@@ -907,16 +1054,27 @@ class Main(wx.Frame):
         
         self.UpdateScheduleToolbar()
          
-    def OnClose(self, event):
+    def OnClose(self, event=None):
+        """ 
+        on application exit we prompt user to close file and
+        disable the schedule manager directly
+        """
         if self.CloseFile() == wx.ID_CANCEL:
-            return
-        
+            return        
         self._schedManager.Stop()
-        # save data before exiting
-        self.WriteData()
-        event.Skip()
-
+        
+        try:
+            self.taskBarIcon.RemoveTray()
+        except:
+            pass
+            
+        self.Destroy()        
+        
     def OnAboutDialogClose(self, event):
+        """ 
+        clear reference to AboutDialog so a new instance 
+        can be opened next time 
+        """
         try:
             self._aboutDialog = None
             event.Skip()
@@ -996,10 +1154,7 @@ class Main(wx.Frame):
         self.UpdateScheduleToolbar()
         # # click the information text
         # self.infoSched.SetValue("")
-    
-    def OnListItemActivated(self, event):
-        self.OnAddFunction()
-
+        
     def OnMenu(self, event):
         e = event.GetEventObject()
         id = event.GetId()
@@ -1011,6 +1166,10 @@ class Main(wx.Frame):
             self.CloseFile()  
         elif label == "Check for updates":
             self.ShowCheckForUpdatesDialog()  
+        elif label == "Disable Schedule Manager":
+            self.DisableScheduleManager()
+        elif label == "Enable Schedule Manager":
+            self.EnableScheduleManager() 
         elif label == "Exit":
             self.Close()
         elif label == "Import":
@@ -1024,11 +1183,22 @@ class Main(wx.Frame):
         elif label == "Settings":
             self.ShowSettingsDialog() 
     
+    def OnRecentFile(self, event):
+        e = event.GetEventObject()
+        id = event.GetId()
+        filePath = e.GetLabel(id)
+        
+        if filePath == self._appConfig["currentFile"]:
+            logging.info("File already opened")
+            return
+        self.CloseFile()    
+        self.LoadFile(filePath)
+        
     def OnScheduleItemEdit(self, event=None):
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
             return
-        
+         
         itemText = self.schedList.GetItemText(selection, 0)
         name, params = itemText.split(DELIMITER)
         params = make_tuple(params)
@@ -1098,7 +1268,7 @@ class Main(wx.Frame):
         """ update the schedule item information """
 
         selection = self.schedList.GetSelection()
-        # logging.info("Schedule tree items selected: %s" % str(selection))
+       
         try:
             text = self.schedList.GetItemText(selection)
             self.infoSched.SetValue(text)
@@ -1117,6 +1287,10 @@ class Main(wx.Frame):
             self._data[groupSel][n][1]["checked"] = self.schedList.GetCheckedState(selection)
             break
       
+    def OnSize(self, event):
+        self.UpdateToolbar()
+        event.Skip()
+        
     def OnToolBar(self, event):
         e = event.GetEventObject()
         id = event.GetId()
@@ -1129,9 +1303,9 @@ class Main(wx.Frame):
         elif label == "Close":
             self.CloseFile()    
         elif label == "Disable Schedule Manager":
-            self.DisableScheduleManager(event)
+            self.DisableScheduleManager()
         elif label == "Enable Schedule Manager":
-            self.EnableScheduleManager(event)
+            self.EnableScheduleManager()
         elif label == "Import":
             self.ShowImportDialog()    
         elif label == "New":
@@ -1292,8 +1466,6 @@ class Main(wx.Frame):
         state = {"data": data, "groupIdx": groupIdx}
         self._redoStack.append(state)
 
-        self.WriteData()
-
     def SaveStateToUndoStack(self):
         """ append current data to undo stack """
         return
@@ -1308,17 +1480,28 @@ class Main(wx.Frame):
                  "groupIdx": groupIdx}
 
         self._undoStack.append(state)
-
-        self.WriteData()
     
     def SetGroupTree(self, data):
         """ set the group list tree """
-        for idx in sorted([int(x) for x in data.keys()]):
+        for idx in sorted([int(x) for x in data.keys() if x != "__version__"]):
             item = self.groupList.AppendItemToRoot(data[str(idx)]["columns"]["0"])
             self.groupList.CheckItem(item, data[str(idx)]["checked"])
             self._data[item] = data[str(idx)]["schedules"]
         self.groupList.UnselectAll()
         
+    def SetRecentFiles(self):
+        """ called once on start-up to insert recent file menu items """
+        if self._appConfig["keepFileList"] == False:
+            return
+            
+        for filePath in self._appConfig["fileList"]:
+            item = wx.MenuItem(id=wx.ID_ANY, text=filePath)
+            self._fileListMenuItems[filePath] = item            
+            self.Bind(wx.EVT_MENU, self.OnRecentFile, item)
+            item.SetHelp("Open File: {0}".format(filePath))
+            self.menuFile.Insert(self.menuFile.GetMenuItemCount()-len(self._fileList)-1, item)
+            self._fileList.append(filePath)
+            
     def SetScheduleTree(self, data):
         """ set the schedule list tree """
         self.schedList.SetTree(data)
@@ -1331,7 +1514,7 @@ class Main(wx.Frame):
         self.GetTopLevelParent().SetStatusText(status)
 
         if event:
-            event.Skip()     
+            event.Skip()    
 
     def ShowAboutDialog(self):
         if not self._aboutDialog:
@@ -1372,7 +1555,6 @@ class Main(wx.Frame):
             self.schedList.DeleteAllItems()
 
             self._data[newItem] = []
-            self.WriteData()
 
             self.groupList.Select(newItem)
             self.groupList.SetFocus()
@@ -1445,7 +1627,6 @@ class Main(wx.Frame):
         
         self.toolbar.EnableTool(wx.ID_REMOVE, False)
         self._redoStack = []
-        self.WriteData()
         
     def ShowSettingsDialog(self):
         try:
@@ -1457,6 +1638,12 @@ class Main(wx.Frame):
         
         self._settingsDialog.Raise()    
             
+    def ToggleScheduleManager(self):
+        if self._tools["Enable Schedule Manager"].GetLabel() == "Enable Schedule Manager":
+            self.EnableScheduleManager()
+        else:       
+            self.DisableScheduleManager()
+    
     def ToggleScheduleSelection(self):
         selection = self.schedList.GetSelection()
         checked = self.schedList.GetCheckedState(selection)
@@ -1474,8 +1661,15 @@ class Main(wx.Frame):
                 if label == "Add Schedule":
                     continue
                 btn.Disable()
+            # stop user from being able add function     
+            self.cboxFunctions.Disable()
+            self.btnAddFunction.Disable()    
             return
-            
+        
+        # enable user to add function     
+        self.cboxFunctions.Enable()
+        self.btnAddFunction.Enable()
+        
         self.schedBtns["Edit"].Enable()
         self.schedBtns["Toggle"].Enable()
         self.schedBtns["Delete"].Enable()
@@ -1490,12 +1684,16 @@ class Main(wx.Frame):
             self.schedBtns["Up"].Enable()
         else:
             self.schedBtns["Up"].Disable()
-            
+      
     def UpdateSettingsDict(self, data):
         self._appConfig.update(data)
-        if self._appConfig["loadLastFile"] == False:
-            self._appConfig["currentFile"] = False
         self.SaveDataToJSON("config.json", self._appConfig)
+        
+        if self._appConfig["keepFileList"] == False:
+            self.ClearRecentFiles()
+            
+        self.UpdateTrayIcon()
+        self.UpdateToolbar()
         
     def UpdateTitlebar(self):
         try:
@@ -1504,15 +1702,52 @@ class Main(wx.Frame):
         except:
             self.SetTitle("{0} {1}".format(__title__, __version__))
             
-    def WriteData(self):
-        return
-        """ write changes to data file"""
-        logging.info("data: %s" % str(self._data))
-
-        with open("schedules.json", 'w') as file:
-            json.dump(self._data, file, sort_keys=True, indent=2)
-
+    def UpdateToolbar(self):
+        if not self.toolbar:
+            return 
+            
+        sizeChoices = [16,32,48,64,128,256]
+        toolSize = int(self._appConfig["toolbarSize"]), int(self._appConfig["toolbarSize"])            
+        width = self.GetSize()[0]
+        toolCount = self.toolbar.GetToolsCount()
+        if toolSize[0] * toolCount > width:
+            idx = sizeChoices.index(toolSize[0])
+            newSize = None
+            for x in reversed(sizeChoices[:idx]):
+                # # try to set the largest toolbar icon size possible
+                if x * toolCount <= width:
+                    toolSize = x, x
+                    self._overrideToolSize = x
+                    break
+        else:
+           self._overrideToolSize = None
+        
+        if self.toolbar.GetToolBitmapSize() == toolSize:
+            return
+            
+        self.toolbar.SetToolBitmapSize(toolSize)
+        for x in range(toolCount):
+            tool = self.toolbar.GetToolByPos(x)
+            label = tool.GetLabel()
+            if not label:
+                continue
+            img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "").replace(".","")))
+            img.Rescale(toolSize[0],toolSize[1], wx.IMAGE_QUALITY_HIGH)
+            bmp = wx.Bitmap(img)
+            tool.SetNormalBitmap(bmp)
+          
+        self.toolbar.Realize()
+        
+    def UpdateTrayIcon(self):
+        if self._appConfig["showTrayIcon"] is True:
+            if not self.taskBarIcon:
+                self.CreateTrayIcon()
+        else:
+            if self.taskBarIcon:
+                self.taskBarIcon.RemoveTray()
+                self.taskBarIcon = None
+   
 if __name__ == "__main__":
-    app = wx.App()
-    Main()
+    app = wx.App()    
+    mainFrame = Main()
     app.MainLoop()
