@@ -106,7 +106,7 @@ DEFAULTCONFIG = {
     "schedManagerSwitchTab": True, # auto switch to Manager tab when schedules enabled
     "showSplashScreen": True,
     "showTrayIcon": True,
-    "toolbarSize": 48,
+    "toolbarSize": 48, # maximum toolbar size
     "windowPos": False, # the last window position
     "windowSize": False, # the last window size
 }
@@ -182,13 +182,20 @@ class SettingsFrame(wx.Frame):
         self.chkShowTray = wx.CheckBox(panel, label="Show Tray Icon")
         gridBag.Add(self.chkShowTray, pos=(row,0), flag=wx.ALL, border=5)         
          
-        row = 1     
+        row += 1     
         lblTrayLeft = wx.StaticText(panel, label="On Tray Icon Left Click")
         choices = ["Do Nothing","Show/Hide Main Window","Enable/Disable Schedule Manager"]
-        self.cboxTrayLeft = wx.ComboBox(panel, choices=choices)
+        self.cboxTrayLeft = wx.ComboBox(panel, choices=choices, style=wx.CB_READONLY)
         gridBag.Add(lblTrayLeft, pos=(row,0), flag=wx.ALL, border=5)  
         gridBag.Add(self.cboxTrayLeft, pos=(row,1), flag=wx.ALL, border=5)  
         
+        row += 1        
+        lblToolbarSize = wx.StaticText(panel, label="Maximum Toolbar Icon Size")
+        choices = ["16","32","48","64","128","256"]
+        self.cboxToolbarSize = wx.ComboBox(panel, choices=choices, style=wx.CB_READONLY)
+        gridBag.Add(lblToolbarSize, pos=(row,0), flag=wx.ALL, border=5)  
+        gridBag.Add(self.cboxToolbarSize, pos=(row,1), flag=wx.ALL, border=5)
+
         row += 1        
         self.chkLoadLastFile = wx.CheckBox(panel, label="Load Last Opened File")
         gridBag.Add(self.chkLoadLastFile, pos=(row,0), flag=wx.ALL, border=5)
@@ -230,6 +237,7 @@ class SettingsFrame(wx.Frame):
         data = {}
         data["showTrayIcon"] = self.chkShowTray.GetValue()
         data["onTrayIconLeft"] = self.cboxTrayLeft.GetSelection()
+        data["toolbarSize"] = self.cboxToolbarSize.GetValue()
         data["loadLastFile"] = self.chkLoadLastFile.GetValue()
         data["keepFileList"] = self.chkRecentFiles.GetValue()
         data["schedManagerSwitchTab"] = self.chkSchedMgrSwitch.GetValue()
@@ -247,6 +255,7 @@ class SettingsFrame(wx.Frame):
             
     def SetDefaults(self):
         self.cboxTrayLeft.SetSelection(0)
+        self.cboxToolbarSize.SetValue("48")
         self.chkShowTray.SetValue(True)
         self.chkLoadLastFile.SetValue(True)
         self.chkRecentFiles.SetValue(True)
@@ -255,6 +264,7 @@ class SettingsFrame(wx.Frame):
         
     def SetValue(self, data):
         for arg, func, default in (
+            ["toolbarSize", self.cboxToolbarSize.SetValue, "48"],
             ["showTrayIcon", self.chkShowTray.SetValue, True],
             ["onTrayIconLeft", self.cboxTrayLeft.SetSelection, 0],
             ["loadLastFile", self.chkLoadLastFile.SetValue, False],
@@ -283,13 +293,15 @@ class Main(wx.Frame):
         self._settingsDialog = None
         self._fileList = []
         self._fileListMenuItems = {}
+        self._overrideToolSize = None
         self._data = {}
         self._menus = {}
         self._redoStack = []
         self._undoStack = []
         self._schedManager = schedulemanager.Manager(self)
         self._taskBarIcon = None
-
+        self.toolbar = None 
+        
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         
         #-----
@@ -425,7 +437,9 @@ class Main(wx.Frame):
         self.Show()
             
         #load settings
-        self.LoadConfig()    
+        self.LoadConfig()
+        
+        self.Bind(wx.EVT_SIZE, self.OnSize)
     
     @property
     def taskBarIcon(self):
@@ -532,7 +546,8 @@ class Main(wx.Frame):
     def CreateToolbar(self):
         self._tools = {}
         toolbar = wx.ToolBar(self, style=wx.TB_FLAT)
-        toolbar.SetToolBitmapSize((48,48))
+        toolSize = int(self._appConfig["toolbarSize"]), int(self._appConfig["toolbarSize"])
+        toolbar.SetToolBitmapSize(toolSize)
         for label, help, state, wxId in [  
             ("New", "New", True, wx.ID_NEW),
             ("Open", "Open", True, wx.ID_OPEN),
@@ -549,11 +564,11 @@ class Main(wx.Frame):
 
             try:
                 img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "").replace(".","")))
-                img.Rescale(48,48, wx.IMAGE_QUALITY_HIGH)
+                img.Rescale(toolSize[0],toolSize[1], wx.IMAGE_QUALITY_HIGH)
                 bmp = wx.Bitmap(img)
                 tool = toolbar.AddTool(wxId, label=label, bitmap=bmp, shortHelp=help)
             except:
-                bmp = wx.Bitmap(48,48)
+                bmp = wx.Bitmap(toolSize)
                 tool = toolbar.AddTool(wxId, label=label, bitmap=bmp, shortHelp=help)
             self.Bind(wx.EVT_TOOL, self.OnToolBar, tool)
             
@@ -593,9 +608,10 @@ class Main(wx.Frame):
         
         self._tools["Enable Schedule Manager"].SetLabel("Disable Schedule Manager")
         self._tools["Enable Schedule Manager"].SetShortHelp("Disable Schedule Manager")
-
-        img = wx.Image("icons/enableschedulemanager.png")
-        img = img.Rescale(48,48, wx.IMAGE_QUALITY_HIGH)
+        width, height = self.toolbar.GetToolBitmapSize()
+        
+        img = wx.Image("icons/enableschedulemanager.png")            
+        img = img.Rescale(width, height, wx.IMAGE_QUALITY_HIGH)
         bmp = wx.Bitmap(img)
         self._tools["Enable Schedule Manager"].SetNormalBitmap(bmp)
         self.toolbar.Realize()
@@ -662,9 +678,11 @@ class Main(wx.Frame):
         
         self._tools["Enable Schedule Manager"].SetLabel("Disable Schedule Manager")
         self._tools["Enable Schedule Manager"].SetShortHelp("Disable Schedule Manager")
+        width, height = self.toolbar.GetToolBitmapSize()
         
         img = wx.Image("icons/disableschedulemanager.png")
-        img = img.Rescale(48,48, wx.IMAGE_QUALITY_HIGH)
+        toolSize = int(self._appConfig["toolbarSize"]), int(self._appConfig["toolbarSize"])
+        img = img.Rescale(width, height, wx.IMAGE_QUALITY_HIGH)
         bmp = wx.Bitmap(img)
         self._tools["Enable Schedule Manager"].SetNormalBitmap(bmp)
         self.toolbar.Realize()
@@ -796,6 +814,7 @@ class Main(wx.Frame):
                self._appConfig["currentFile"] = False
                
         self.UpdateTrayIcon()
+        self.UpdateToolbar()
         
     def LoadFile(self, filePath):
         """ load a schedule file by file path """
@@ -1177,6 +1196,10 @@ class Main(wx.Frame):
             self._data[groupSel][n][1]["checked"] = self.schedList.GetCheckedState(selection)
             break
       
+    def OnSize(self, event):
+        self.UpdateToolbar()
+        event.Skip()
+        
     def OnToolBar(self, event):
         e = event.GetEventObject()
         id = event.GetId()
@@ -1573,6 +1596,7 @@ class Main(wx.Frame):
             self.ClearRecentFiles()
             
         self.UpdateTrayIcon()
+        self.UpdateToolbar()
         
     def UpdateTitlebar(self):
         try:
@@ -1581,6 +1605,42 @@ class Main(wx.Frame):
         except:
             self.SetTitle("{0} {1}".format(__title__, __version__))
             
+    def UpdateToolbar(self):
+        if not self.toolbar:
+            return 
+            
+        sizeChoices = [16,32,48,64,128,256]
+        toolSize = int(self._appConfig["toolbarSize"]), int(self._appConfig["toolbarSize"])            
+        width = self.GetSize()[0]
+        toolCount = self.toolbar.GetToolsCount()
+        if toolSize[0] * toolCount > width:
+            idx = sizeChoices.index(toolSize[0])
+            newSize = None
+            for x in reversed(sizeChoices[:idx]):
+                # # try to set the largest toolbar icon size possible
+                if x * toolCount <= width:
+                    toolSize = x, x
+                    self._overrideToolSize = x
+                    break
+        else:
+           self._overrideToolSize = None
+        
+        if self.toolbar.GetToolBitmapSize() == toolSize:
+            return
+            
+        self.toolbar.SetToolBitmapSize(toolSize)
+        for x in range(toolCount):
+            tool = self.toolbar.GetToolByPos(x)
+            label = tool.GetLabel()
+            if not label:
+                continue
+            img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "").replace(".","")))
+            img.Rescale(toolSize[0],toolSize[1], wx.IMAGE_QUALITY_HIGH)
+            bmp = wx.Bitmap(img)
+            tool.SetNormalBitmap(bmp)
+          
+        self.toolbar.Realize()
+        
     def UpdateTrayIcon(self):
         if self._appConfig["showTrayIcon"] is True:
             if not self.taskBarIcon:
