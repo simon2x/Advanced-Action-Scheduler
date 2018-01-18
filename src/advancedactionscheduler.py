@@ -435,6 +435,10 @@ class Main(wx.Frame):
         if ret == wx.ID_YES:
             self.SaveData()
         
+        if self._appConfig["loadLastFile"] == False:
+            self._appConfig["currentFile"] = False # clear
+            self.SaveDataToJSON("config.json", self._appConfig)
+            
         self.ClearUI()
         
     def CreateMenu(self):
@@ -791,9 +795,11 @@ class Main(wx.Frame):
             # self.menubar.Enable(wx.ID_CLOSE, True)
             
         except FileNotFoundError:
+            logging.error("{0}".format(FileNotFoundError))
             return
         except json.JSONDecodeError:
             # TODO: raise corrupt/invalid file error
+            logging.error("{0}".format(json.JSONDecodeError))
             return
     
     def MoveScheduleItemDown(self):
@@ -1493,8 +1499,6 @@ class Main(wx.Frame):
             
     def UpdateSettingsDict(self, data):
         self._appConfig.update(data)
-        if self._appConfig["loadLastFile"] == False:
-            self._appConfig["currentFile"] = False
         self.SaveDataToJSON("config.json", self._appConfig)
         
     def UpdateTitlebar(self):
