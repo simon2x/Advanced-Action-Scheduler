@@ -341,6 +341,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
                 self.parent.Hide()
             else:
                 self.parent.Show()
+                self.parent.Raise()
                 
         # toggle schedule manager
         elif self.appConfig["onTrayIconLeft"] == 2:
