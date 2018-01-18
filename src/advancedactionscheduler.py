@@ -182,6 +182,13 @@ class SettingsFrame(wx.Frame):
         self.chkShowTray = wx.CheckBox(panel, label="Show Tray Icon")
         gridBag.Add(self.chkShowTray, pos=(row,0), flag=wx.ALL, border=5)         
          
+        row = 1     
+        lblTrayLeft = wx.StaticText(panel, label="On Tray Icon Left Click")
+        choices = ["Do Nothing","Show/Hide Main Window","Enable/Disable Schedule Manager"]
+        self.cboxTrayLeft = wx.ComboBox(panel, choices=choices)
+        gridBag.Add(lblTrayLeft, pos=(row,0), flag=wx.ALL, border=5)  
+        gridBag.Add(self.cboxTrayLeft, pos=(row,1), flag=wx.ALL, border=5)  
+        
         row += 1        
         self.chkLoadLastFile = wx.CheckBox(panel, label="Load Last Opened File")
         gridBag.Add(self.chkLoadLastFile, pos=(row,0), flag=wx.ALL, border=5)
@@ -222,6 +229,7 @@ class SettingsFrame(wx.Frame):
     def GetValue(self):
         data = {}
         data["showTrayIcon"] = self.chkShowTray.GetValue()
+        data["onTrayIconLeft"] = self.cboxTrayLeft.GetSelection()
         data["loadLastFile"] = self.chkLoadLastFile.GetValue()
         data["keepFileList"] = self.chkRecentFiles.GetValue()
         data["schedManagerSwitchTab"] = self.chkSchedMgrSwitch.GetValue()
@@ -238,6 +246,7 @@ class SettingsFrame(wx.Frame):
             self.Destroy()
             
     def SetDefaults(self):
+        self.cboxTrayLeft.SetSelection(0)
         self.chkShowTray.SetValue(True)
         self.chkLoadLastFile.SetValue(True)
         self.chkRecentFiles.SetValue(True)
@@ -247,6 +256,7 @@ class SettingsFrame(wx.Frame):
     def SetValue(self, data):
         for arg, func, default in (
             ["showTrayIcon", self.chkShowTray.SetValue, True],
+            ["onTrayIconLeft", self.cboxTrayLeft.SetSelection, 0],
             ["loadLastFile", self.chkLoadLastFile.SetValue, False],
             ["keepFileList", self.chkRecentFiles.SetValue, True],
             ["schedManagerSwitchTab", self.chkSchedMgrSwitch.SetValue, True],
@@ -1621,14 +1631,14 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
     def OnTrayLeft(self, event):
     
         # show/hide window
-        if self.appConfig["onTrayIconLeft"] == 0:
+        if self.appConfig["onTrayIconLeft"] == 1:
             if self.parent.IsShown():
                 self.parent.Hide()
             else:
                 self.parent.Show()
                 
         # toggle schedule manager
-        elif self.appConfig["onTrayIconLeft"] == 1:
+        elif self.appConfig["onTrayIconLeft"] == 2:
             self.parent.ToggleScheduleManager()
     
     def OnTrayRight(self, event):
