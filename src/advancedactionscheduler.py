@@ -466,6 +466,8 @@ class Main(wx.Frame):
             self._menus[item] = menuRun.Append(wx.ID_ANY, item, helpStr)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
             
+        self._menus["Disable Schedule Manager"].Enable(False)
+            
         menuHelp = wx.Menu()
         helpMenus = [("Check for updates", "Check for updates (Not Yet Implemented)"),
                      ("About", "Import Images From Folder")]
@@ -769,10 +771,11 @@ class Main(wx.Frame):
             with open("config.json", 'w') as file:
                 json.dump(self._appConfig, file, sort_keys=True, indent=2)
         
-        if os.path.exists(self._appConfig["currentFile"]):
-            self.LoadFile(self._appConfig["currentFile"])
-        else:
-           self._appConfig["currentFile"] = False
+        if self._appConfig["loadLastFile"] is True:
+            if os.path.exists(self._appConfig["currentFile"]):
+                self.LoadFile(self._appConfig["currentFile"])
+            else:
+               self._appConfig["currentFile"] = False
            
     def LoadFile(self, filePath):
         try:
@@ -1490,6 +1493,8 @@ class Main(wx.Frame):
             
     def UpdateSettingsDict(self, data):
         self._appConfig.update(data)
+        if self._appConfig["loadLastFile"] == False:
+            self._appConfig["currentFile"] = False
         self.SaveDataToJSON("config.json", self._appConfig)
         
     def UpdateTitlebar(self):
