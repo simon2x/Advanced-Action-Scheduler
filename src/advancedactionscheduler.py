@@ -99,8 +99,13 @@ DEFAULTCONFIG = {
     "loadLastFile": True, # the currently opened schedule file
     "fileList": [], # recently opened schedule files
     "keepFileList": True,
+    "onClose": 0, # on close window
+    "onTrayIconLeft": 0,
     "schedManagerLogCount": 10, # number of logs before clearing table
     "schedManagerSwitchTab": True, # auto switch to Manager tab when schedules enabled
+    "showSplashScreen": True,
+    "showTrayIcon": True,
+    "toolbarSize": 48,
     "windowPos": False, # the last window position
     "windowSize": False, # the last window size
 }
