@@ -303,8 +303,11 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         self.parent = parent
         self.parent.taskBarIcon = self
         
+        self.iconNormal = wx.Icon(wx.Bitmap("icons/iconnormal.png"))
+        self.iconRunning = wx.Icon(wx.Bitmap("icons/iconrunning.png"))
+        
         self.tooltip = "{0} {1}".format(__title__, __version__)
-        self.SetTrayIcon()  
+        self.SetTrayIcon(running=False)  
         self.trayMenu = self.CreateTrayMenu()
         self.Bind(wx.adv.EVT_TASKBAR_LEFT_DOWN, self.OnTrayLeft)        
         self.Bind(wx.adv.EVT_TASKBAR_RIGHT_DOWN, self.OnTrayRight) 
@@ -354,10 +357,12 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         self.RemoveIcon()
         self.Destroy()
         
-    def SetTrayIcon(self):
-        icon = wx.Icon(wx.Bitmap("icons/icon.png"))
-        self.SetIcon(icon, self.tooltip)
-        
+    def SetTrayIcon(self, running):
+        if running:
+            self.SetIcon(self.iconRunning, self.tooltip)
+        else:    
+            self.SetIcon(self.iconNormal, self.tooltip)
+            
 class Main(wx.Frame):
 
     def __init__(self, parent=None):
@@ -681,8 +686,8 @@ class Main(wx.Frame):
         self._menus["Disable Schedule Manager"].Enable(False)
         self._menus["Enable Schedule Manager"].Enable(True)
         
-        self._tools["Enable Schedule Manager"].SetLabel("Disable Schedule Manager")
-        self._tools["Enable Schedule Manager"].SetShortHelp("Disable Schedule Manager")
+        self._tools["Enable Schedule Manager"].SetLabel("Enable Schedule Manager")
+        self._tools["Enable Schedule Manager"].SetShortHelp("Enable Schedule Manager")
         width, height = self.toolbar.GetToolBitmapSize()
         
         img = wx.Image("icons/enableschedulemanager.png")            
@@ -692,6 +697,9 @@ class Main(wx.Frame):
         self.toolbar.Realize()
 
         self._schedManager.Stop()
+        
+        if self.taskBarIcon:
+            self.taskBarIcon.SetTrayIcon(running=False)
         
     def DoRedo(self):
         print(self._redoStack)
@@ -770,6 +778,7 @@ class Main(wx.Frame):
             sendData[itemText] = scheds
             
         if not sendData:
+            self.DisableScheduleManager()
             return
         self._schedManager.SetSchedules(sendData)
         self._schedManager.Start()
@@ -777,6 +786,9 @@ class Main(wx.Frame):
         # switch to the manager when schedules are started
         if self._appConfig["schedManagerSwitchTab"] is True:
             self.notebook.SetSelection(1)
+        
+        if self.taskBarIcon:
+            self.taskBarIcon.SetTrayIcon(running=True)    
             
     def GetAppConfig(self):
         return self._appConfig
@@ -1626,6 +1638,12 @@ class Main(wx.Frame):
         
         self._settingsDialog.Raise()    
             
+    def ToggleScheduleManager(self):
+        if self._tools["Enable Schedule Manager"].GetLabel() == "Enable Schedule Manager":
+            self.EnableScheduleManager()
+        else:       
+            self.DisableScheduleManager()
+    
     def ToggleScheduleSelection(self):
         selection = self.schedList.GetSelection()
         checked = self.schedList.GetCheckedState(selection)
