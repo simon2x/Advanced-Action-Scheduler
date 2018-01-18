@@ -493,13 +493,9 @@ class Main(wx.Frame):
         self.SetMenuBar(menubar)
 
     def CreateToolbar(self):
-        # toolbar = wx.ToolBar(self, style=wx.TB_TEXT|wx.TB_FLAT)
-        # toolbar = wx.ToolBar(self, style=wx.TB_TEXT)
+        self._tools = {}
         toolbar = wx.ToolBar(self, style=wx.TB_FLAT)
-        # toolbar.AddTool(wx.ID _ANY, "t")#,  wx.BitmapFromBuffer(wx.ART_FILE_OPEN))
         toolbar.SetToolBitmapSize((48,48))
-        # toolbar.SetToolBitmapSize((48,48))
-        # toolbar.SetBackgroundColour("white")
         for label, help, state, wxId in [  
             ("New", "New", True, wx.ID_NEW),
             ("Open", "Open", True, wx.ID_OPEN),
@@ -524,6 +520,7 @@ class Main(wx.Frame):
                 tool = toolbar.AddTool(wxId, label=label, bitmap=bmp, shortHelp=help)
             self.Bind(wx.EVT_TOOL, self.OnToolBar, tool)
             
+            self._tools[label] = tool
             tool.Enable(state)
             
             if label == "Close":
@@ -547,17 +544,19 @@ class Main(wx.Frame):
         self.UpdateScheduleToolbar()
         self.SaveScheduleTreeToData()
        
-    def DisableScheduleManager(self, event):
-        e = event.GetEventObject()
-        id = event.GetId()
-        tool = e.FindById(id)
-        tool.SetLabel("Enable Schedule Manager")
-        e.SetToolShortHelp(id, "Enable Schedule Manager")
+    def DisableScheduleManager(self):
+        # Enable/Disable menu item accordingly
+        self._menus["Disable Schedule Manager"].Enable(False)
+        self._menus["Enable Schedule Manager"].Enable(True)
+        
+        self._tools["Enable Schedule Manager"].SetLabel("Disable Schedule Manager")
+        self._tools["Enable Schedule Manager"].SetShortHelp("Disable Schedule Manager")
 
         img = wx.Image("icons/enableschedulemanager.png")
         img = img.Rescale(48,48, wx.IMAGE_QUALITY_HIGH)
         bmp = wx.Bitmap(img)
-        e.SetToolNormalBitmap(id, bmp)
+        self._tools["Enable Schedule Manager"].SetNormalBitmap(bmp)
+        self.toolbar.Realize()
 
         self._schedManager.Stop()
         
@@ -618,17 +617,19 @@ class Main(wx.Frame):
 
             self.WriteData()    
     
-    def EnableScheduleManager(self, event):
-        e = event.GetEventObject()
-        id = event.GetId()
-        tool = e.FindById(id)
-        tool.SetLabel("Disable Schedule Manager")
-        e.SetToolShortHelp(id, "Disable Schedule Manager")
-
+    def EnableScheduleManager(self):
+        # Enable/Disable menu item accordingly
+        self._menus["Disable Schedule Manager"].Enable(True)
+        self._menus["Enable Schedule Manager"].Enable(False)
+        
+        self._tools["Enable Schedule Manager"].SetLabel("Disable Schedule Manager")
+        self._tools["Enable Schedule Manager"].SetShortHelp("Disable Schedule Manager")
+        
         img = wx.Image("icons/disableschedulemanager.png")
         img = img.Rescale(48,48, wx.IMAGE_QUALITY_HIGH)
         bmp = wx.Bitmap(img)
-        e.SetToolNormalBitmap(id, bmp)
+        self._tools["Enable Schedule Manager"].SetNormalBitmap(bmp)
+        self.toolbar.Realize()
         
         sendData = {}
         for item, scheds in self._data.items():
@@ -1040,6 +1041,10 @@ class Main(wx.Frame):
             self.CloseFile()  
         elif label == "Check for updates":
             self.ShowCheckForUpdatesDialog()  
+        elif label == "Disable Schedule Manager":
+            self.DisableScheduleManager()
+        elif label == "Enable Schedule Manager":
+            self.EnableScheduleManager() 
         elif label == "Exit":
             self.Close()
         elif label == "Import":
@@ -1169,9 +1174,9 @@ class Main(wx.Frame):
         elif label == "Close":
             self.CloseFile()    
         elif label == "Disable Schedule Manager":
-            self.DisableScheduleManager(event)
+            self.DisableScheduleManager()
         elif label == "Enable Schedule Manager":
-            self.EnableScheduleManager(event)
+            self.EnableScheduleManager()
         elif label == "Import":
             self.ShowImportDialog()    
         elif label == "New":
