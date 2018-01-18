@@ -258,6 +258,8 @@ class Main(wx.Frame):
         self._appConfig = DEFAULTCONFIG 
         self._aboutDialog = None
         self._settingsDialog = None
+        self._fileList = []
+        self._fileListMenuItems = {}
         self._data = {}
         self._menus = {}
         self._redoStack = []
@@ -400,9 +402,8 @@ class Main(wx.Frame):
         self.Show()
             
         #load settings
-        self.LoadConfig()
-        self.UpdateRecentFiles()
-        
+        self.LoadConfig()    
+                
     def AddLogMessage(self, message):
         """ insert log message as first item to schedule messenger list """
         if self.schedLog.GetItemCount() == self._appConfig["schedManagerLogCount"]:
@@ -438,7 +439,11 @@ class Main(wx.Frame):
         
         if self._appConfig["loadLastFile"] == False:
             self._appConfig["currentFile"] = False # clear
-            self.SaveDataToJSON("config.json", self._appConfig)
+        if self._appConfig["keepFileList"] == False:
+            self._appConfig["fileList"] = []
+        else: 
+            self._appConfig["fileList"] = self._fileList
+        self.SaveDataToJSON("config.json", self._appConfig)
             
         self.ClearUI()
         
@@ -463,7 +468,8 @@ class Main(wx.Frame):
                 menuFile.AppendSeparator()
             elif item == "Settings":
                 menuFile.AppendSeparator()
-
+        self.menuFile = menuFile
+        
         menuRun = wx.Menu()
         runMenus = [("Enable Schedule Manager", "Enable Schedule Manager"),
                     ("Disable Schedule Manager", "Disable Schedule Manager")]
@@ -776,12 +782,14 @@ class Main(wx.Frame):
             with open("config.json", 'w') as file:
                 json.dump(self._appConfig, file, sort_keys=True, indent=2)
         
+        self.SetRecentFiles()
+        
         if self._appConfig["loadLastFile"] is True:
             if os.path.exists(self._appConfig["currentFile"]):
                 self.LoadFile(self._appConfig["currentFile"])
             else:
                self._appConfig["currentFile"] = False
-           
+        
     def LoadFile(self, filePath):
         try:
             with open(filePath, 'r') as file:
@@ -802,7 +810,21 @@ class Main(wx.Frame):
             # TODO: raise corrupt/invalid file error
             logging.error("{0}".format(json.JSONDecodeError))
             return
-    
+            
+        if self._appConfig["keepFileList"] == False:
+            return
+            
+        if filePath in self._fileList:
+            self.menuFile.Delete(self._fileListMenuItems[filePath])
+            del self._fileListMenuItems[filePath]
+            del self._fileList[self._fileList.index(filePath)]
+            
+        self._fileListMenuItems[filePath] = item = wx.MenuItem(id=wx.ID_ANY, text=filePath)
+        self.Bind(wx.EVT_MENU, self.OnRecentFile, item)
+        item.SetHelp("Open File: {0}".format(filePath))
+        self.menuFile.Insert(self.menuFile.GetMenuItemCount()-len(self._fileList)-1, item)
+        self._fileList.insert(0, filePath)
+        
     def MoveScheduleItemDown(self):
         # valid item selection?
         selection = self.schedList.GetSelection()
@@ -1031,6 +1053,17 @@ class Main(wx.Frame):
         elif label == "Settings":
             self.ShowSettingsDialog() 
     
+    def OnRecentFile(self, event):
+        e = event.GetEventObject()
+        id = event.GetId()
+        filePath = e.GetLabel(id)
+        
+        if filePath == self._appConfig["currentFile"]:
+            logging.info("File already opened")
+            return
+        self.CloseFile()    
+        self.LoadFile(filePath)
+        
     def OnScheduleItemEdit(self, event=None):
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
@@ -1326,6 +1359,19 @@ class Main(wx.Frame):
             self._data[item] = data[str(idx)]["schedules"]
         self.groupList.UnselectAll()
         
+    def SetRecentFiles(self):
+        """ called once on start-up to insert recent file menu items """
+        if self._appConfig["keepFileList"] == False:
+            return
+            
+        for filePath in self._appConfig["fileList"]:
+            item = wx.MenuItem(id=wx.ID_ANY, text=filePath)
+            self._fileListMenuItems[filePath] = item            
+            self.Bind(wx.EVT_MENU, self.OnRecentFile, item)
+            item.SetHelp("Open File: {0}".format(filePath))
+            self.menuFile.Insert(self.menuFile.GetMenuItemCount()-len(self._fileList)-1, item)
+            self._fileList.append(filePath)
+            
     def SetScheduleTree(self, data):
         """ set the schedule list tree """
         self.schedList.SetTree(data)
@@ -1498,11 +1544,6 @@ class Main(wx.Frame):
         else:
             self.schedBtns["Up"].Disable()
       
-    def UpdateRecentFiles(self):
-        if self._appConfig["keepFileList"] == False:
-            return
-            
-        
     def UpdateSettingsDict(self, data):
         self._appConfig.update(data)
         self.SaveDataToJSON("config.json", self._appConfig)
