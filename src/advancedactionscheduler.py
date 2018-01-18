@@ -42,6 +42,7 @@ import wx.dataview #for TreeListCtrl
 import wx.lib.agw.aui as aui
 
 from dialogs import *
+import wx.adv
 from wx.lib.scrolledpanel import ScrolledPanel
 from wx.lib.pubsub import setuparg1
 from wx.lib.pubsub import pub
@@ -178,6 +179,10 @@ class SettingsFrame(wx.Frame):
         gridBag = wx.GridBagSizer(5,5)
         
         row = 0        
+        self.chkShowTray = wx.CheckBox(panel, label="Show Tray Icon")
+        gridBag.Add(self.chkShowTray, pos=(row,0), flag=wx.ALL, border=5)         
+         
+        row += 1        
         self.chkLoadLastFile = wx.CheckBox(panel, label="Load Last Opened File")
         gridBag.Add(self.chkLoadLastFile, pos=(row,0), flag=wx.ALL, border=5)
          
@@ -216,6 +221,7 @@ class SettingsFrame(wx.Frame):
      
     def GetValue(self):
         data = {}
+        data["showTrayIcon"] = self.chkShowTray.GetValue()
         data["loadLastFile"] = self.chkLoadLastFile.GetValue()
         data["keepFileList"] = self.chkRecentFiles.GetValue()
         data["schedManagerSwitchTab"] = self.chkSchedMgrSwitch.GetValue()
@@ -232,6 +238,7 @@ class SettingsFrame(wx.Frame):
             self.Destroy()
             
     def SetDefaults(self):
+        self.chkShowTray.SetValue(True)
         self.chkLoadLastFile.SetValue(True)
         self.chkRecentFiles.SetValue(True)
         self.chkSchedMgrSwitch.SetValue(True)
@@ -239,6 +246,7 @@ class SettingsFrame(wx.Frame):
         
     def SetValue(self, data):
         for arg, func, default in (
+            ["showTrayIcon", self.chkShowTray.SetValue, True],
             ["loadLastFile", self.chkLoadLastFile.SetValue, False],
             ["keepFileList", self.chkRecentFiles.SetValue, True],
             ["schedManagerSwitchTab", self.chkSchedMgrSwitch.SetValue, True],
@@ -252,12 +260,12 @@ class SettingsFrame(wx.Frame):
         
 class Main(wx.Frame):
 
-    def __init__(self):
+    def __init__(self, parent=None):
 
         self._title = "{0} {1}".format(__title__, __version__)
 
         wx.Frame.__init__(self,
-                          parent=None,
+                          parent=parent,
                           title=self._title)
 
         self._appConfig = DEFAULTCONFIG 
@@ -270,6 +278,7 @@ class Main(wx.Frame):
         self._redoStack = []
         self._undoStack = []
         self._schedManager = schedulemanager.Manager(self)
+        self._taskBarIcon = None
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         
@@ -407,7 +416,15 @@ class Main(wx.Frame):
             
         #load settings
         self.LoadConfig()    
-                
+    
+    @property
+    def taskBarIcon(self):
+        return self._taskBarIcon
+        
+    @taskBarIcon.setter
+    def taskBarIcon(self, value):
+        self._taskBarIcon = value
+        
     def AddLogMessage(self, message):
         """ insert log message as first item to schedule messenger list """
         if self.schedLog.GetItemCount() >= self._appConfig["schedManagerLogCount"]:
@@ -544,6 +561,11 @@ class Main(wx.Frame):
         self.toolbar = toolbar
         self.SetToolBar(toolbar)
 
+    def CreateTrayIcon(self):   
+        if self.taskBarIcon:
+            self.taskBarIcon.RemoveTray()
+        self.taskBarIcon = TaskBarIcon(self)
+        
     def DeleteScheduleItem(self):   
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
@@ -652,6 +674,9 @@ class Main(wx.Frame):
         # switch to the manager when schedules are started
         if self._appConfig["schedManagerSwitchTab"] is True:
             self.notebook.SetSelection(1)
+            
+    def GetAppConfig(self):
+        return self._appConfig
         
     def GetDialog(self, label, value=None):
 
@@ -759,6 +784,8 @@ class Main(wx.Frame):
                 self.LoadFile(self._appConfig["currentFile"])
             else:
                self._appConfig["currentFile"] = False
+               
+        self.UpdateTrayIcon()
         
     def LoadFile(self, filePath):
         """ load a schedule file by file path """
@@ -907,7 +934,7 @@ class Main(wx.Frame):
         
         self.UpdateScheduleToolbar()
          
-    def OnClose(self, event):
+    def OnClose(self, event=None):
         """ 
         on application exit we prompt user to close file and
         disable the schedule manager directly
@@ -915,8 +942,14 @@ class Main(wx.Frame):
         if self.CloseFile() == wx.ID_CANCEL:
             return        
         self._schedManager.Stop()
-        event.Skip()
-
+        
+        try:
+            self.taskBarIcon.RemoveTray()
+        except:
+            pass
+            
+        self.Destroy()        
+        
     def OnAboutDialogClose(self, event):
         """ 
         clear reference to AboutDialog so a new instance 
@@ -1357,7 +1390,7 @@ class Main(wx.Frame):
         self.GetTopLevelParent().SetStatusText(status)
 
         if event:
-            event.Skip()     
+            event.Skip()    
 
     def ShowAboutDialog(self):
         if not self._aboutDialog:
@@ -1528,6 +1561,8 @@ class Main(wx.Frame):
         
         if self._appConfig["keepFileList"] == False:
             self.ClearRecentFiles()
+            
+        self.UpdateTrayIcon()
         
     def UpdateTitlebar(self):
         try:
@@ -1536,7 +1571,78 @@ class Main(wx.Frame):
         except:
             self.SetTitle("{0} {1}".format(__title__, __version__))
             
+    def UpdateTrayIcon(self):
+        if self._appConfig["showTrayIcon"] is True:
+            if not self.taskBarIcon:
+                self.CreateTrayIcon()
+        else:
+            if self.taskBarIcon:
+                self.taskBarIcon.RemoveTray()
+                self.taskBarIcon = None
+            
+class TaskBarIcon(wx.adv.TaskBarIcon):
+
+    def __init__(self, parent):    
+        wx.adv.TaskBarIcon.__init__(self)
+        
+        self.parent = parent
+        self.parent.taskBarIcon = self
+        
+        self.tooltip = "{0} {1}".format(__title__, __version__)
+        self.SetTrayIcon()  
+        self.trayMenu = self.CreateTrayMenu()
+        self.Bind(wx.adv.EVT_TASKBAR_LEFT_DOWN, self.OnTrayLeft)        
+        self.Bind(wx.adv.EVT_TASKBAR_RIGHT_DOWN, self.OnTrayRight) 
+    
+    @property
+    def appConfig(self):
+        return self.parent.GetAppConfig()
+        
+    def CreateMenuItem(self, trayMenu, label, func):
+        item = wx.MenuItem(trayMenu, -1, label)
+        trayMenu.Bind(wx.EVT_MENU, func, id=item.GetId())
+        trayMenu.Append(item)
+        return item
+            
+    def CreateTrayMenu(self):
+        trayMenu = wx.Menu()
+        self.CreateMenuItem(trayMenu, "Settings", self.OnSettings)
+        self.CreateMenuItem(trayMenu, "About", self.OnAbout)
+        trayMenu.AppendSeparator()
+        self.CreateMenuItem(trayMenu, "Exit", self.parent.OnClose)
+        return trayMenu
+        
+    def OnAbout(self, event):
+        self.parent.ShowAboutDialog()
+
+    def OnSettings(self, event):
+        self.parent.ShowSettingsDialog()
+        
+    def OnTrayLeft(self, event):
+    
+        # show/hide window
+        if self.appConfig["onTrayIconLeft"] == 0:
+            if self.parent.IsShown():
+                self.parent.Hide()
+            else:
+                self.parent.Show()
+                
+        # toggle schedule manager
+        elif self.appConfig["onTrayIconLeft"] == 1:
+            self.parent.ToggleScheduleManager()
+    
+    def OnTrayRight(self, event):
+        self.PopupMenu(self.trayMenu)
+        
+    def RemoveTray(self, event=None):
+        self.RemoveIcon()
+        self.Destroy()
+        
+    def SetTrayIcon(self):
+        icon = wx.Icon(wx.Bitmap("icons/icon.png"))
+        self.SetIcon(icon, self.tooltip)
+   
 if __name__ == "__main__":
     app = wx.App()
-    Main()
+    mainFrame = Main()
     app.MainLoop()
