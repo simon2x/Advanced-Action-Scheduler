@@ -406,7 +406,7 @@ class Main(wx.Frame):
                 
     def AddLogMessage(self, message):
         """ insert log message as first item to schedule messenger list """
-        if self.schedLog.GetItemCount() == self._appConfig["schedManagerLogCount"]:
+        if self.schedLog.GetItemCount() >= self._appConfig["schedManagerLogCount"]:
             self.schedLog.DeleteAllItems()
             
         i = self.schedLog.GetItemCount()
