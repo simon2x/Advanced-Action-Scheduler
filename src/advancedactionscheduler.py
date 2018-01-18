@@ -331,17 +331,16 @@ class Main(wx.Frame):
 
         self.cboxFunctions = wx.ComboBox(schedPanel, style=wx.CB_READONLY, choices=FUNCTIONS)
         self.cboxFunctions.SetSelection(0)
+        self.cboxFunctions.Disable()
         self.cboxFunctions.Bind(wx.EVT_COMBOBOX, self.OnComboboxFunction)
 
-        btnAddFunction = wx.Button(schedPanel, label="Add Function", size=(-1, -1))
-        btnAddFunction.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
-
+        self.btnAddFunction = wx.Button(schedPanel, label="Add Function", size=(-1, -1))
+        self.btnAddFunction.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
+        self.btnAddFunction.Disable()
         hSizerFunctions2.Add(self.cboxFunctions, 0, wx.ALL|wx.CENTRE, 5)
-        hSizerFunctions2.Add(btnAddFunction, 0, wx.ALL|wx.CENTRE, 5)
+        hSizerFunctions2.Add(self.btnAddFunction, 0, wx.ALL|wx.CENTRE, 5)
 
         schedSizer.Add(hSizerFunctions2, 0, wx.ALL, 0)
-
-        # schedSizer.Add(wx.StaticLine(schedPanel), 0, wx.ALL|wx.EXPAND, 0)
 
         # -----
 
@@ -690,6 +689,7 @@ class Main(wx.Frame):
             n += 1    
             child = self.groupList.GetNextSibling(child)
             
+        jsonData["__version__"] = __version__        
         return jsonData
         
     def GetGroupListIndex(self, item):
@@ -1034,7 +1034,7 @@ class Main(wx.Frame):
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
             return
-        
+         
         itemText = self.schedList.GetItemText(selection, 0)
         name, params = itemText.split(DELIMITER)
         params = make_tuple(params)
@@ -1104,7 +1104,7 @@ class Main(wx.Frame):
         """ update the schedule item information """
 
         selection = self.schedList.GetSelection()
-        # logging.info("Schedule tree items selected: %s" % str(selection))
+       
         try:
             text = self.schedList.GetItemText(selection)
             self.infoSched.SetValue(text)
@@ -1315,7 +1315,7 @@ class Main(wx.Frame):
     
     def SetGroupTree(self, data):
         """ set the group list tree """
-        for idx in sorted([int(x) for x in data.keys()]):
+        for idx in sorted([int(x) for x in data.keys() if x != "__version__"]):
             item = self.groupList.AppendItemToRoot(data[str(idx)]["columns"]["0"])
             self.groupList.CheckItem(item, data[str(idx)]["checked"])
             self._data[item] = data[str(idx)]["schedules"]
@@ -1487,8 +1487,15 @@ class Main(wx.Frame):
                 if label == "Add Schedule":
                     continue
                 btn.Disable()
+            # stop user from being able add function     
+            self.cboxFunctions.Disable()
+            self.btnAddFunction.Disable()    
             return
-            
+        
+        # enable user to add function     
+        self.cboxFunctions.Enable()
+        self.btnAddFunction.Enable()
+        
         self.schedBtns["Edit"].Enable()
         self.schedBtns["Toggle"].Enable()
         self.schedBtns["Delete"].Enable()
