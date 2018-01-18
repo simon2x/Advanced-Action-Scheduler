@@ -587,8 +587,6 @@ class Main(wx.Frame):
 
         self.groupList.Select(state["groupIdx"])
 
-        self.WriteData()
-
     def DoUndo(self):
         # can we undo?
             try:
@@ -615,8 +613,6 @@ class Main(wx.Frame):
 
             self.groupList.Select(state["groupIdx"])
 
-            self.WriteData()    
-    
     def EnableScheduleManager(self):
         # Enable/Disable menu item accordingly
         self._menus["Disable Schedule Manager"].Enable(True)
@@ -733,44 +729,6 @@ class Main(wx.Frame):
         data = self.schedList.GetTree()
         return data
     
-    def GetScheduleTreeAndWriteData(self):
-        # save tree to data
-        #self.schedList.DeleteAllItems()
-        # update schedule list
-        groupIdx = self.groupList.GetSelection()
-
-        # checked = self.groupList.GetCheckedState(selection)
-        schedules = self.schedList.GetTree()
-        self._data[groupIdx]["schedules"] = schedules
-        print(self._data)
-        self.WriteData()
-
-    def GetTopLevel(self):
-        """ return sequence tree top-level """
-        try:
-            selection = item = self.schedList.GetSelection()
-        except:
-            return False
-
-        if not selection.IsOk():
-            return False
-
-        text = self.schedList.GetItemText(selection)
-
-        # root = self.schedList.GetRootItem()
-        # parent = self.schedList.GetItemParent(selection)
-
-        parents = [item]
-        # get item parents
-        while self.schedList.GetItemParent(item).IsOk():
-            parent = self.schedList.GetItemParent(item)
-            parents.append(parent)
-            item = parent
-
-        parents = [self.schedList.GetItemText(itm) for itm in parents if itm.IsOk()]
-        print( parents )
-        return parents[-2]
-    
     def LoadConfig(self):
         """ load application config and restore config settings """
         try:
@@ -792,6 +750,7 @@ class Main(wx.Frame):
                self._appConfig["currentFile"] = False
         
     def LoadFile(self, filePath):
+        """ load a schedule file by file path """
         try:
             with open(filePath, 'r') as file:
                 fileData = json.load(file)
@@ -938,15 +897,20 @@ class Main(wx.Frame):
         self.UpdateScheduleToolbar()
          
     def OnClose(self, event):
+        """ 
+        on application exit we prompt user to close file and
+        disable the schedule manager directly
+        """
         if self.CloseFile() == wx.ID_CANCEL:
-            return
-        
+            return        
         self._schedManager.Stop()
-        # save data before exiting
-        self.WriteData()
         event.Skip()
 
     def OnAboutDialogClose(self, event):
+        """ 
+        clear reference to AboutDialog so a new instance 
+        can be opened next time 
+        """
         try:
             self._aboutDialog = None
             event.Skip()
@@ -1026,10 +990,7 @@ class Main(wx.Frame):
         self.UpdateScheduleToolbar()
         # # click the information text
         # self.infoSched.SetValue("")
-    
-    def OnListItemActivated(self, event):
-        self.OnAddFunction()
-
+        
     def OnMenu(self, event):
         e = event.GetEventObject()
         id = event.GetId()
@@ -1337,8 +1298,6 @@ class Main(wx.Frame):
         state = {"data": data, "groupIdx": groupIdx}
         self._redoStack.append(state)
 
-        self.WriteData()
-
     def SaveStateToUndoStack(self):
         """ append current data to undo stack """
         return
@@ -1353,8 +1312,6 @@ class Main(wx.Frame):
                  "groupIdx": groupIdx}
 
         self._undoStack.append(state)
-
-        self.WriteData()
     
     def SetGroupTree(self, data):
         """ set the group list tree """
@@ -1430,7 +1387,6 @@ class Main(wx.Frame):
             self.schedList.DeleteAllItems()
 
             self._data[newItem] = []
-            self.WriteData()
 
             self.groupList.Select(newItem)
             self.groupList.SetFocus()
@@ -1503,7 +1459,6 @@ class Main(wx.Frame):
         
         self.toolbar.EnableTool(wx.ID_REMOVE, False)
         self._redoStack = []
-        self.WriteData()
         
     def ShowSettingsDialog(self):
         try:
@@ -1560,14 +1515,6 @@ class Main(wx.Frame):
         except:
             self.SetTitle("{0} {1}".format(__title__, __version__))
             
-    def WriteData(self):
-        return
-        """ write changes to data file"""
-        logging.info("data: %s" % str(self._data))
-
-        with open("schedules.json", 'w') as file:
-            json.dump(self._data, file, sort_keys=True, indent=2)
-
 if __name__ == "__main__":
     app = wx.App()
     Main()
