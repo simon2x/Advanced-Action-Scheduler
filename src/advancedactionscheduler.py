@@ -415,6 +415,12 @@ class Main(wx.Frame):
         self.schedLog.SetItem(item, 2, message)
         self.schedLog.SetItem(item, 3, strftime("%d-%m-%Y", dt))
         
+    def ClearRecentFiles(self):
+        for item in self._fileListMenuItems.values():
+            self.menuFile.Delete(item)
+        self._fileListMenuItems = {}
+        self._fileList = []
+    
     def ClearUI(self):
         """ clears lists and set toolbar/button states appropriately """
         self.groupList.DeleteAllItems()
@@ -1514,6 +1520,9 @@ class Main(wx.Frame):
     def UpdateSettingsDict(self, data):
         self._appConfig.update(data)
         self.SaveDataToJSON("config.json", self._appConfig)
+        
+        if self._appConfig["keepFileList"] == False:
+            self.ClearRecentFiles()
         
     def UpdateTitlebar(self):
         try:
