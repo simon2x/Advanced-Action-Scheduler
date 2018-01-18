@@ -401,6 +401,7 @@ class Main(wx.Frame):
             
         #load settings
         self.LoadConfig()
+        self.UpdateRecentFiles()
         
     def AddLogMessage(self, message):
         """ insert log message as first item to schedule messenger list """
@@ -1496,7 +1497,12 @@ class Main(wx.Frame):
             self.schedBtns["Up"].Enable()
         else:
             self.schedBtns["Up"].Disable()
+      
+    def UpdateRecentFiles(self):
+        if self._appConfig["keepFileList"] == False:
+            return
             
+        
     def UpdateSettingsDict(self, data):
         self._appConfig.update(data)
         self.SaveDataToJSON("config.json", self._appConfig)
