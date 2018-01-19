@@ -13,6 +13,7 @@ the Free Software Foundation; either version 2 of the License, or
 import base
 import logging
 import platform
+import subprocess
 import time
 import webbrowser
 
@@ -116,6 +117,17 @@ class Manager:
             actman.MouseClickRelative(kwargs)
             self.SendLog("MouseClickRelative: {0}".format(window))   
             
+        elif action == "NewProcess":
+            # remove leading and trailing whitespace
+            cmd = [s.strip() for s in kwargs["cmd"].split(",")]
+            try:
+                subprocess.call(cmd)
+                self.SendLog("NewProcess: {0}".format(cmd))
+            except FileNotFoundError as e:
+                self.SendLog("NewProcess: {0}, {1}".format(cmd, e))
+            except PermissionError as e:
+                self.SendLog("NewProcess: {0}, {1}".format(cmd, e))
+        
         elif action == "OpenURL":
             url = kwargs["url"]
             browser = kwargs["browser"]
