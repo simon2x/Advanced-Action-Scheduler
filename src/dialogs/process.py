@@ -99,12 +99,6 @@ class NewProcess(wx.Dialog):
         self.SetMinSize((w*2, h*1.5))
         self.SetSize((w*2, h*1.5))
         
-    def DeleteSelected(self):
-        selected = self.historyList.GetFirstSelected()
-        while selected != -1:
-            self.historyList.DeleteItem(selected)
-            selected = self.historyList.GetFirstSelected()
-        
     def GetHistoryList(self):
         idx = 0
         items = []
@@ -124,19 +118,19 @@ class NewProcess(wx.Dialog):
         elif label == "Add To Preset":
             self.historyList.Append([self.cboxCmd.GetValue()])       
         elif label == "Cancel":
-            data = {"newProcessHistory":self.GetHistoryList()}
+            data = {"newProcessPresets":self.GetHistoryList()}
             self.parent.UpdateSettingsDict(data)
             self.EndModal(id)
         elif label == "Clear":
             value = self.cboxCmd.SetValue("")    
         elif label == "delete":
-            self.DeleteSelected()
+            self.historyList.DeleteSelected()
         elif label == "down":
             self.historyList.MoveSelectedItemsDown()
         elif label == "edit":
             self.OnHistoryListItemActivated()
         elif label == "Ok":
-            data = {"newProcessHistory": self.GetHistoryList()}
+            data = {"newProcessPresets": self.GetHistoryList()}
             self.parent.UpdateSettingsDict(data)
             self.EndModal(id)
         elif label == "Reset":
