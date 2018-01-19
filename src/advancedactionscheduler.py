@@ -101,8 +101,8 @@ DEFAULTCONFIG = {
     "loadLastFile": True, # the currently opened schedule file
     "fileList": [], # recently opened schedule files
     "keepFileList": True,
-    "keepNewProcessHistory": True, # list of recently used commands
-    "newProcessHistory": [], # list of recently used commands
+    "newProcessPresets": [], # list of saved commands
+    "openUrlPresets": [], # list of saved urls
     "onClose": 0, # on close window
     "onTrayIconLeft": 0,
     "schedManagerLogCount": 10, # number of logs before clearing table
@@ -816,9 +816,10 @@ class Main(wx.Frame):
             dlg = dialogs.mouserelative.MouseClickRelative(self)
         elif label == "NewProcess":
             dlg = dialogs.process.NewProcess(self)
-            dlg.SetHistoryList(self._appConfig["newProcessHistory"])
+            dlg.SetHistoryList(self._appConfig["newProcessPresets"])
         elif label == "OpenURL":
             dlg = dialogs.browser.OpenURL(self)
+            dlg.SetUrlPresetList(self._appConfig["openUrlPresets"])
         elif label == "Power":
             dlg = power.AddPower(self)
         elif label == "StartSchedule":
