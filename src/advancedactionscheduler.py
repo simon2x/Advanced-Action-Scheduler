@@ -89,6 +89,7 @@ FUNCTIONS = ["CloseWindow",
              "IfWindowNotOpen",
              "MouseClickAbsolute",
              "MouseClickRelative",
+             "NewProcess",
              "OpenURL",
              "Power",
              "StopSchedule",
@@ -811,6 +812,8 @@ class Main(wx.Frame):
             dlg = dialogs.mouseabsolute.MouseClickAbsolute(self)
         elif label == "MouseClickRelative":
             dlg = dialogs.mouserelative.MouseClickRelative(self)
+        elif label == "NewProcess":
+            dlg = dialogs.process.NewProcess(self)    
         elif label == "OpenURL":
             dlg = dialogs.browser.OpenURL(self)
         elif label == "Power":
