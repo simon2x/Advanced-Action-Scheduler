@@ -388,7 +388,13 @@ class BaseList(wx.ListCtrl, ListCtrlAutoWidthMixin):
 
         wx.ListCtrl.__init__(self, parent, style=style)
         ListCtrlAutoWidthMixin.__init__(self)
-
+    
+    def DeleteSelected(self):
+        selected = self.GetFirstSelected()
+        while selected != -1:
+            self.DeleteItem(selected)
+            selected = self.GetFirstSelected()
+            
     def DeselectAll(self):
         first = self.GetFirstSelected()
         if first == -1:
