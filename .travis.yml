@@ -1,0 +1,4 @@
+language: python
+# sudo: enabled
+rvm:
+    - 3.5
