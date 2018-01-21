@@ -89,6 +89,7 @@ FUNCTIONS = ["CloseWindow",
              "IfWindowNotOpen",
              "MouseClickAbsolute",
              "MouseClickRelative",
+             "NewProcess",
              "OpenURL",
              "Power",
              "StopSchedule",
@@ -96,10 +97,13 @@ FUNCTIONS = ["CloseWindow",
              "SwitchWindow"]
   
 DEFAULTCONFIG = {
+    "browserPresets": [], # list of saved browsers
     "currentFile": False, # the currently opened schedule file
     "loadLastFile": True, # the currently opened schedule file
     "fileList": [], # recently opened schedule files
     "keepFileList": True,
+    "newProcessPresets": [], # list of saved commands
+    "openUrlPresets": [], # list of saved urls
     "onClose": 0, # on close window
     "onTrayIconLeft": 0,
     "schedManagerLogCount": 10, # number of logs before clearing table
@@ -811,8 +815,13 @@ class Main(wx.Frame):
             dlg = dialogs.mouseabsolute.MouseClickAbsolute(self)
         elif label == "MouseClickRelative":
             dlg = dialogs.mouserelative.MouseClickRelative(self)
+        elif label == "NewProcess":
+            dlg = dialogs.process.NewProcess(self)
+            dlg.SetHistoryList(self._appConfig["newProcessPresets"])
         elif label == "OpenURL":
             dlg = dialogs.browser.OpenURL(self)
+            dlg.SetBrowserPresets(self._appConfig["browserPresets"])
+            dlg.SetUrlPresets(self._appConfig["openUrlPresets"])
         elif label == "Power":
             dlg = power.AddPower(self)
         elif label == "StartSchedule":

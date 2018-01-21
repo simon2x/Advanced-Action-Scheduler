@@ -388,7 +388,13 @@ class BaseList(wx.ListCtrl, ListCtrlAutoWidthMixin):
 
         wx.ListCtrl.__init__(self, parent, style=style)
         ListCtrlAutoWidthMixin.__init__(self)
-
+    
+    def DeleteSelected(self):
+        selected = self.GetFirstSelected()
+        while selected != -1:
+            self.DeleteItem(selected)
+            selected = self.GetFirstSelected()
+            
     def DeselectAll(self):
         first = self.GetFirstSelected()
         if first == -1:
@@ -399,6 +405,63 @@ class BaseList(wx.ListCtrl, ListCtrlAutoWidthMixin):
         while self.GetNextSelected(item) != -1:
             item = self.GetNextSelected(item)
             self.Select(self.GetNextSelected(item), on=0)
+      
+    def MoveSelectedItemsDown(self):
+        items = []
+        selected = self.GetFirstSelected()   
+        while selected != -1:
+            items.append(selected)
+            selected = self.GetNextSelected(selected)
+        
+        if items == [self.GetItemCount()-1]:
+            return
+         
+        limit = self.GetItemCount()-1
+        rowBlockStart = None # consecutive selected rows
+        for row in items:
+            if row+1 in items:
+                if rowBlockStart is None:
+                    rowBlockStart = row
+                continue
+            if row == self.GetItemCount()-1:
+                return
+            
+            itemText = []
+            if rowBlockStart:
+                for col in range(0, self.GetColumnCount()):
+                    itemText.append(self.GetItemText(row+1, col))
+                self.DeleteItem(row+1)
+                new = self.InsertItem(rowBlockStart, itemText[0])
+                rowBlockStart = None
+            else:
+                for col in range(0, self.GetColumnCount()):
+                    itemText.append(self.GetItemText(row, col))
+                self.DeleteItem(row)
+                new = self.InsertItem(row+1, itemText[0])
+                self.Select(new)
+            
+            for col in range(0, self.GetColumnCount()):
+                self.SetItem(new, col, itemText[col])
+                
+    def MoveSelectedItemsUp(self):
+        items = []
+        selected = self.GetFirstSelected()   
+        while selected != -1:
+            items.append(selected)
+            selected = self.GetNextSelected(selected)
+        
+        if items == [0]:
+            return
+            
+        limit = 0
+        for row in items:            
+            if row == limit:
+                limit += 1
+                continue
+            text = self.GetItemText(row)    
+            self.DeleteItem(row)
+            new = self.InsertItem(row-1, text)
+            self.Select(new)
 
 class InputDialog(wx.Dialog):
 
