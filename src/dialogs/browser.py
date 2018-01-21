@@ -92,6 +92,7 @@ class OpenURL(wx.Dialog):
         lbl = wx.StaticText(panel, label="Browser Type:")
         browsers = [b for b in advwebbrowser.klasses.keys()]
         self.cboxBrowserClass = wx.ComboBox(panel, choices=browsers, style=wx.CB_READONLY)
+        self.cboxBrowserClass.Select(0)
         grid.Add(lbl, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
         grid.Add(self.cboxBrowserClass, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
         

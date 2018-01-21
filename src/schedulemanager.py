@@ -24,9 +24,9 @@ import apscheduler.events as apsevents
 
 PLATFORM = platform.system()
 if PLATFORM == "Windows":
-    import actions.windowsactionmanager as actman
+    from win import actionmanager as actman
 elif PLATFORM == "Linux":
-    import actions.linuxactionmanager as actman
+    from linux import actionmanager as actman
 
 DELIMITER = " ➡ "
 

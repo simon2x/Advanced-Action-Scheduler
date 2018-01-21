@@ -15,7 +15,7 @@ import subprocess
 import time
 from ast import literal_eval as make_tuple
 
-from windowmanager import windows as winman
+from win import windowmanager as winman
 
 def CloseWindow(kwargs):
     """

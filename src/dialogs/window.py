@@ -19,9 +19,9 @@ import wx.lib.agw.floatspin as floatspin
 
 PLATFORM = platform.system()
 if PLATFORM == "Windows":
-    from windowmanager import windows as winman
+    from win import windowmanager as winman
 elif PLATFORM == "Linux":
-    from windowmanager import linux as winman
+    from linux import windowmanager as winman
     
 class WindowDialog(wx.Dialog):
 

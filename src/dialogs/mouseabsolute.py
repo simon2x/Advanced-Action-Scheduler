@@ -19,7 +19,7 @@ from ast import literal_eval as make_tuple
 
 PLATFORM = platform.system()
 if PLATFORM == "Windows":
-    from windowmanager import windows as winman
+    from win import windowmanager as winman
 elif PLATFORM == "Linux":
     from windowmanager import linux as winman
     
