@@ -15,7 +15,7 @@ import logging
 import platform
 import subprocess
 import time
-import webbrowser
+import advwebbrowser
 
 from ast import literal_eval as make_tuple
 from apscheduler.triggers.cron import CronTrigger
@@ -37,6 +37,8 @@ class Manager:
         self._parent = parent
         self._schedules = {}
         self._schedData = {}
+        self._webbrowser = advwebbrowser
+        self._browsers = {} # registered browsers
     
     def AddSchedule(self, groupName, schedStr):
         """ parse the schedule string and add schedule """
@@ -129,26 +131,8 @@ class Manager:
                 self.SendLog("NewProcess: {0}, {1}".format(cmd, e))
         
         elif action == "OpenURL":
-            url = kwargs["url"]
-            browser = kwargs["browser"]
-            newwindow = kwargs["newwindow"]
-            autoraise = kwargs["autoraise"]
-            print (webbrowser._browsers)
-            return
-            if browser != "system default":
-                b = webbrowser.get(browser)
-            else:
-                b = webbrowser.get(browser)
-
-            if newwindow and autoraise:
-                b.open(newwindow, new=1, sautoraise=True)
-            elif newwindow and not autoraise:
-                b.open(newwindow, new=1, autoraise=False)
-            elif not newwindow and autoraise:
-                b.open(newwindow, new=0, autoraise=True)
-            elif not newwindow and not autoraise:
-                b.open(newwindow, new=0, autoraise=False)
-
+            self.OpenURL(kwargs)
+            
         elif action == "Power":
             action = kwargs["action"]
             alert = kwargs["alert"]
@@ -182,6 +166,33 @@ class Manager:
 
         self.SendLog("Executed schedule %s from group: %s" % (schedName, groupName))
 
+    def OpenURL(self, kwargs):
+        url = kwargs["url"]
+        browser = kwargs["browser"]
+        browserclass = self._webbrowser.klasses[kwargs["browserclass"]]
+        newwindow = kwargs["newwindow"]
+        autoraise = kwargs["autoraise"]
+        
+        try:
+            b = self._browsers[browser]
+        except KeyError:
+            self._webbrowser.register(browser, browserclass)
+            b = self._webbrowser.get(browser)
+            self._browsers[browser] = b
+        except Exception as e:
+            self.SendLog("OpenURL: Error - {0}".format(e))
+            return
+            
+        if newwindow and autoraise:
+            b.open(url, new=1, autoraise=True)
+        elif newwindow and not autoraise:
+            b.open(url, new=1, autoraise=False)
+        elif not newwindow and autoraise:
+            b.open(url, new=2, autoraise=True)
+        elif not newwindow and not autoraise:
+            b.open(url, new=2, autoraise=False)
+        self.SendLog("OpenURL: {1} ({0})".format(browser, url))
+        
     def SendLog(self, message):
         """ pass message to schedule manager lis """
         parent = self.GetParent()
