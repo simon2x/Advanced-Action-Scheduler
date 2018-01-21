@@ -912,6 +912,12 @@ class Main(wx.Frame):
         if self._appConfig["showSplashScreen"] is True:
             SplashScreen(800)
             
+        try:
+            x, y = make_tuple(self._appConfig["windowSize"])
+            self.SetSize((x, y))
+        except:
+            pass
+            
         self.UpdateTrayIcon()
         self.UpdateToolbar()
         wx.CallLater(800, self.Show)
@@ -1077,6 +1083,7 @@ class Main(wx.Frame):
         except:
             pass
             
+        self.UpdateSettingsDict({"windowSize": str(self.GetSize())})    
         self.Destroy()        
         
     def OnAboutDialogClose(self, event):
