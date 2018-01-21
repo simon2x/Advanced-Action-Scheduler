@@ -1082,8 +1082,7 @@ class Main(wx.Frame):
             self.taskBarIcon.RemoveTray()
         except:
             pass
-            
-        self.UpdateSettingsDict({"windowSize": str(self.GetSize())})    
+        
         self.Destroy()        
         
     def OnAboutDialogClose(self, event):
