@@ -97,6 +97,7 @@ FUNCTIONS = ["CloseWindow",
              "SwitchWindow"]
   
 DEFAULTCONFIG = {
+    "browserPresets": [], # list of saved browsers
     "currentFile": False, # the currently opened schedule file
     "loadLastFile": True, # the currently opened schedule file
     "fileList": [], # recently opened schedule files
@@ -819,7 +820,8 @@ class Main(wx.Frame):
             dlg.SetHistoryList(self._appConfig["newProcessPresets"])
         elif label == "OpenURL":
             dlg = dialogs.browser.OpenURL(self)
-            dlg.SetUrlPresetList(self._appConfig["openUrlPresets"])
+            dlg.SetBrowserPresets(self._appConfig["browserPresets"])
+            dlg.SetUrlPresets(self._appConfig["openUrlPresets"])
         elif label == "Power":
             dlg = power.AddPower(self)
         elif label == "StartSchedule":
