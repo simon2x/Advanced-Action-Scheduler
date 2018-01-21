@@ -912,6 +912,12 @@ class Main(wx.Frame):
         if self._appConfig["showSplashScreen"] is True:
             SplashScreen(800)
             
+        try:
+            x, y = make_tuple(self._appConfig["windowSize"])
+            self.SetSize((x, y))
+        except:
+            pass
+            
         self.UpdateTrayIcon()
         self.UpdateToolbar()
         wx.CallLater(800, self.Show)
@@ -1068,6 +1074,7 @@ class Main(wx.Frame):
         on application exit we prompt user to close file and
         disable the schedule manager directly
         """
+        self._appConfig["windowSize"] = str(self.GetSize())
         if self.CloseFile() == wx.ID_CANCEL:
             return        
         self._schedManager.Stop()
@@ -1076,7 +1083,7 @@ class Main(wx.Frame):
             self.taskBarIcon.RemoveTray()
         except:
             pass
-            
+        
         self.Destroy()        
         
     def OnAboutDialogClose(self, event):
