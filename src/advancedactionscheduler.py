@@ -1074,6 +1074,7 @@ class Main(wx.Frame):
         on application exit we prompt user to close file and
         disable the schedule manager directly
         """
+        self._appConfig["windowSize"] = str(self.GetSize())
         if self.CloseFile() == wx.ID_CANCEL:
             return        
         self._schedManager.Stop()
