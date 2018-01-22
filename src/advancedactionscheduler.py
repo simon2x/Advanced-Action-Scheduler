@@ -1228,12 +1228,21 @@ class Main(wx.Frame):
         
     def OnScheduleContextMenu(self, event):
         menu = wx.Menu()
+        subMenu = wx.Menu()
+        if self.cboxFunctions.IsEnabled():
+            for label in FUNCTIONS:
+                item = subMenu.Append(wx.ID_ANY, label)
+            
         for label in ["Edit", "Add Schedule", "", "Up", "Down",
                       "Toggle", "", "Delete"]:
             if not label:
                 menu.AppendSeparator()
-                continue                
-            item = menu.Append(wx.ID_ANY, label)
+                continue
+            if label == "Add Schedule":
+                item = menu.AppendSubMenu(subMenu, "Add Function")
+                if not self.cboxFunctions.IsEnabled():
+                    item.Enable(False)
+            item = menu.Append(wx.ID_ANY, label)        
             if not self.schedBtns[label].IsEnabled():
                 item.Enable(False)
                 continue
