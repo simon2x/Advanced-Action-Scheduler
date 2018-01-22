@@ -508,7 +508,10 @@ class Main(wx.Frame):
         self.schedLog.InsertColumn(0, "#")
         self.schedLog.InsertColumn(1, "Time")
         self.schedLog.InsertColumn(2, "Message")
-        self.schedLog.InsertColumn(3, "Date")
+        self.schedLog.InsertColumn(4, "Schedule")
+        self.schedLog.InsertColumn(5, "Group")
+        self.schedLog.InsertColumn(6, "Date")
+        self.schedLog.setResizeColumn(3)
         schedManagerSizer.Add(self.schedLog, 1, wx.ALL|wx.EXPAND, 0)
 
         self.notebook.AddPage(schedPanel, "Schedules")
@@ -535,15 +538,25 @@ class Main(wx.Frame):
         
     def AddLogMessage(self, message):
         """ insert log message as first item to schedule messenger list """
+        columnNames = {}
+        for x in range(self.schedLog.GetColumnCount()):
+            column = self.schedLog.GetColumn(x)
+            columnText = column.GetText()
+            columnNames[columnText] = x
+            
         if self.schedLog.GetItemCount() >= self._appConfig["schedManagerLogCount"]:
             self.schedLog.DeleteAllItems()
-            
+        
         i = self.schedLog.GetItemCount()
         item = self.schedLog.InsertItem(0, str(i))
         dt = gmtime() 
-        self.schedLog.SetItem(item, 1, strftime("%H:%M:%S", dt))
-        self.schedLog.SetItem(item, 2, message)
-        self.schedLog.SetItem(item, 3, strftime("%d-%m-%Y", dt))
+        self.schedLog.SetItem(item, columnNames["Time"], strftime("%H:%M:%S", dt))
+        self.schedLog.SetItem(item, columnNames["Date"], strftime("%d-%m-%Y", dt))
+        for k, v in message.items():
+            try:
+                self.schedLog.SetItem(item, columnNames[k], v)
+            except:
+                pass
         
     def ClearRecentFiles(self):
         for item in self._fileListMenuItems.values():
