@@ -826,9 +826,11 @@ class Main(wx.Frame):
             dlg = power.AddPower(self)
         elif label == "StartSchedule":
             dlg = dialogs.schedule.StartSchedule(self)
+            dlg.SetScheduleNames(self.GetScheduleNames())
         elif label == "StopSchedule":
             dlg = dialogs.schedule.StopSchedule(self)
-
+            dlg.SetScheduleNames(self.GetScheduleNames())
+            
         if value:
             dlg.SetValue(value)
 
@@ -878,8 +880,7 @@ class Main(wx.Frame):
         schedules = []
         item = self.schedList.GetFirstItem()
         while item.IsOk():
-            if self.schedList.GetCheckedState(item) == 1:
-                schedules.append(self.schedList.GetItemText(item, 0).split(DELIMITER)[0])
+            schedules.append(self.schedList.GetItemText(item, 0).split(DELIMITER)[0])
             item = self.schedList.GetNextSibling(item)
 
         return schedules
