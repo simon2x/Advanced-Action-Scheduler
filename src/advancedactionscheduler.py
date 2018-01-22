@@ -120,7 +120,7 @@ class AboutDialog(wx.Frame):
     def __init__(self, parent):                    
         wx.Frame.__init__(self,
                           parent,
-                          style=wx.DEFAULT_FRAME_STYLE|wx.FRAME_NO_TASKBAR,
+                          style=wx.DEFAULT_FRAME_STYLE|wx.FRAME_NO_TASKBAR|wx.STAY_ON_TOP,
                           title=__title__)
         
         self.SetIcon(wx.Icon("icons/icon.png"))                
@@ -174,7 +174,7 @@ class SettingsFrame(wx.Frame):
 
         wx.Frame.__init__(self,
                           parent=parent,
-                          style=wx.DEFAULT_FRAME_STYLE|wx.FRAME_NO_TASKBAR,
+                          style=wx.DEFAULT_FRAME_STYLE|wx.FRAME_NO_TASKBAR|wx.STAY_ON_TOP,
                           title=self._title)
         
         self.SetIcon(wx.Icon("icons/icon.png"))                  
