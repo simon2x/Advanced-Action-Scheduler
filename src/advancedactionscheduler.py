@@ -497,22 +497,22 @@ class Main(wx.Frame):
 
         schedManagerHsizer = wx.BoxSizer(wx.HORIZONTAL)
         self.chkBoxes = {}
-        for lbl in ["All","Schedules","Actions","Errors"]:
-            chkBox = wx.CheckBox(schedManagerPanel, label=lbl)
-            self.chkBoxes[lbl] = chkBox
-            schedManagerHsizer.Add(chkBox, 0, wx.ALL, 5)
-        self.chkBoxes["All"].SetValue(True)
-        schedManagerSizer.Add(schedManagerHsizer, 0, wx.ALL, 0)
+        # for lbl in ["All","Schedules","Actions","Errors"]:
+            # chkBox = wx.CheckBox(schedManagerPanel, label=lbl)
+            # self.chkBoxes[lbl] = chkBox
+            # schedManagerHsizer.Add(chkBox, 0, wx.ALL, 5)
+        # self.chkBoxes["All"].SetValue(True)
+        # schedManagerSizer.Add(schedManagerHsizer, 0, wx.ALL, 0)
 
         self.schedLog = base.BaseList(schedManagerPanel)
-        self.schedLog.InsertColumn(0, "#")
-        self.schedLog.InsertColumn(1, "Time")
+        self.schedLog.InsertColumn(0, "Group")
+        self.schedLog.InsertColumn(1, "Schedule")
         self.schedLog.InsertColumn(2, "Message")
-        self.schedLog.InsertColumn(4, "Schedule")
-        self.schedLog.InsertColumn(5, "Group")
-        self.schedLog.InsertColumn(6, "Date")
+        self.schedLog.InsertColumn(4, "Time")
+        self.schedLog.InsertColumn(5, "Date")
+        self.schedLog.InsertColumn(6, "#")
         self.schedLog.setResizeColumn(3)
-        schedManagerSizer.Add(self.schedLog, 1, wx.ALL|wx.EXPAND, 0)
+        schedManagerSizer.Add(self.schedLog, 1, wx.ALL|wx.EXPAND, 5)
 
         self.notebook.AddPage(schedPanel, "Schedules")
         self.notebook.AddPage(schedManagerPanel, "Manager")
@@ -548,7 +548,8 @@ class Main(wx.Frame):
             self.schedLog.DeleteAllItems()
         
         i = self.schedLog.GetItemCount()
-        item = self.schedLog.InsertItem(0, str(i))
+        item = self.schedLog.InsertItem(0, "")
+        self.schedLog.SetItem(item, columnNames["#"], str(i))
         dt = gmtime() 
         self.schedLog.SetItem(item, columnNames["Time"], strftime("%H:%M:%S", dt))
         self.schedLog.SetItem(item, columnNames["Date"], strftime("%d-%m-%Y", dt))
