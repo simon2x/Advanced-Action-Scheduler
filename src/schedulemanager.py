@@ -137,12 +137,6 @@ class Manager:
             action = kwargs["action"]
             alert = kwargs["alert"]
 
-        elif action == "StopSchedule":
-            schedule = kwargs["schedule"]
-
-        elif action == "StartSchedule":
-            schedule = kwargs["schedule"]
-
         elif action == "SwitchWindow":
             kwargs["matches"] = 1
             actman.SwitchWindow(kwargs)
@@ -154,15 +148,28 @@ class Manager:
 
     def OnSchedule(self, args):
         groupName, schedName = args
-         
+                 
         childIgnore = () 
         for index, action, params in self._schedData[groupName][schedName]:
             if childIgnore and not index.startswith(childIgnore):
                 continue
-            
-            a = self.DoAction(action, params)
-            if not a:
-                childIgnore + (index+",",)
+            print(action)    
+            if action == "StopSchedule":
+                schedule = params["schedule"]
+                self.StartSchedule(groupName, schedule, enable=0)
+                if schedule == schedName:
+                    return
+                    
+            elif action == "StartSchedule":
+                schedule = params["schedule"]
+                self.StartSchedule(groupName, schedule, enable=1)
+                if schedule == schedName:
+                    return
+                    
+            else:
+                a = self.DoAction(action, params)
+                if not a:
+                    childIgnore + (index+",",)
 
         self.SendLog("Executed schedule %s from group: %s" % (schedName, groupName))
 
@@ -252,4 +259,44 @@ class Manager:
         self._schedules = {}
         self._schedData = {}
 
+    def StartSchedule(self, groupName, schedName, enable=1):
+        """ start/stop schedule """
+        logging.info("{0}, {1}".format(groupName, schedName))
+        
+        found = None
+        enabled = None
+        for n, (name, schedule, e) in enumerate(self._schedules[groupName]):
+            # print(name, schedName)
+            if name != schedName:
+                continue
+            found = name
+            enabled = e
+            break
+        
+        if not found:
+            if enable == 1:
+                self.SendLog("StartSchedule: Could not find schedule %s from group: %s" % (schedName, groupName))
+            else:
+                self.SendLog("StopSchedule: Could not find schedule %s from group: %s" % (schedName, groupName))
+            return
+                
+        # start
+        if enable == 1 and enabled == 0:
+            self._schedules[groupName][n] = (name, schedule, 1)
+            schedule.start()
+            self.SendLog("StartSchedule: %s from group: %s" % (schedName, groupName))
+            
+        elif enable == 1 and enabled == 1:
+            self.SendLog("StartSchedule: '%s' from '%s' already running" % (schedName, groupName))
+            
+        # stop
+        elif enable == 0 and enabled == 1:
+            self._schedules[groupName][n] = (name, schedule, 0)
+            schedule.shutdown(wait=False)
+            self.SendLog("StopSchedule: %s from group: %s" % (schedName, groupName))
+
+        elif enable == 0 and enabled == 0:
+            self._schedules[groupName][n] = (name, schedule, 0)
+            self.SendLog("StopSchedule: '%s' from '%s' already stopped" % (schedName, groupName))
+                    
 # END
