@@ -120,7 +120,7 @@ class AboutDialog(wx.Frame):
     def __init__(self, parent):                    
         wx.Frame.__init__(self,
                           parent,
-                          style=wx.DEFAULT_FRAME_STYLE|wx.FRAME_NO_TASKBAR,
+                          style=wx.DEFAULT_FRAME_STYLE|wx.FRAME_NO_TASKBAR|wx.STAY_ON_TOP,
                           title=__title__)
         
         self.SetIcon(wx.Icon("icons/icon.png"))                
@@ -174,7 +174,7 @@ class SettingsFrame(wx.Frame):
 
         wx.Frame.__init__(self,
                           parent=parent,
-                          style=wx.DEFAULT_FRAME_STYLE|wx.FRAME_NO_TASKBAR,
+                          style=wx.DEFAULT_FRAME_STYLE|wx.FRAME_NO_TASKBAR|wx.STAY_ON_TOP,
                           title=self._title)
         
         self.SetIcon(wx.Icon("icons/icon.png"))                  
@@ -472,6 +472,7 @@ class Main(wx.Frame):
         self.splitter2 = wx.SplitterWindow(schedPanel)
 
         self.schedList = base.TreeListCtrl(self.splitter2, style=wx.dataview.TL_CHECKBOX)
+        self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_CONTEXT_MENU, self.OnScheduleContextMenu)
         self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self.OnScheduleTreeActivated)
         self.schedList.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnScheduleTreeSelectionChanged)
         self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_CHECKED, self.OnScheduleTreeItemChecked)
@@ -497,19 +498,22 @@ class Main(wx.Frame):
 
         schedManagerHsizer = wx.BoxSizer(wx.HORIZONTAL)
         self.chkBoxes = {}
-        for lbl in ["All","Schedules","Actions","Errors"]:
-            chkBox = wx.CheckBox(schedManagerPanel, label=lbl)
-            self.chkBoxes[lbl] = chkBox
-            schedManagerHsizer.Add(chkBox, 0, wx.ALL, 5)
-        self.chkBoxes["All"].SetValue(True)
-        schedManagerSizer.Add(schedManagerHsizer, 0, wx.ALL, 0)
+        # for lbl in ["All","Schedules","Actions","Errors"]:
+            # chkBox = wx.CheckBox(schedManagerPanel, label=lbl)
+            # self.chkBoxes[lbl] = chkBox
+            # schedManagerHsizer.Add(chkBox, 0, wx.ALL, 5)
+        # self.chkBoxes["All"].SetValue(True)
+        # schedManagerSizer.Add(schedManagerHsizer, 0, wx.ALL, 0)
 
         self.schedLog = base.BaseList(schedManagerPanel)
-        self.schedLog.InsertColumn(0, "#")
-        self.schedLog.InsertColumn(1, "Time")
+        self.schedLog.InsertColumn(0, "Group")
+        self.schedLog.InsertColumn(1, "Schedule")
         self.schedLog.InsertColumn(2, "Message")
-        self.schedLog.InsertColumn(3, "Date")
-        schedManagerSizer.Add(self.schedLog, 1, wx.ALL|wx.EXPAND, 0)
+        self.schedLog.InsertColumn(4, "Time")
+        self.schedLog.InsertColumn(5, "Date")
+        self.schedLog.InsertColumn(6, "#")
+        self.schedLog.setResizeColumn(3)
+        schedManagerSizer.Add(self.schedLog, 1, wx.ALL|wx.EXPAND, 5)
 
         self.notebook.AddPage(schedPanel, "Schedules")
         self.notebook.AddPage(schedManagerPanel, "Manager")
@@ -535,15 +539,26 @@ class Main(wx.Frame):
         
     def AddLogMessage(self, message):
         """ insert log message as first item to schedule messenger list """
+        columnNames = {}
+        for x in range(self.schedLog.GetColumnCount()):
+            column = self.schedLog.GetColumn(x)
+            columnText = column.GetText()
+            columnNames[columnText] = x
+            
         if self.schedLog.GetItemCount() >= self._appConfig["schedManagerLogCount"]:
             self.schedLog.DeleteAllItems()
-            
+        
         i = self.schedLog.GetItemCount()
-        item = self.schedLog.InsertItem(0, str(i))
+        item = self.schedLog.InsertItem(0, "")
+        self.schedLog.SetItem(item, columnNames["#"], str(i))
         dt = gmtime() 
-        self.schedLog.SetItem(item, 1, strftime("%H:%M:%S", dt))
-        self.schedLog.SetItem(item, 2, message)
-        self.schedLog.SetItem(item, 3, strftime("%d-%m-%Y", dt))
+        self.schedLog.SetItem(item, columnNames["Time"], strftime("%H:%M:%S", dt))
+        self.schedLog.SetItem(item, columnNames["Date"], strftime("%d-%m-%Y", dt))
+        for k, v in message.items():
+            try:
+                self.schedLog.SetItem(item, columnNames[k], v)
+            except:
+                pass
         
     def ClearRecentFiles(self):
         for item in self._fileListMenuItems.values():
@@ -776,8 +791,8 @@ class Main(wx.Frame):
         
         sendData = {}
         for item, scheds in self._data.items():
-            if self.groupList.GetCheckedState(item) == 0:
-                continue
+            # if self.groupList.GetCheckedState(item) == 0:
+                # continue
             itemText = self.groupList.GetItemText(item)
             sendData[itemText] = scheds
             
@@ -826,9 +841,11 @@ class Main(wx.Frame):
             dlg = power.AddPower(self)
         elif label == "StartSchedule":
             dlg = dialogs.schedule.StartSchedule(self)
+            dlg.SetScheduleNames(self.GetScheduleNames())
         elif label == "StopSchedule":
             dlg = dialogs.schedule.StopSchedule(self)
-
+            dlg.SetScheduleNames(self.GetScheduleNames())
+            
         if value:
             dlg.SetValue(value)
 
@@ -878,8 +895,7 @@ class Main(wx.Frame):
         schedules = []
         item = self.schedList.GetFirstItem()
         while item.IsOk():
-            if self.schedList.GetCheckedState(item) == 1:
-                schedules.append(self.schedList.GetItemText(item, 0).split(DELIMITER)[0])
+            schedules.append(self.schedList.GetItemText(item, 0).split(DELIMITER)[0])
             item = self.schedList.GetNextSibling(item)
 
         return schedules
@@ -1210,6 +1226,29 @@ class Main(wx.Frame):
         self.CloseFile()    
         self.LoadFile(filePath)
         
+    def OnScheduleContextMenu(self, event):
+        menu = wx.Menu()
+        subMenu = wx.Menu()
+        if self.cboxFunctions.IsEnabled():
+            for label in FUNCTIONS:
+                item = subMenu.Append(wx.ID_ANY, label)
+            
+        for label in ["Edit", "Add Schedule", "", "Up", "Down",
+                      "Toggle", "", "Delete"]:
+            if not label:
+                menu.AppendSeparator()
+                continue
+            if label == "Add Schedule":
+                item = menu.AppendSubMenu(subMenu, "Add Function")
+                if not self.cboxFunctions.IsEnabled():
+                    item.Enable(False)
+            item = menu.Append(wx.ID_ANY, label)        
+            if not self.schedBtns[label].IsEnabled():
+                item.Enable(False)
+                continue
+        menu.Bind(wx.EVT_MENU, self.OnScheduleToolBar)
+        self.PopupMenu(menu)
+        
     def OnScheduleItemEdit(self, event=None):
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
@@ -1255,8 +1294,12 @@ class Main(wx.Frame):
         self.infoSched.SetValue(value)    
 
     def OnScheduleToolBar(self, event):
-        e = event.GetEventObject()
-        name = e.GetName()
+        try:
+            e = event.GetEventObject()
+            name = e.GetName()
+        except:
+            id = event.GetId()
+            name = e.GetLabel(id)
 
         if name == "Add Function":
             self.OnComboboxFunction()
@@ -1269,6 +1312,9 @@ class Main(wx.Frame):
             
         elif name == "Down":
             self.MoveScheduleItemDown()
+            
+        elif name == "Edit":
+            self.OnScheduleItemEdit()
             
         elif name == "Toggle":
             self.ToggleScheduleSelection()

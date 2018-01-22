@@ -111,11 +111,11 @@ class AddSchedule(wx.Dialog):
         #-----
         hSizer = wx.BoxSizer(wx.HORIZONTAL)
         hSizer.AddStretchSpacer()
-        btn_cancel = wx.Button(panel, label="Cancel", id=wx.ID_CANCEL)
-        btn_cancel.Bind(wx.EVT_BUTTON, self.OnButton)
+        btnCancel = wx.Button(panel, label="Cancel", id=wx.ID_CANCEL)
+        btnCancel.Bind(wx.EVT_BUTTON, self.OnButton)
         self.btnOk = wx.Button(panel, label="Ok", id=wx.ID_OK)
         self.btnOk.Bind(wx.EVT_BUTTON, self.OnButton)
-        hSizer.Add(btn_cancel, 0, wx.ALL|wx.EXPAND, 5)
+        hSizer.Add(btnCancel, 0, wx.ALL|wx.EXPAND, 5)
         hSizer.Add(self.btnOk, 0, wx.ALL|wx.EXPAND, 5)
 
         #add to main sizer
@@ -300,7 +300,6 @@ class ScheduleDialog(wx.Dialog):
                            parent,
                            title=title)
 
-        # self._variables = variables
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -310,41 +309,43 @@ class ScheduleDialog(wx.Dialog):
 
         row = 0
 
-        lbl_function = wx.StaticText(panel, label="Schedule Name:")
+        lblFunction = wx.StaticText(panel, label="Schedule Name:")
         choices = []
-        self.cbox_schedule = wx.ComboBox(panel, choices=choices)
-        # self.cbox_schedule.Bind(wx.EVT_COMBOBOX, self.OnFunctionSelection)
+        self.cboxSched = wx.ComboBox(panel, choices=choices)
+        self.cboxSched.Bind(wx.EVT_TEXT, self.OnScheduleNameEdit)
 
-        grid.Add(lbl_function, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
-        grid.Add(self.cbox_schedule, pos=(row,1), span=(0,2), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(lblFunction, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
+        grid.Add(self.cboxSched, pos=(row,1), span=(0,2), flag=wx.ALL|wx.EXPAND, border=5)
         grid.AddGrowableCol(1)
 
         sboxSizer.AddSpacer(10)
-        sboxSizer.Add(grid, 1, wx.ALL|wx.EXPAND, 2)
+        sboxSizer.Add(grid, 1, wx.ALL|wx.EXPAND, 5)
         #-----
         hSizer = wx.BoxSizer(wx.HORIZONTAL)
         hSizer.AddStretchSpacer()
-        btn_cancel = wx.Button(panel, label="Cancel", id=wx.ID_CANCEL)
-        btn_cancel.Bind(wx.EVT_BUTTON, self.OnButton)
+        btnCancel = wx.Button(panel, label="Cancel", id=wx.ID_CANCEL)
+        btnCancel.Bind(wx.EVT_BUTTON, self.OnButton)
         self.btnOk = wx.Button(panel, label="Ok", id=wx.ID_OK)
         self.btnOk.Bind(wx.EVT_BUTTON, self.OnButton)
-        # self.btnOk.Disable()
-        hSizer.Add(btn_cancel, 0, wx.ALL|wx.EXPAND, 5)
+        self.btnOk.Disable()
+        hSizer.Add(btnCancel, 0, wx.ALL|wx.EXPAND, 5)
         hSizer.Add(self.btnOk, 0, wx.ALL|wx.EXPAND, 5)
 
         #add to main sizer
-        sizer.Add(sboxSizer, 0, wx.ALL|wx.EXPAND, 2)
-        sizer.Add(hSizer, 0, wx.ALL|wx.EXPAND, 2)
+        sizer.Add(sboxSizer, 0, wx.ALL|wx.EXPAND, 5)
+        sizer.Add(hSizer, 0, wx.ALL|wx.EXPAND, 5)
 
         panel.SetSizer(sizer)
-
         w, h = sizer.Fit(self)
+        self.SetMinSize((w*1.5, h))
+        self.SetSize((w*1.5, h))        
+        
+    def GetValue(self):
+        data = ("schedule", self.cboxSched.GetValue())
+        data = str([data])
 
-        try:
-            self.SetIcon(theme.GetIcon("psu_png"))
-        except:
-            pass
-
+        return data
+        
     def OnFunctionSelection(self, event):
         self.btnOk.Enable()
 
@@ -357,20 +358,31 @@ class ScheduleDialog(wx.Dialog):
             self.EndModal(id)
         elif label == "Ok":
             self.EndModal(id)
-
-    def GetValue(self, data):
-        value = {}
-
+            
+    def OnScheduleNameEdit(self, event):
+        e = event.GetEventObject()
+        value = e.GetValue()
+        if value == "":
+            pass
+        elif not value.replace("_","").isalnum():
+            pass
+        else:
+            self.btnOk.Enable()
+            return
+        
+        self.btnOk.Disable()   
+        
+    def SetScheduleNames(self, schedules):
+        for s in schedules:
+            self.cboxSched.Append(s)
+        
     def SetValue(self, data):
-        name = data["schedule"]
-        self.cbox_schedule.SetValue(name)
-
-    def GetValue(self):
-        data = ("schedule", self.cbox_schedule.GetValue())
-        data = str([data])
-
-        return data
-
+        try:
+            name = data["schedule"]
+            self.cboxSched.SetValue(name)
+        except:
+            pass
+            
 class StartSchedule(ScheduleDialog):
 
     def __init__(self, parent):

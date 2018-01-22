@@ -40,7 +40,7 @@ class Manager:
         self._webbrowser = advwebbrowser
         self._browsers = {} # registered browsers
     
-    def AddSchedule(self, groupName, schedStr):
+    def AddSchedule(self, groupName, schedStr, enabled):
         """ parse the schedule string and add schedule """
             
         schedName, schedTime = schedStr.split(DELIMITER)
@@ -67,9 +67,9 @@ class Manager:
         # schedule.add_listener(self.OnScheduleEvent, 
                               # apsevents.EVENT_JOB_EXECUTED|apsevents.EVENT_JOB_ERROR)
         try:     
-            self._schedules[groupName].append((schedName, schedule))
+            self._schedules[groupName].append((schedName, schedule, enabled))
         except:
-            self._schedules[groupName] = [(schedName, schedule)]
+            self._schedules[groupName] = [(schedName, schedule, enabled)]
             
     def AddScheduleItem(self, groupName, schedName, index, schedItemStr):
         """ parse the schedItemStr to an action """
@@ -77,76 +77,79 @@ class Manager:
         params = {k:v for k,v in make_tuple(paramStr)}
         self._schedData[groupName][schedName].append((index, action, params))
 
-    def DoAction(self, action, kwargs):
+    def DoAction(self, groupName, schedName, action, kwargs):
         logging.info("Executing action: %s" % action)
         logging.info("parameters: %s" % str(kwargs))
+        logData = {"Group": groupName, "Schedule": schedName, "Message": action}
         
         if action == "CloseWindow":
             actman.CloseWindow(kwargs)
+            logData["Message"] = "SwitchWindow: {0}".format(kwargs["window"])  
             
         elif action == "Delay":
             delay = kwargs["delay"]
             time.sleep(float(delay)) #remove the 's'
-            self.SendLog("Delayed for {0} seconds".format(delay))
+            logData["Message"] = "Delay: {0} seconds".format(delay)
+            self.SendLog(logData)
             
         elif action == "IfWindowOpen":
             window = kwargs["window"]
             kwargs["matches"] = 1
             if not actman.FindWindow(kwargs):
-                self.SendLog("IfWindowOpen: %s ...not found" % window)
+                logData["Message"] = "IfWindowOpen: {0} ...not found".format(window)
+                self.SendLog(logData)
                 return
-            
-            self.SendLog("IfWindowOpen: %s ...found" % window)
-            return True
+            else:
+                logData["Message"] = "IfWindowOpen: {0} ...found".format(window)
+                self.SendLog(logData)
 
         elif action == "IfWindowNotOpen":
             window = kwargs["window"]
             kwargs["matches"] = 1
             if not actman.FindWindow(kwargs):
-                self.SendLog("IfWindowNotOpen: %s ...not found" % window)
-                return True
-
-            self.SendLog("IfWindowNotOpen: %s ...found" % window)
-            return
+                logData["Message"] = "IfWindowOpen: {0} ...not found".format(window)
+                self.SendLog(logData)
+            else:
+                logData["Message"] = "IfWindowOpen: {0} ...found".format(window)
+                self.SendLog(logData)
+                return
 
         elif action == "MouseClickAbsolute":
             window = kwargs["window"]
             actman.MouseClickAbsolute(kwargs)
-            self.SendLog("MouseClickAbsolute: {0}".format(window))   
+            logData["Message"] = "MouseClickRelative: {0}".format(window)  
                        
         elif action == "MouseClickRelative":
             window = kwargs["window"]
             actman.MouseClickRelative(kwargs)
-            self.SendLog("MouseClickRelative: {0}".format(window))   
+            logData["Message"] = "MouseClickRelative: {0}".format(window) 
             
         elif action == "NewProcess":
             # remove leading and trailing whitespace
             cmd = [s.strip() for s in kwargs["cmd"].split(",")]
             try:
                 subprocess.call(cmd)
-                self.SendLog("NewProcess: {0}".format(cmd))
+                logData["Message"] = "NewProcess: {0}".format(cmd)  
             except FileNotFoundError as e:
-                self.SendLog("NewProcess: {0}, {1}".format(cmd, e))
+                logData["Message"] = "NewProcess: {0}, {1}".format(cmd, e)
             except PermissionError as e:
-                self.SendLog("NewProcess: {0}, {1}".format(cmd, e))
+                logData["Message"] = "NewProcess: {0}, {1}".format(cmd, e)
         
         elif action == "OpenURL":
             self.OpenURL(kwargs)
+            logData["Message"] = "OpenURL: {0}, {1}".format(kwargs["url"], kwargs["browser"])  
             
         elif action == "Power":
             action = kwargs["action"]
             alert = kwargs["alert"]
-
-        elif action == "StopSchedule":
-            schedule = kwargs["schedule"]
-
-        elif action == "StartSchedule":
-            schedule = kwargs["schedule"]
+            logData["Message"] = "Power: {0}, {1}".format(action, alert)  
 
         elif action == "SwitchWindow":
             kwargs["matches"] = 1
             actman.SwitchWindow(kwargs)
+            logData["Message"] = "SwitchWindow: {0}".format(kwargs["window"])  
 
+        self.SendLog(logData)    
         return True
         
     def GetParent(self):
@@ -154,17 +157,31 @@ class Manager:
 
     def OnSchedule(self, args):
         groupName, schedName = args
-         
+                 
         childIgnore = () 
         for index, action, params in self._schedData[groupName][schedName]:
             if childIgnore and not index.startswith(childIgnore):
                 continue
-            
-            a = self.DoAction(action, params)
-            if not a:
-                childIgnore + (index+",",)
+            print(action)    
+            if action == "StopSchedule":
+                schedule = params["schedule"]
+                self.StartSchedule(groupName, schedule, enable=0)
+                if schedule == schedName:
+                    return
+                    
+            elif action == "StartSchedule":
+                schedule = params["schedule"]
+                self.StartSchedule(groupName, schedule, enable=1)
+                if schedule == schedName:
+                    return
+                    
+            else:
+                a = self.DoAction(groupName, schedName, action, params)
+                if not a:
+                    childIgnore + (index+",",)
 
-        self.SendLog("Executed schedule %s from group: %s" % (schedName, groupName))
+        logData = {"Group": groupName, "Schedule": schedName, "Message": "Executed Schedule"}
+        self.SendLog(logData)
 
     def OpenURL(self, kwargs):
         url = kwargs["url"]
@@ -180,7 +197,7 @@ class Manager:
             b = self._webbrowser.get(browser)
             self._browsers[browser] = b
         except Exception as e:
-            self.SendLog("OpenURL: Error - {0}".format(e))
+            self.SendLog({"Message":"OpenURL: Error - {0}".format(e)})
             return
             
         if newwindow and autoraise:
@@ -191,7 +208,7 @@ class Manager:
             b.open(url, new=2, autoraise=True)
         elif not newwindow and not autoraise:
             b.open(url, new=2, autoraise=False)
-        self.SendLog("OpenURL: {1} ({0})".format(browser, url))
+        self.SendLog({"Message": "OpenURL: {1} ({0})".format(browser, url)})
         
     def SendLog(self, message):
         """ pass message to schedule manager lis """
@@ -214,13 +231,13 @@ class Manager:
             for index, itemData in schedList:
                 # is a schedule?
                 if "," not in index:
-                    if itemData["checked"] == 0:
-                        childIgnore += (index+",",)
-                        continue
+                    # if itemData["checked"] == 0:
+                        # childIgnore += (index+",",)
+                        # continue
                     schedStr = itemData["columns"]["0"]
                     currentSched, _ = schedStr.split(DELIMITER)
                     self._schedData[groupName][currentSched] = []
-                    self.AddSchedule(groupName, schedStr)
+                    self.AddSchedule(groupName, schedStr, itemData["checked"])
                     continue
                     
                 if itemData["checked"] == 0 or index.startswith(childIgnore):
@@ -231,21 +248,65 @@ class Manager:
 
     def Start(self):
         for groupName, groupScheds in self._schedules.items():
-            for schedName, schedule in groupScheds:
+            for schedName, schedule, enabled in groupScheds:
+                if enabled == 0:
+                    continue
                 schedule.start()
-                self.SendLog("Started schedule {0} from {1} group".format(schedName, groupName))
+                self.SendLog({"Message":"Started schedule {0} from {1} group".format(schedName, groupName)})
 
     def Stop(self):
         """ shutdown all schedules """
         for groupName, groupScheds in self._schedules.items():
-            for schedName, schedule in groupScheds:
+            for schedName, schedule, enabled in groupScheds:
+                if enabled == 0:
+                    continue
                 schedule.shutdown(wait=False)
-                self.SendLog("Stopped schedule {0} from {1} group".format(schedName, groupName))
+                self.SendLog({"Message":"Stopped schedule {0} from {1} group".format(schedName, groupName)})
 
-        self.SendLog("All running schedules have been stopped")
+        self.SendLog({"Message":"All running schedules have been stopped"})
 
         # clear schedules and data
         self._schedules = {}
         self._schedData = {}
 
+    def StartSchedule(self, groupName, schedName, enable=1):
+        """ start/stop schedule """
+        logging.info("{0}, {1}".format(groupName, schedName))
+        
+        found = None
+        enabled = None
+        for n, (name, schedule, e) in enumerate(self._schedules[groupName]):
+            # print(name, schedName)
+            if name != schedName:
+                continue
+            found = name
+            enabled = e
+            break
+        
+        if not found:
+            if enable == 1:
+                self.SendLog({"Message":"StartSchedule: Could not find schedule {0} from group: {1}".format(schedName, groupName)})
+            else:
+                self.SendLog({"Message":"StopSchedule: Could not find schedule {0} from group: {1}".format(schedName, groupName)})
+            return
+                
+        # start
+        if enable == 1 and enabled == 0:
+            self._schedules[groupName][n] = (name, schedule, 1)
+            schedule.start()
+            self.SendLog({"Message":"StartSchedule: {0} from group: {1}".format(schedName, groupName)})
+            
+        elif enable == 1 and enabled == 1:
+            self.SendLog({"Message":"StartSchedule: {0} from group: {1} is already running".format(schedName, groupName)})
+            
+        # stop
+        elif enable == 0 and enabled == 1:
+            self._schedules[groupName][n] = (name, schedule, 0)
+            schedule.shutdown(wait=False)
+            self.SendLog({"Message":"StopSchedule: {0} from group: {1}".format(schedName, groupName)})
+
+        elif enable == 0 and enabled == 0:
+            self._schedules[groupName][n] = (name, schedule, 0)
+            self.SendLog({"Message":"StopSchedule: {0} from group: {1} is already stopped".format(schedName, groupName)})
+                    
 # END
