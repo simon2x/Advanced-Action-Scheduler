@@ -472,6 +472,7 @@ class Main(wx.Frame):
         self.splitter2 = wx.SplitterWindow(schedPanel)
 
         self.schedList = base.TreeListCtrl(self.splitter2, style=wx.dataview.TL_CHECKBOX)
+        self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_CONTEXT_MENU, self.OnScheduleContextMenu)
         self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self.OnScheduleTreeActivated)
         self.schedList.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnScheduleTreeSelectionChanged)
         self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_CHECKED, self.OnScheduleTreeItemChecked)
@@ -1225,6 +1226,20 @@ class Main(wx.Frame):
         self.CloseFile()    
         self.LoadFile(filePath)
         
+    def OnScheduleContextMenu(self, event):
+        menu = wx.Menu()
+        for label in ["Edit", "Add Schedule", "", "Up", "Down",
+                      "Toggle", "", "Delete"]:
+            if not label:
+                menu.AppendSeparator()
+                continue                
+            item = menu.Append(wx.ID_ANY, label)
+            if not self.schedBtns[label].IsEnabled():
+                item.Enable(False)
+                continue
+        menu.Bind(wx.EVT_MENU, self.OnScheduleToolBar)
+        self.PopupMenu(menu)
+        
     def OnScheduleItemEdit(self, event=None):
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
@@ -1270,8 +1285,12 @@ class Main(wx.Frame):
         self.infoSched.SetValue(value)    
 
     def OnScheduleToolBar(self, event):
-        e = event.GetEventObject()
-        name = e.GetName()
+        try:
+            e = event.GetEventObject()
+            name = e.GetName()
+        except:
+            id = event.GetId()
+            name = e.GetLabel(id)
 
         if name == "Add Function":
             self.OnComboboxFunction()
@@ -1284,6 +1303,9 @@ class Main(wx.Frame):
             
         elif name == "Down":
             self.MoveScheduleItemDown()
+            
+        elif name == "Edit":
+            self.OnScheduleItemEdit()
             
         elif name == "Toggle":
             self.ToggleScheduleSelection()
