@@ -14,7 +14,6 @@ import logging
 import platform
 import sys
 import wx
-import windowmanager
 import wx.lib.agw.floatspin as floatspin
 
 PLATFORM = platform.system()
