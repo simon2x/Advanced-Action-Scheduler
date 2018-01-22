@@ -403,13 +403,36 @@ class Main(wx.Frame):
         self.splitter = wx.SplitterWindow(self)
 
         leftPanel = wx.Panel(self.splitter)
+        leftPanel.SetBackgroundColour("DARKGREY")
         leftSizer = wx.BoxSizer(wx.VERTICAL)
+        
+        hSizerGroup = wx.WrapSizer(wx.HORIZONTAL)
+        self.groupBtns = {}
+        for label in ["Add Group", "Up", "Down", "Edit", "Toggle", "Delete"]:
+            btn = wx.Button(leftPanel, label=label, name=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
+            if label != "Add Group":
+                btn.Disable()
+            self.groupBtns[label] = btn
+            img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
+            img = img.Rescale(24,24, wx.IMAGE_QUALITY_HIGH)
+            bmp = wx.Bitmap(img)
+            if label == "Edit":
+                btn.Bind(wx.EVT_BUTTON, self.OnGroupItemEdit)
+            else:
+                btn.Bind(wx.EVT_BUTTON, self.OnGroupToolBar)
+            btn.SetBitmap(bmp)
 
+            tooltip = wx.ToolTip(label)
+            btn.SetToolTip(tooltip)
+            hSizerGroup.Add(btn, 0, wx.ALL|wx.EXPAND, 2)
+        leftSizer.Add(hSizerGroup, 0, wx.ALL|wx.EXPAND, 5)
+        
         self.groupList = base.TreeListCtrl(leftPanel)
-        self.groupList.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnGroupItemSelected)
+        self.groupList.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnGroupItemSelectionChanged)
         self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_CHECKED, self.OnGroupItemChecked)
+        self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self.OnGroupItemEdit)
         self.groupList.AppendColumn("Group")
-        self.groupList_root = self.groupList.GetRootItem()
+        self.groupListRoot = self.groupList.GetRootItem()
 
         leftSizer.Add(self.groupList, 1, wx.ALL|wx.EXPAND, 5)
         leftPanel.SetSizer(leftSizer)
@@ -573,6 +596,7 @@ class Main(wx.Frame):
         self._data = {}
         self._appConfig["currentFile"] = False
         self.UpdateScheduleToolbar()
+        self.UpdateGroupToolbar()
         self.UpdateTitlebar()
         
     def CloseFile(self):
@@ -973,6 +997,64 @@ class Main(wx.Frame):
         item.SetHelp("Open File: {0}".format(filePath))
         self.menuFile.Insert(self.menuFile.GetMenuItemCount()-len(self._fileList)-1, item)
         self._fileList.insert(0, filePath)
+    
+    def MoveGroupItemDown(self):
+        # valid item selection?
+        selection = self.groupList.GetSelection()
+        if not selection.IsOk():
+            return
+        
+        self.SaveStateToUndoStack()
+        
+        # can item be moved down?
+        next = self.groupList.GetNextSibling(selection)
+        assert next.IsOk(), "Next item is not valid"
+        
+        idxText = self.groupList.GetItemText(selection)
+        checkState = self.groupList.GetCheckedState(selection)
+        idxData = self._data[selection]
+        
+        newItem = self.groupList.InsertItem(self.groupListRoot, next, idxText)
+        self.groupList.DeleteItem(selection)
+        self.groupList.CheckItem(newItem, checkState)
+        
+        self._data[newItem] = idxData
+        del self._data[selection]
+        
+        self.groupList.Select(newItem)
+        
+        # finally, clear the redo stack        
+        self._redoStack = []
+        
+        self.UpdateGroupToolbar()
+    
+    def MoveGroupItemUp(self):
+        # valid item selection?
+        selection = self.groupList.GetSelection()
+        if not selection.IsOk():
+            return
+        
+        self.SaveStateToUndoStack()
+        
+        # can previous item be moved down?
+        previous = self.schedList.GetPreviousSibling(selection)
+        assert previous.IsOk() is True, "Previous item is not valid"
+        
+        idxText = self.groupList.GetItemText(previous)
+        checkState = self.groupList.GetCheckedState(previous)
+        idxData = self._data[previous]
+        
+        newItem = self.groupList.InsertItem(self.groupListRoot, selection, idxText)
+        self.groupList.DeleteItem(previous)
+        self.groupList.CheckItem(newItem, checkState)
+        
+        self._data[newItem] = idxData
+        del self._data[previous]
+
+        # finally, clear the redo stack        
+        self._redoStack = []
+        
+        self.UpdateGroupToolbar()
         
     def MoveScheduleItemDown(self):
         # valid item selection?
@@ -1028,6 +1110,7 @@ class Main(wx.Frame):
         self.SaveStateToUndoStack()
         self.schedList.Select(self.schedList.GetNextSibling(next))
         self.UpdateScheduleToolbar()
+        
         # finally, clear the redo stack        
         self._redoStack = []
     
@@ -1154,21 +1237,59 @@ class Main(wx.Frame):
         self.schedList.CheckItem(newItem)
         self.schedList.Expand(newItem)
         self.schedList.SetFocus()
-            
+               
     def OnGroupItemChecked(self, event):
         return
+        
+    def OnGroupItemEdit(self, event=None):
+        selection = self.groupList.GetSelection()
+        if not selection.IsOk():
+            return
+         
+        groupName = self.groupList.GetItemText(selection, 0)
+        
+        m = "Group Name:"
+        
+        # find unique group name
+        i = 1
+        b = "group_"
+        uid = b + str(i)
+        groupNames = [s for s in self.GetGroupNames() if not s == groupName]
+        while uid in groupNames:
+            i += 1
+            uid = b + str(i)
+                
+        while True:            
+            dlg = wx.TextEntryDialog(self, message=m, caption="Add Group", value=groupName)
+            ret = dlg.ShowModal()
+            if ret == wx.ID_CANCEL:
+                return
+            elif dlg.GetValue() in groupNames:
+                m = "Group Name: ('{0}' already exists)".format(dlg.GetValue())
+                continue    
+            elif dlg.GetValue() == "":
+                m = "Group Name: (Name cannot be empty)"
+                continue 
+            elif not dlg.GetValue().replace("_","").isalnum():
+                m = "Group Name: (Name can only contain 0-9, A-Z. Underscores allowed)"
+                continue
 
+            self.SaveStateToUndoStack()
+            newName = dlg.GetValue()
+            self.groupList.SetItemText(selection, newName)
+            return
+        
     def OnGroupItemKeyDown(self, event):
         key = event.GetKeyCode()
         index = self.groupList.GetSelection()
-        # if index == -1:
-            # return
         print(key)
         if key == wx.WXK_SPACE:
             self.groupList.CheckItem( index )
             
-    def OnGroupItemSelected(self, event):
-        """ update schedule list """
+    def OnGroupItemSelectionChanged(self, event=None):
+        """ update group buttons and schedule list """
+        self.UpdateGroupToolbar()
+        
         groupSel = self.groupList.GetSelection()
         for item, data in self._data.items():
             print(groupSel==item)
@@ -1184,9 +1305,33 @@ class Main(wx.Frame):
         
         self.schedBtns["Add Schedule"].Disable()
         self.UpdateScheduleToolbar()
-        # # click the information text
-        # self.infoSched.SetValue("")
-        
+                    
+    def OnGroupToolBar(self, event):
+        try:
+            e = event.GetEventObject()
+            name = e.GetName()
+        except:
+            id = event.GetId()
+            name = e.GetLabel(id)
+
+        if name == "Add Group":
+            self.ShowAddGroupDialog()
+                
+        elif name == "Delete":
+            self.ShowRemoveGroupDialog()  
+            
+        elif name == "Down":
+            self.MoveGroupItemDown()
+            
+        elif name == "Edit":
+            self.OnGroupItemEdit()
+            
+        elif name == "Toggle":
+            self.ToggleGroupSelection()
+            
+        elif name == "Up":
+            self.MoveGroupItemUp()   
+            
     def OnMenu(self, event):
         e = event.GetEventObject()
         id = event.GetId()
@@ -1375,7 +1520,7 @@ class Main(wx.Frame):
         elif label == "Open":
             self.OpenFile()    
         elif label == "Remove Group":
-            self.ShowRemoveGroupDialog()        
+            self.ShowRemoveGroupDialog()
         elif label == "Redo":
             self.DoRedo()
         elif label == "Save":
@@ -1686,8 +1831,8 @@ class Main(wx.Frame):
         self.schedList.DeleteAllItems()
         self.groupList.DeleteItem(groupIdx)
         del self._data[groupIdx]
+        self.UpdateGroupToolbar()
         
-        self.toolbar.EnableTool(wx.ID_REMOVE, False)
         self._redoStack = []
         
     def ShowSettingsDialog(self):
@@ -1699,6 +1844,16 @@ class Main(wx.Frame):
             self._settingsDialog.Show()            
         
         self._settingsDialog.Raise()    
+        
+    def ToggleGroupSelection(self):
+        selection = self.groupList.GetSelection()
+        checked = self.groupList.GetCheckedState(selection)
+        if checked == 1:
+            self.groupList.UncheckItem(selection)
+        else:
+            self.groupList.CheckItem(selection)
+
+        self.SaveStateToUndoStack()    
             
     def ToggleScheduleManager(self):
         if self._tools["Enable Schedule Manager"].GetLabel() == "Enable Schedule Manager":
@@ -1715,6 +1870,26 @@ class Main(wx.Frame):
             self.schedList.CheckItem(selection)
 
         self.SaveStateToUndoStack()
+            
+    def UpdateGroupToolbar(self):
+        selection = self.groupList.GetSelection()
+        state = True
+        if not selection.IsOk():
+            state = False
+        
+        for label, btn in self.groupBtns.items():
+            if label == "Add Group":
+                btn.Enable()
+                continue 
+            btn.Enable(state)
+            
+        if selection.IsOk():
+            if self.groupList.GetFirstItem() == selection:
+                self.groupBtns["Up"].Disable()
+            if not self.groupList.GetNextSibling(selection).IsOk():
+                self.groupBtns["Down"].Disable()
+            
+        self.toolbar.EnableTool(wx.ID_REMOVE, state)
             
     def UpdateScheduleToolbar(self):
         selection = self.schedList.GetSelection()
