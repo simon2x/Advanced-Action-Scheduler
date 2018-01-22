@@ -40,7 +40,7 @@ class Manager:
         self._webbrowser = advwebbrowser
         self._browsers = {} # registered browsers
     
-    def AddSchedule(self, groupName, schedStr):
+    def AddSchedule(self, groupName, schedStr, enabled):
         """ parse the schedule string and add schedule """
             
         schedName, schedTime = schedStr.split(DELIMITER)
@@ -67,9 +67,9 @@ class Manager:
         # schedule.add_listener(self.OnScheduleEvent, 
                               # apsevents.EVENT_JOB_EXECUTED|apsevents.EVENT_JOB_ERROR)
         try:     
-            self._schedules[groupName].append((schedName, schedule))
+            self._schedules[groupName].append((schedName, schedule, enabled))
         except:
-            self._schedules[groupName] = [(schedName, schedule)]
+            self._schedules[groupName] = [(schedName, schedule, enabled)]
             
     def AddScheduleItem(self, groupName, schedName, index, schedItemStr):
         """ parse the schedItemStr to an action """
@@ -214,13 +214,13 @@ class Manager:
             for index, itemData in schedList:
                 # is a schedule?
                 if "," not in index:
-                    if itemData["checked"] == 0:
-                        childIgnore += (index+",",)
-                        continue
+                    # if itemData["checked"] == 0:
+                        # childIgnore += (index+",",)
+                        # continue
                     schedStr = itemData["columns"]["0"]
                     currentSched, _ = schedStr.split(DELIMITER)
                     self._schedData[groupName][currentSched] = []
-                    self.AddSchedule(groupName, schedStr)
+                    self.AddSchedule(groupName, schedStr, itemData["checked"])
                     continue
                     
                 if itemData["checked"] == 0 or index.startswith(childIgnore):
@@ -231,14 +231,18 @@ class Manager:
 
     def Start(self):
         for groupName, groupScheds in self._schedules.items():
-            for schedName, schedule in groupScheds:
+            for schedName, schedule, enabled in groupScheds:
+                if enabled == 0:
+                    continue
                 schedule.start()
                 self.SendLog("Started schedule {0} from {1} group".format(schedName, groupName))
 
     def Stop(self):
         """ shutdown all schedules """
         for groupName, groupScheds in self._schedules.items():
-            for schedName, schedule in groupScheds:
+            for schedName, schedule, enabled in groupScheds:
+                if enabled == 0:
+                    continue
                 schedule.shutdown(wait=False)
                 self.SendLog("Stopped schedule {0} from {1} group".format(schedName, groupName))
 

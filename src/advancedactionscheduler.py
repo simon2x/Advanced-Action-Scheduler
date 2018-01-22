@@ -776,8 +776,8 @@ class Main(wx.Frame):
         
         sendData = {}
         for item, scheds in self._data.items():
-            if self.groupList.GetCheckedState(item) == 0:
-                continue
+            # if self.groupList.GetCheckedState(item) == 0:
+                # continue
             itemText = self.groupList.GetItemText(item)
             sendData[itemText] = scheds
             

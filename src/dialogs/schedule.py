@@ -377,9 +377,12 @@ class ScheduleDialog(wx.Dialog):
             self.cboxSched.Append(s)
         
     def SetValue(self, data):
-        name = data["schedule"]
-        self.cboxSched.SetValue(name)
-
+        try:
+            name = data["schedule"]
+            self.cboxSched.SetValue(name)
+        except:
+            pass
+            
 class StartSchedule(ScheduleDialog):
 
     def __init__(self, parent):
