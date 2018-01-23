@@ -593,6 +593,7 @@ class Main(wx.Frame):
         
         self.groupList = base.TreeListCtrl(leftPanel)
         self.groupList.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnGroupItemSelectionChanged)
+        self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_CONTEXT_MENU, self.OnGroupContextMenu)
         self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_CHECKED, self.OnGroupItemChecked)
         self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self.OnGroupItemEdit)
         self.groupList.AppendColumn("Group")
@@ -1556,6 +1557,26 @@ class Main(wx.Frame):
             return
         self.CloseFile()    
         self.LoadFile(filePath)
+        
+    def OnGroupContextMenu(self, event):
+        menu = wx.Menu()
+        subMenu = wx.Menu()
+        if self.cboxFunctions.IsEnabled():
+            for label in FUNCTIONS:
+                item = subMenu.Append(wx.ID_ANY, label)
+            
+        for label in ["Edit", "Add Group", "", "Up", "Down",
+                      "Toggle", "", "Delete"]:
+            if not label:
+                menu.AppendSeparator()
+                continue
+                
+            item = menu.Append(wx.ID_ANY, label)        
+            if not self.groupBtns[label].IsEnabled():
+                item.Enable(False)
+                continue
+        menu.Bind(wx.EVT_MENU, self.OnGroupToolBar)
+        self.PopupMenu(menu)
         
     def OnScheduleContextMenu(self, event):
         menu = wx.Menu()
