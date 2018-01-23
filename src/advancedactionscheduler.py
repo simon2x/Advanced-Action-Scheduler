@@ -245,15 +245,15 @@ class SettingsFrame(wx.Frame):
          
         row += 1     
         lblTrayLeft = wx.StaticText(panel, label="On Tray Icon Left Click")
-        choices = ["Do Nothing","Show/Hide Main Window","Enable/Disable Schedule Manager"]
-        self.cboxTrayLeft = wx.ComboBox(panel, choices=choices, style=wx.CB_READONLY)
+        trayChoices = ["Do Nothing","Show/Hide Main Window","Enable/Disable Schedule Manager",
+                       "Show Tray Menu"]
+        self.cboxTrayLeft = wx.ComboBox(panel, choices=trayChoices, style=wx.CB_READONLY)
         gridBag.Add(lblTrayLeft, pos=(row,0), flag=wx.ALL, border=5)  
         gridBag.Add(self.cboxTrayLeft, pos=(row,1), flag=wx.ALL, border=5)  
         
         row += 1     
         lblTrayLeft = wx.StaticText(panel, label="On Tray Icon Left Double Click")
-        choices = ["Do Nothing","Show/Hide Main Window","Enable/Disable Schedule Manager"]
-        self.cboxTrayLeftDouble = wx.ComboBox(panel, choices=choices, style=wx.CB_READONLY)
+        self.cboxTrayLeftDouble = wx.ComboBox(panel, choices=trayChoices, style=wx.CB_READONLY)
         gridBag.Add(lblTrayLeft, pos=(row,0), flag=wx.ALL, border=5)  
         gridBag.Add(self.cboxTrayLeftDouble, pos=(row,1), flag=wx.ALL, border=5)  
         
@@ -472,6 +472,10 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         # toggle schedule manager
         elif action == 2:
             self.parent.ToggleScheduleManager()
+            
+        # show menu
+        elif action == 3:
+            self.PopupMenu(self.trayMenu)
         
     def IsDouble(self):
         
