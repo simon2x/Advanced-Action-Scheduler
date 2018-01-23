@@ -417,6 +417,9 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
     def __init__(self, parent):    
         wx.adv.TaskBarIcon.__init__(self)
         
+        self.leftClickCount = 0
+        self.isWaiting = False
+        
         self.parent = parent
         self.parent.taskBarIcon = self
         
@@ -426,8 +429,8 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         self.tooltip = "{0} {1}".format(__title__, __version__)
         self.SetTrayIcon(running=False)  
         self.trayMenu = self.CreateTrayMenu()
-        self.Bind(wx.adv.EVT_TASKBAR_LEFT_DOWN, self.OnTrayLeft)        
-        self.Bind(wx.adv.EVT_TASKBAR_RIGHT_DOWN, self.OnTrayRight) 
+        self.Bind(wx.adv.EVT_TASKBAR_LEFT_UP, self.OnTrayLeft)
+        self.Bind(wx.adv.EVT_TASKBAR_RIGHT_UP, self.OnTrayRight) 
     
     @property
     def appConfig(self):
@@ -453,10 +456,10 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
     def OnSettings(self, event):
         self.parent.ShowSettingsDialog()
         
-    def OnTrayLeft(self, event):
+    def DoTrayAction(self, action):
     
         # show/hide window
-        if self.appConfig["onTrayIconLeft"] == 1:
+        if action == 1:
             if self.parent.IsShown():
                 self.parent.Hide()
             else:
@@ -464,9 +467,45 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
                 self.parent.Raise()
                 
         # toggle schedule manager
-        elif self.appConfig["onTrayIconLeft"] == 2:
+        elif action == 2:
             self.parent.ToggleScheduleManager()
-    
+        
+    def IsDouble(self):
+        
+        if self.leftClickCount == 1:
+            self.DoTrayAction(self.appConfig["onTrayIconLeft"])
+            
+        else:
+            self.DoTrayAction(self.appConfig["onTrayIconLeftDouble"])
+            
+        self.leftClickCount = 0
+        self.isWaiting = False
+            
+    def OnTrayLeft(self, event=None, double=False):
+        """
+        This is a bit of a hacky way of wx.adv.taskBarIcon registering
+        single and double click separately.
+        
+        Binding EVT_TASKBAR_LEFT_UP and EVT_TASKBAR_LEFT_DCLICK
+        and double clicking would raise EVT_TASKBAR_LEFT_DCLICK
+        once and EVT_TASKBAR_LEFT_UP twice.
+        
+        So instead, I just bind EVT_TASKBAR_LEFT_UP and catch 
+        and increment left click count. If more than one within
+        a short period of time, we assume double click behaviour.
+        """
+        
+        self.leftClickCount += 1
+        if self.isWaiting:
+            return
+        self.isWaiting = True    
+        wx.CallLater(200, self.IsDouble)
+        
+    def OnTrayLeftDouble(self, event):
+        self.isDouble = True
+        self.OnTrayLeft(double=True)
+        self.isDouble = False
+        
     def OnTrayRight(self, event):
         self.PopupMenu(self.trayMenu)
         
@@ -489,7 +528,7 @@ class Main(wx.Frame):
         wx.Frame.__init__(self,
                           parent=parent,
                           title=self._title)
-
+        
         self._appConfig = DEFAULTCONFIG 
         self._aboutDialog = None
         self._settingsDialog = None
@@ -534,7 +573,7 @@ class Main(wx.Frame):
             else:
                 btn.Bind(wx.EVT_BUTTON, self.OnGroupToolBar)
             btn.SetBitmap(bmp)
-        
+
             tooltip = wx.ToolTip(label)
             btn.SetToolTip(tooltip)
             hSizerGroup.Add(btn, 0, wx.ALL|wx.EXPAND, 2)
