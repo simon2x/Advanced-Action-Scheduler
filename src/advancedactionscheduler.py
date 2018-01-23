@@ -652,11 +652,9 @@ class Main(wx.Frame):
         self.btnAddFunction.Disable()
         hSizerFunctions2.Add(self.cboxFunctions, 0, wx.ALL|wx.CENTRE, 5)
         hSizerFunctions2.Add(self.btnAddFunction, 0, wx.ALL|wx.CENTRE, 5)
-
         schedSizer.Add(hSizerFunctions2, 0, wx.ALL, 0)
 
         # -----
-
         self.splitter2 = wx.SplitterWindow(schedPanel)
 
         self.schedList = base.TreeListCtrl(self.splitter2, style=wx.dataview.TL_CHECKBOX)
@@ -899,7 +897,9 @@ class Main(wx.Frame):
             tool.Enable(state)
             
             if label == "Close":
-                toolbar.AddSeparator()  
+                toolbar.AddSeparator() 
+            elif label == "Remove Group":
+                toolbar.AddSeparator()    
             elif label == "Redo":
                 toolbar.AddSeparator()
             elif label == "Enable Schedule Manager":
@@ -945,58 +945,17 @@ class Main(wx.Frame):
             self.taskBarIcon.SetTrayIcon(running=False)
         
     def DoRedo(self):
-        print(self._redoStack)
-        # can we redo?
-        try:
-            state = self._redoStack[-1]
-            # self._undoStack.append(state)
-            del self._redoStack[-1]
-        except:
-            logging.info("No redo operations are possible")
-            return
-
-        self.SaveStateToUndoStack()
-
-        self._data = state["data"]
-
-        self.groupList.DeleteAllItems()
-        self.schedList.DeleteAllItems()
-
-        for k,v in self._data.items():
-            name = self._data[k]["name"]
-            item = self.groupList.InsertItem(int(k), name)
-            checked = v["checked"]
-            if checked == "True":
-                self.groupList.CheckItem(item)
-
-        self.groupList.Select(state["groupIdx"])
-
+        state = self._redoStack[-1]
+        self._undoStack.append(self.GetCommandState())
+        del self._redoStack[-1]
+        self.RestoreState(state)
+        
     def DoUndo(self):
-        # can we undo?
-            try:
-                state = self._undoStack[-1]
-                # self._redoStack.append(state)
-                del self._undoStack[-1]
-            except:
-                logging.info("No undo operations are possible")
-                return
-
-            self.SaveStateToRedoStack()
-
-            self._data = state["data"]
-
-            self.groupList.DeleteAllItems()
-            self.schedList.DeleteAllItems()
-
-            for k,v in self._data.items():
-                name = self._data[k]["name"]
-                item = self.groupList.InsertItem(int(k), name)
-                checked = v["checked"]
-                if checked == "True":
-                    self.groupList.CheckItem(item)
-
-            self.groupList.Select(state["groupIdx"])
-
+        state = self._undoStack[-1]
+        self._redoStack.append(self.GetCommandState())
+        del self._undoStack[-1]
+        self.RestoreState(state)
+        
     def EnableScheduleManager(self):
         # Enable/Disable menu item accordingly
         self._menus["Disable Schedule Manager"].Enable(True)
@@ -1036,6 +995,13 @@ class Main(wx.Frame):
     def GetAppConfig(self):
         return self._appConfig
         
+    def GetCommandState(self):
+        """ get state for undo/redo operations """
+        state = {"data": self.GetDataForJSON(),
+                 "groupSel": self.groupList.GetIndexByOrder(self.groupList.GetSelection()),
+                 "schedSel": self.schedList.GetIndexByOrder(self.schedList.GetSelection()),}
+        return state
+    
     def GetDialog(self, label, value=None):
 
         if label == "CloseWindow":
@@ -1159,7 +1125,7 @@ class Main(wx.Frame):
             print(e)
             
         self.UpdateTrayIcon()
-        self.UpdateToolbar()
+        self.UpdateToolbarSize()
         wx.CallLater(800, self.Show)
         self.Raise()
         
@@ -1747,7 +1713,7 @@ class Main(wx.Frame):
             break
       
     def OnSize(self, event):
-        wx.CallAfter(self.UpdateToolbar)
+        wx.CallAfter(self.UpdateToolbarSize)
         event.Skip()
         
     def OnToolBar(self, event):
@@ -1855,6 +1821,19 @@ class Main(wx.Frame):
         for item in expanded_items:
             tree.Expand(item)
     
+    def RestoreState(self, state):
+        self._data = {}
+        self.groupList.DeleteAllItems()
+        self.schedList.DeleteAllItems()
+        
+        self.SetGroupTree(state["data"])
+        self.groupList.SelectItemByOrder(state["groupSel"])
+        self.OnGroupItemSelectionChanged()
+        self.schedList.SelectItemByOrder(state["schedSel"])
+        self.UpdateGroupToolbar()
+        self.UpdateScheduleToolbar()
+        self.UpdateToolbar()
+        
     def SaveData(self):
         jsonData = self.GetDataForJSON()
         if self._appConfig["currentFile"] is not False:
@@ -1913,32 +1892,11 @@ class Main(wx.Frame):
                 continue
             self._data[groupSel] = schedules
             
-    def SaveStateToRedoStack(self):
-        """ append current data to undo stack """
-        groupIdx = self.groupList.GetFirstSelected()
-
-        # create a copy of data
-        data = {}
-        for k,v in self._data.items():
-            data[k] = dict(v)
-
-        state = {"data": data, "groupIdx": groupIdx}
-        self._redoStack.append(state)
-
     def SaveStateToUndoStack(self):
-        """ append current data to undo stack """
-        return
-        groupIdx = self.groupList.GetFirstSelected()
-
-        # create a copy of data
-        data = {}
-        for k,v in self._data.items():
-            data[k] = dict(v)
-
-        state = {"data": data,
-                 "groupIdx": groupIdx}
-
+        logging.info("Saved State To Undo Stack")
+        state = self.GetCommandState()
         self._undoStack.append(state)
+        self.UpdateToolbar()
     
     def SetGroupTree(self, data):
         """ set the group list tree """
@@ -2187,7 +2145,7 @@ class Main(wx.Frame):
         
         self.SetupHotkeys()
         self.UpdateTrayIcon()
-        self.UpdateToolbar()
+        self.UpdateToolbarSize()
         
     def UpdateTitlebar(self):
         try:
@@ -2197,6 +2155,18 @@ class Main(wx.Frame):
             self.SetTitle("{0} {1}".format(__title__, __version__))
             
     def UpdateToolbar(self):
+    
+        if self._undoStack:
+            self.toolbar.EnableTool(wx.ID_UNDO, True)
+        else:    
+            self.toolbar.EnableTool(wx.ID_UNDO, False)
+            
+        if self._redoStack:
+            self.toolbar.EnableTool(wx.ID_REDO, True)
+        else:
+            self.toolbar.EnableTool(wx.ID_REDO, False)
+        
+    def UpdateToolbarSize(self):
         
         if not self.toolbar:
             return 
@@ -2230,7 +2200,7 @@ class Main(wx.Frame):
             img.Rescale(toolSize[0],toolSize[1], wx.IMAGE_QUALITY_HIGH)
             bmp = wx.Bitmap(img)
             tool.SetNormalBitmap(bmp)
-          
+                      
         self.toolbar.Realize()
         
     def UpdateTrayIcon(self):

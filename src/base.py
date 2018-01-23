@@ -34,7 +34,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
         wx.dataview.TreeListCtrl.__init__(self, parent, style=style)
         
     def AppendItemToRoot(self, value):
-        item = super(TreeListCtrl, self).AppendItem(self.GetRootItem(), value)
+        item = self.AppendItem(self.GetRootItem(), value)
         return item 
         
     def DeleteAllItems(self):
@@ -54,6 +54,22 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             depth += 1
             item = self.GetItemParent(item)
         return depth - 1
+        
+    def GetIndexByOrder(self, item):
+        """ iterate through all items until we reach the item """
+        if not item.IsOk():
+            return None
+        
+        n = 0 
+        itemIter = self.GetFirstItem()
+        if not itemIter.IsOk():
+            return None
+ 
+        while (itemIter != item):
+            itemIter = self.GetNextItem(itemIter)
+            n += 1
+        
+        return n
         
     def GetItemIndex(self, item):
         """ hacky way of getting the item index """
@@ -305,7 +321,24 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
 
         for item in expandedItems:
             self.Expand(item)
-            
+    
+    def SelectItemByOrder(self, n):
+        """ step through until we reach the nth item """
+        if n is None:
+            return
+        assert n >= 0, "Must be greater/equal to 0" 
+        
+        count = 0
+        itemIter = self.GetFirstItem()
+        # if not itemIter.IsOk():
+            # return None
+        print(count, n)
+        while n != count:
+            itemIter = self.GetNextItem(itemIter)
+            count += 1
+        
+        self.Select(itemIter)
+        
     def SetTree(self, data):
         """ set the treelist """
         self.DeleteAllItems()
