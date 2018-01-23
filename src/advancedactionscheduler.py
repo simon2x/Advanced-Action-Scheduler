@@ -781,7 +781,7 @@ class Main(wx.Frame):
         
     def ClearRedoStack(self): 
         self._redoStack = []
-        self._tools["Redo"].Enable(False)
+        self.UpdateToolbar()
         
     def ClearUI(self):
         """ clears lists and set toolbar/button states appropriately """
@@ -918,11 +918,11 @@ class Main(wx.Frame):
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
             return
-
         self.SaveStateToUndoStack()
         self.schedList.DeleteItem(selection)
         self.UpdateScheduleToolbar()
         self.SaveScheduleTreeToData()
+        self.ClearRedoStack()
        
     def DisableScheduleManager(self):
         # Enable/Disable menu item accordingly
@@ -1171,11 +1171,10 @@ class Main(wx.Frame):
         if not selection.IsOk():
             return
         
-        self.SaveStateToUndoStack()
-        
         # can item be moved down?
         next = self.groupList.GetNextSibling(selection)
         assert next.IsOk(), "Next item is not valid"
+        self.SaveStateToUndoStack()
         
         idxText = self.groupList.GetItemText(selection)
         checkState = self.groupList.GetCheckedState(selection)
@@ -1190,8 +1189,8 @@ class Main(wx.Frame):
         
         self.groupList.Select(newItem)
         
-        # finally, clear the redo stack        
-        self._redoStack = []
+        self.SaveScheduleTreeToData()
+        self.ClearRedoStack()
         
         self.UpdateGroupToolbar()
     
@@ -1201,11 +1200,10 @@ class Main(wx.Frame):
         if not selection.IsOk():
             return
         
-        self.SaveStateToUndoStack()
-        
         # can previous item be moved down?
         previous = self.schedList.GetPreviousSibling(selection)
         assert previous.IsOk() is True, "Previous item is not valid"
+        self.SaveStateToUndoStack()
         
         idxText = self.groupList.GetItemText(previous)
         checkState = self.groupList.GetCheckedState(previous)
@@ -1218,8 +1216,8 @@ class Main(wx.Frame):
         self._data[newItem] = idxData
         del self._data[previous]
 
-        # finally, clear the redo stack        
-        self._redoStack = []
+        self.SaveScheduleTreeToData()
+        self.ClearRedoStack()
         
         self.UpdateGroupToolbar()
         
@@ -1232,11 +1230,9 @@ class Main(wx.Frame):
         # can item be moved down?
         next = self.schedList.GetNextSibling(selection)
         assert next.IsOk(), "Next item is not valid"
-        
-        baseIdx = self.schedList.GetItemIndex(selection)
-        
         self.SaveStateToUndoStack()
         
+        baseIdx = self.schedList.GetItemIndex(selection)
         subTree = self.schedList.GetSubTree(selection)
         self.schedList.InsertSubTree(next, subTree)        
         self.schedList.DeleteItem(selection)
@@ -1274,12 +1270,11 @@ class Main(wx.Frame):
         newScheds += groupScheds[idxDecr[-1]+1:] 
         self._data[groupSel] = newScheds      
         
-        self.SaveStateToUndoStack()
         self.schedList.Select(self.schedList.GetNextSibling(next))
         self.UpdateScheduleToolbar()
         
-        # finally, clear the redo stack        
-        self._redoStack = []
+        self.SaveScheduleTreeToData()
+        self.ClearRedoStack()
     
     def MoveScheduleItemUp(self):
         """ move item up by moving the previous item down """
@@ -1332,6 +1327,9 @@ class Main(wx.Frame):
             newScheds.append(groupScheds[x])
         newScheds += groupScheds[idxDecr[-1]+1:] 
         self._data[groupSel] = newScheds
+        
+        self.SaveScheduleTreeToData()
+        self.ClearRedoStack()
         
         self.UpdateScheduleToolbar()
          
@@ -1445,6 +1443,7 @@ class Main(wx.Frame):
             self.SaveStateToUndoStack()
             newName = dlg.GetValue()
             self.groupList.SetItemText(selection, newName)
+            self.ClearRedoStack()
             return
         
     def OnGroupItemKeyDown(self, event):
@@ -1620,17 +1619,23 @@ class Main(wx.Frame):
             dlg.SetValue(params)
             if dlg.ShowModal() != wx.ID_OK:
                 return
+            self.SaveStateToUndoStack()    
             newName, value = dlg.GetValue()
             value = newName + DELIMITER + value
             self.schedList.SetItemText(selection, 0, value)
+            self.SaveScheduleTreeToData() 
+            self.ClearRedoStack()
         else:
             dlg = self.GetDialog(name)
             dlg.SetValue(params)
             if dlg.ShowModal() != wx.ID_OK:
-                return
+                return    
+            self.SaveStateToUndoStack()
             value = dlg.GetValue()
             value = name + DELIMITER + value
             self.schedList.SetItemText(selection, 0, value)
+            self.SaveScheduleTreeToData() 
+            self.ClearRedoStack()
                 
         idx = self.schedList.GetItemIndex(selection)
         groupSel = self.groupList.GetSelection()
@@ -1979,8 +1984,8 @@ class Main(wx.Frame):
 
             self.groupList.Select(newItem)
             self.groupList.SetFocus()
-
-            self._redoStack = []
+            
+            self.ClearRedoStack()
             return
             
     def ShowAddScheduleDialog(self):   
@@ -2066,9 +2071,7 @@ class Main(wx.Frame):
             self.groupList.UncheckItem(selection)
         else:
             self.groupList.CheckItem(selection)
-
-        self.SaveStateToUndoStack()    
-            
+        
     def ToggleScheduleManager(self):
         if self._tools["Enable Schedule Manager"].GetLabel() == "Enable Schedule Manager":
             self.EnableScheduleManager()
