@@ -21,7 +21,7 @@ PLATFORM = platform.system()
 if PLATFORM == "Windows":
     from win import windowmanager as winman
 elif PLATFORM == "Linux":
-    from windowmanager import linux as winman
+    from linux import windowmanager as winman
     
 class FindPosition(wx.Frame):
 
