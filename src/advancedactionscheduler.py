@@ -647,7 +647,7 @@ class Main(wx.Frame):
         self.cboxFunctions.Disable()
         self.cboxFunctions.Bind(wx.EVT_COMBOBOX, self.OnComboboxFunction)
 
-        self.btnAddFunction = wx.Button(schedPanel, label="Add Function", size=(-1, -1))
+        self.btnAddFunction = wx.Button(schedPanel, label="Add Function", name="Add Function", size=(-1, -1))
         self.btnAddFunction.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
         self.btnAddFunction.Disable()
         hSizerFunctions2.Add(self.cboxFunctions, 0, wx.ALL|wx.CENTRE, 5)
@@ -685,15 +685,26 @@ class Main(wx.Frame):
         schedManagerPanel.SetSizer(schedManagerSizer)
 
         schedManagerHsizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.chkBoxes = {}
-        # for lbl in ["All","Schedules","Actions","Errors"]:
-            # chkBox = wx.CheckBox(schedManagerPanel, label=lbl)
-            # self.chkBoxes[lbl] = chkBox
-            # schedManagerHsizer.Add(chkBox, 0, wx.ALL, 5)
-        # self.chkBoxes["All"].SetValue(True)
-        # schedManagerSizer.Add(schedManagerHsizer, 0, wx.ALL, 0)
+        self.schedManagerBtns = {}
+        for label in ["Clear"]:
+            if label == "Clear":
+                schedManagerHsizer.AddStretchSpacer()
+            btn = wx.Button(schedManagerPanel, label=label, name=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
+            self.schedBtns[label] = btn
+            img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
+            img = img.Rescale(32,32, wx.IMAGE_QUALITY_HIGH)
+            bmp = wx.Bitmap(img)
+            btn.SetBitmap(bmp)
+            btn.Bind(wx.EVT_BUTTON, self.OnScheduleManagerToolbar)
+            schedManagerHsizer.Add(btn, 0, wx.ALL, 5)
+            self.schedManagerBtns[label] = btn
+            tooltip = wx.ToolTip(label)
+            btn.SetToolTip(tooltip)
+        schedManagerSizer.Add(schedManagerHsizer, 0, wx.ALL|wx.EXPAND, 0)
 
         self.schedLog = base.BaseList(schedManagerPanel)
+        self.schedLog.Bind(wx.EVT_RIGHT_UP, self.OnScheduleManagerContextMenu)
+        self.schedLog.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self.OnScheduleManagerContextMenu)
         self.schedLog.InsertColumn(0, "Group")
         self.schedLog.InsertColumn(1, "Schedule")
         self.schedLog.InsertColumn(2, "Message")
@@ -1601,6 +1612,25 @@ class Main(wx.Frame):
         menu.Bind(wx.EVT_MENU, self.OnScheduleToolBar)
         self.PopupMenu(menu)
         
+    def OnScheduleManagerContextMenu(self, event):
+        menu = wx.Menu()
+        subMenu = wx.Menu()
+        if self.cboxFunctions.IsEnabled():
+            for label in FUNCTIONS:
+                item = subMenu.Append(wx.ID_ANY, label)
+            
+        for label in ["Clear"]:
+            if not label:
+                menu.AppendSeparator()
+                continue
+                
+            item = menu.Append(wx.ID_ANY, label)        
+            if not self.schedManagerBtns[label].IsEnabled():
+                item.Enable(False)
+                continue
+        menu.Bind(wx.EVT_MENU, self.OnScheduleManagerToolbar)
+        self.PopupMenu(menu)    
+        
     def OnScheduleItemEdit(self, event=None):
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
@@ -1673,6 +1703,17 @@ class Main(wx.Frame):
             
         elif name == "Up":
             self.MoveScheduleItemUp()   
+            
+    def OnScheduleManagerToolbar(self, event):
+        try:
+            e = event.GetEventObject()
+            name = e.GetName()
+        except:
+            id = event.GetId()
+            name = e.GetLabel(id)
+
+        if name == "Clear":
+            self.schedLog.DeleteAllItems()       
             
     def OnScheduleTreeActivated(self, event):
         self.OnScheduleItemEdit(None)        
