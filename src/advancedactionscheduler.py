@@ -717,7 +717,7 @@ class Main(wx.Frame):
         self.LoadConfig()
         
         #setup hotkeys
-        # self.SetupHotkeys()
+        self.SetupHotkeys()
         
     @property
     def taskBarIcon(self):
@@ -729,18 +729,31 @@ class Main(wx.Frame):
         
     def AddLogMessage(self, message):
         """ insert log message as first item to schedule messenger list """
+        
+        if self._appConfig["schedManagerLogCount"] <= 0:
+            self.schedLog.DeleteAllItems()
+            return
+        
         columnNames = {}
         for x in range(self.schedLog.GetColumnCount()):
             column = self.schedLog.GetColumn(x)
             columnText = column.GetText()
             columnNames[columnText] = x
             
-        if self.schedLog.GetItemCount() >= self._appConfig["schedManagerLogCount"]:
-            self.schedLog.DeleteAllItems()
-        
-        i = self.schedLog.GetItemCount()
+        while self.schedLog.GetItemCount() >= self._appConfig["schedManagerLogCount"]:
+            try:
+                self.schedLog.DeleteItem(self.schedLog.GetItemCount()-1)
+            except:
+                continue
+                
+        if self.schedLog.GetItemCount() == 0:
+            n = 0
+        else:
+            first = self.schedLog.GetItemText(0, columnNames["#"])
+            n = int(first) + 1
+            
         item = self.schedLog.InsertItem(0, "")
-        self.schedLog.SetItem(item, columnNames["#"], str(i))
+        self.schedLog.SetItem(item, columnNames["#"], str(n))
         dt = gmtime() 
         self.schedLog.SetItem(item, columnNames["Time"], strftime("%H:%M:%S", dt))
         self.schedLog.SetItem(item, columnNames["Date"], strftime("%d-%m-%Y", dt))
@@ -1668,7 +1681,7 @@ class Main(wx.Frame):
             break
       
     def OnSize(self, event):
-        self.UpdateToolbar()
+        wx.CallAfter(self.UpdateToolbar)
         event.Skip()
         
     def OnToolBar(self, event):
@@ -1897,11 +1910,8 @@ class Main(wx.Frame):
             event.Skip()   
 
     def SetupHotkeys(self):
-        try:
-            keyboard.unhook_all()
-            keyboard.add_hotkey(self._appConfig["toggleSchedManHotkey"], self.ToggleScheduleManager)
-        except Exception as e:
-            print(e)
+        keyboard.unhook_all()
+        keyboard.add_hotkey(self._appConfig["toggleSchedManHotkey"], self.ToggleScheduleManager)
             
     def ShowAboutDialog(self):
         if not self._aboutDialog:
@@ -2121,6 +2131,7 @@ class Main(wx.Frame):
             self.SetTitle("{0} {1}".format(__title__, __version__))
             
     def UpdateToolbar(self):
+        
         if not self.toolbar:
             return 
             

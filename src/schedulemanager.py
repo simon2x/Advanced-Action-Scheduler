@@ -15,6 +15,7 @@ import logging
 import platform
 import subprocess
 import time
+import wx
 import advwebbrowser
 
 from ast import literal_eval as make_tuple
@@ -213,7 +214,7 @@ class Manager:
     def SendLog(self, message):
         """ pass message to schedule manager lis """
         parent = self.GetParent()
-        parent.AddLogMessage(message)
+        wx.CallAfter(parent.AddLogMessage, message)
 
     def SetSchedules(self, data):
         """ 
