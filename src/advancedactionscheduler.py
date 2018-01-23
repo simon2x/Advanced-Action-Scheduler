@@ -26,6 +26,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from ast import literal_eval as make_tuple
 from time import gmtime, strftime
 
+import keyboard # global hotkey
 import psutil
 import json
 import logging
@@ -82,19 +83,64 @@ logger.addHandler(ch)
 #------------------------------------------------#
 
 DELIMITER = " ➡ "
-FUNCTIONS = ["CloseWindow",
-             "Delay",
-             # "KillProcess",
-             "IfWindowOpen",
-             "IfWindowNotOpen",
-             "MouseClickAbsolute",
-             "MouseClickRelative",
-             "NewProcess",
-             "OpenURL",
-             "Power",
-             "StopSchedule",
-             "StartSchedule",
-             "SwitchWindow"]
+
+FUNCTIONKEYS = {
+     340: 'F1',
+     341: 'F2',
+     342: 'F3',
+     343: 'F4',
+     344: 'F5',
+     345: 'F6',
+     346: 'F7',
+     347: 'F8',
+     348: 'F9',
+     349: 'F10',
+     350: 'F11',
+     351: 'F12',
+     352: 'F13',
+     353: 'F14',
+     354: 'F15',
+     355: 'F16',
+     356: 'F17',
+     357: 'F18',
+     358: 'F19',
+     359: 'F20',
+     360: 'F21',
+     361: 'F22',
+     362: 'F23',
+     363: 'F24'
+}
+
+RESERVEDHOTKEYS = [
+    "CTRL+E",
+    "CTRL+I",
+    "CTRL+N",
+    "CTRL+O",
+    "CTRL+S",
+    "CTRL+SHIFT+S",
+    "CTRL+W",
+    "CTRL+T",
+    "CTRL+V",
+    "CTRL+C",
+    "CTRL+X",
+    "CTRL+A"
+]
+ 
+FUNCTIONS = [
+    "CloseWindow",
+    "Delay",
+    # "KillProcess",
+    "IfWindowOpen",
+    "IfWindowNotOpen",
+    "MouseClickAbsolute",
+    "MouseClickRelative",
+    "NewProcess",
+    "OpenURL",
+    "Power",
+    "StopSchedule",
+    "StartSchedule",
+    "SwitchWindow"
+]
   
 DEFAULTCONFIG = {
     "browserPresets": [], # list of saved browsers
@@ -106,10 +152,12 @@ DEFAULTCONFIG = {
     "openUrlPresets": [], # list of saved urls
     "onClose": 0, # on close window
     "onTrayIconLeft": 0,
+    "onTrayIconLeftDouble": 1,
     "schedManagerLogCount": 10, # number of logs before clearing table
     "schedManagerSwitchTab": True, # auto switch to Manager tab when schedules enabled
     "showSplashScreen": True,
     "showTrayIcon": True,
+    "toggleSchedManHotkey": "CTRL+F11",
     "toolbarSize": 48, # maximum toolbar size
     "windowPos": False, # the last window position
     "windowSize": False, # the last window size
@@ -200,6 +248,13 @@ class SettingsFrame(wx.Frame):
         gridBag.Add(lblTrayLeft, pos=(row,0), flag=wx.ALL, border=5)  
         gridBag.Add(self.cboxTrayLeft, pos=(row,1), flag=wx.ALL, border=5)  
         
+        row += 1     
+        lblTrayLeft = wx.StaticText(panel, label="On Tray Icon Left Double Click")
+        choices = ["Do Nothing","Show/Hide Main Window","Enable/Disable Schedule Manager"]
+        self.cboxTrayLeftDouble = wx.ComboBox(panel, choices=choices, style=wx.CB_READONLY)
+        gridBag.Add(lblTrayLeft, pos=(row,0), flag=wx.ALL, border=5)  
+        gridBag.Add(self.cboxTrayLeftDouble, pos=(row,1), flag=wx.ALL, border=5)  
+        
         row += 1        
         lblToolbarSize = wx.StaticText(panel, label="Maximum Toolbar Icon Size")
         choices = ["16","32","48","64","128","256"]
@@ -221,9 +276,17 @@ class SettingsFrame(wx.Frame):
         
         row += 1
         lblSchedMgrLogCount = wx.StaticText(panel, label="Schedule Manager Log Count")
-        self.chkSchedMgrLogCount = wx.SpinCtrl(panel, min=-1, max=1000)
+        self.schedMgrLogCount = wx.SpinCtrl(panel, min=-1, max=1000)
         gridBag.Add(lblSchedMgrLogCount, pos=(row,0), flag=wx.ALL, border=5)
-        gridBag.Add(self.chkSchedMgrLogCount, pos=(row,1), flag=wx.ALL, border=5)
+        gridBag.Add(self.schedMgrLogCount, pos=(row,1), flag=wx.ALL, border=5)
+        
+        row += 1
+        lblSchedMgrHotkey = wx.StaticText(panel, label="Toggle Schedule Manager Hotkey")
+        self.schedMgrHotkey = wx.TextCtrl(panel)
+        # self.schedMgrHotkey.Bind(wx.EVT_TEXT, self.OnHotkeyText)
+        self.schedMgrHotkey.Bind(wx.EVT_CHAR_HOOK, self.OnHotkeyEdit)
+        gridBag.Add(lblSchedMgrHotkey, pos=(row,0), flag=wx.ALL, border=5)
+        gridBag.Add(self.schedMgrHotkey, pos=(row,1), flag=wx.ALL, border=5)
         
         hSizer = wx.BoxSizer(wx.HORIZONTAL)
         btn = wx.Button(panel, label="Cancel", id=wx.ID_CANCEL)
@@ -249,11 +312,13 @@ class SettingsFrame(wx.Frame):
         data["showTrayIcon"] = self.chkShowTray.GetValue()
         data["showSplashScreen"] = self.chkShowSplash.GetValue()
         data["onTrayIconLeft"] = self.cboxTrayLeft.GetSelection()
+        data["onTrayIconLeftDouble"] = self.cboxTrayLeftDouble.GetSelection()
         data["toolbarSize"] = self.cboxToolbarSize.GetValue()
         data["loadLastFile"] = self.chkLoadLastFile.GetValue()
         data["keepFileList"] = self.chkRecentFiles.GetValue()
         data["schedManagerSwitchTab"] = self.chkSchedMgrSwitch.GetValue()
-        data["schedManagerLogCount"] = self.chkSchedMgrLogCount.GetValue()
+        data["schedManagerLogCount"] = self.schedMgrLogCount.GetValue()
+        data["toggleSchedManHotkey"] = self.schedMgrHotkey.GetValue().upper()
         return data
         
     def OnButton(self, event):
@@ -264,16 +329,62 @@ class SettingsFrame(wx.Frame):
         elif id == wx.ID_OK:
             self.GetParent().UpdateSettingsDict(self.GetValue())
             self.Destroy()
+    
+    def OnHotkeyEdit(self, event):
+        e = event.GetEventObject()
+        keycode = event.GetKeyCode()
+        
+        if keycode == wx.WXK_ESCAPE:
+            self.schedMgrHotkey.SetValue("")
+            return
+        elif keycode == wx.WXK_RETURN:
+            self.schedMgrHotkey.SetValue("")
+            return
+        
+        if keycode in [wx.WXK_SHIFT, wx.WXK_RAW_CONTROL, wx.WXK_ALT]:
+            return
             
+        char = "%c" % keycode
+        if keycode == wx.WXK_NONE:
+            return
+        if keycode == wx.WXK_SPACE:
+            char = "SPACE"
+        elif not char.isalnum():
+            return
+            
+        if keycode in FUNCTIONKEYS:
+            char = FUNCTIONKEYS[keycode]
+        
+        hotkey = []
+        if event.CmdDown():
+            hotkey.append("CTRL")
+        if event.AltDown():
+            hotkey.append("ALT")
+        if event.ShiftDown():
+            hotkey.append("SHIFT")
+        hotkey.append(char)    
+ 
+        hotkey = "+".join(hotkey)
+        if hotkey in RESERVEDHOTKEYS:
+            return
+            
+        # combination of two or more keys?
+        # but we allow function key as a standalone hotkey without combination
+        if "+" not in hotkey and not hotkey in FUNCTIONKEYS.values():
+            return
+        self.schedMgrHotkey.SetValue(hotkey)
+          
     def SetDefaults(self):
         self.cboxTrayLeft.SetSelection(0)
+        self.cboxTrayLeftDouble.SetSelection(0)
         self.chkShowSplash.SetValue(True)
         self.cboxToolbarSize.SetValue("48")
         self.chkShowTray.SetValue(True)
         self.chkLoadLastFile.SetValue(True)
         self.chkRecentFiles.SetValue(True)
         self.chkSchedMgrSwitch.SetValue(True)
-        self.chkSchedMgrLogCount.SetValue(100)
+        self.schedMgrLogCount.SetValue(100)
+        self.schedMgrHotkey.SetValue("")
         
     def SetValue(self, data):
         for arg, func, default in (
@@ -281,10 +392,12 @@ class SettingsFrame(wx.Frame):
             ["showSplashScreen", self.chkShowSplash.SetValue, True],
             ["showTrayIcon", self.chkShowTray.SetValue, True],
             ["onTrayIconLeft", self.cboxTrayLeft.SetSelection, 0],
+            ["onTrayIconLeftDouble", self.cboxTrayLeftDouble.SetSelection, 0],
             ["loadLastFile", self.chkLoadLastFile.SetValue, False],
             ["keepFileList", self.chkRecentFiles.SetValue, True],
             ["schedManagerSwitchTab", self.chkSchedMgrSwitch.SetValue, True],
-            ["schedManagerLogCount", self.chkSchedMgrLogCount.SetValue, 100]):
+            ["schedManagerLogCount", self.schedMgrLogCount.SetValue, 100],
+            ["toggleSchedManHotkey", self.schedMgrHotkey.SetValue, ""]):
             
             try:
                 func(data[arg])
@@ -421,7 +534,7 @@ class Main(wx.Frame):
             else:
                 btn.Bind(wx.EVT_BUTTON, self.OnGroupToolBar)
             btn.SetBitmap(bmp)
-
+        
             tooltip = wx.ToolTip(label)
             btn.SetToolTip(tooltip)
             hSizerGroup.Add(btn, 0, wx.ALL|wx.EXPAND, 2)
@@ -551,6 +664,9 @@ class Main(wx.Frame):
 
         #load settings
         self.LoadConfig()
+        
+        #setup hotkeys
+        # self.SetupHotkeys()
         
     @property
     def taskBarIcon(self):
@@ -955,8 +1071,8 @@ class Main(wx.Frame):
         try:
             x, y = make_tuple(self._appConfig["windowSize"])
             self.SetSize((x, y))
-        except:
-            pass
+        except Exception as e:
+            print(e)
             
         self.UpdateTrayIcon()
         self.UpdateToolbar()
@@ -1183,6 +1299,7 @@ class Main(wx.Frame):
         except:
             pass
         
+        keyboard.unhook_all()
         self.Destroy()        
         
     def OnAboutDialogClose(self, event):
@@ -1721,8 +1838,15 @@ class Main(wx.Frame):
         self.GetTopLevelParent().SetStatusText(status)
 
         if event:
-            event.Skip()    
+            event.Skip()   
 
+    def SetupHotkeys(self):
+        try:
+            keyboard.unhook_all()
+            keyboard.add_hotkey(self._appConfig["toggleSchedManHotkey"], self.ToggleScheduleManager)
+        except Exception as e:
+            print(e)
+            
     def ShowAboutDialog(self):
         if not self._aboutDialog:
             self._aboutDialog = AboutDialog(self)
@@ -1928,7 +2052,8 @@ class Main(wx.Frame):
         
         if self._appConfig["keepFileList"] == False:
             self.ClearRecentFiles()
-            
+        
+        self.SetupHotkeys()
         self.UpdateTrayIcon()
         self.UpdateToolbar()
         
@@ -1985,6 +2110,6 @@ class Main(wx.Frame):
                 self.taskBarIcon = None
    
 if __name__ == "__main__":
-    app = wx.App()    
+    app = wx.App()
     mainFrame = Main()
     app.MainLoop()
