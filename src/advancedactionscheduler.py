@@ -216,6 +216,14 @@ class AboutDialog(wx.Frame):
         self.Raise()
         self.Show()
         
+        self.Bind(wx.EVT_CHAR_HOOK, self.OnChar)
+     
+    def OnChar(self, event):
+        e = event.GetEventObject()
+        keycode = event.GetKeyCode()
+        if keycode == wx.WXK_ESCAPE:
+            self.Destroy()
+        
 class SettingsFrame(wx.Frame):
 
     def __init__(self, parent):
@@ -308,6 +316,8 @@ class SettingsFrame(wx.Frame):
         self.SetMaxSize(self.GetSize())
         
         self.SetDefaults()
+        
+        self.Bind(wx.EVT_CHAR_HOOK, self.OnChar)
      
     def GetValue(self):
         data = {}
@@ -332,6 +342,12 @@ class SettingsFrame(wx.Frame):
             self.GetParent().UpdateSettingsDict(self.GetValue())
             self.Destroy()
     
+    def OnChar(self, event):
+        e = event.GetEventObject()
+        keycode = event.GetKeyCode()
+        if keycode == wx.WXK_ESCAPE:
+            self.Destroy()
+            
     def OnHotkeyEdit(self, event):
         e = event.GetEventObject()
         keycode = event.GetKeyCode()
