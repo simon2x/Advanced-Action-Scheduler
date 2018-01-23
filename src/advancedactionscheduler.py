@@ -780,7 +780,11 @@ class Main(wx.Frame):
             self.menuFile.Delete(item)
         self._fileListMenuItems = {}
         self._fileList = []
-    
+        
+    def ClearRedoStack(self): 
+        self._redoStack = []
+        self._tools["Redo"].Enable(False)
+        
     def ClearUI(self):
         """ clears lists and set toolbar/button states appropriately """
         self.groupList.DeleteAllItems()
