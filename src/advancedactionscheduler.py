@@ -212,6 +212,8 @@ class AboutDialog(wx.Frame):
         self.SetSize(w, h*2)
         self.SetMinSize(self.GetSize())
         self.SetMaxSize(self.GetSize())
+        
+        self.Raise()
         self.Show()
         
 class SettingsFrame(wx.Frame):
@@ -755,6 +757,10 @@ class Main(wx.Frame):
         self.UpdateTitlebar()
         
     def CloseFile(self):
+        
+        self.Raise()
+        self.Restore()
+        self.Show()
         dlg = wx.MessageDialog(self,
                                message="Save file before closing?",
                                caption="Close File",
@@ -1116,6 +1122,7 @@ class Main(wx.Frame):
         self.UpdateTrayIcon()
         self.UpdateToolbar()
         wx.CallLater(800, self.Show)
+        self.Raise()
         
     def LoadFile(self, filePath):
         """ load a schedule file by file path """
