@@ -433,7 +433,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         self.trayMenu = self.CreateTrayMenu()
         self.Bind(wx.adv.EVT_TASKBAR_LEFT_UP, self.OnTrayLeft)
         self.Bind(wx.adv.EVT_TASKBAR_RIGHT_UP, self.OnTrayRight) 
-    
+        
     @property
     def appConfig(self):
         return self.parent.GetAppConfig()
@@ -446,6 +446,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
             
     def CreateTrayMenu(self):
         trayMenu = wx.Menu()
+        self.CreateMenuItem(trayMenu, "Advanced Action Scheduler", self.ShowMainWindow)
         self.CreateMenuItem(trayMenu, "Settings", self.OnSettings)
         self.CreateMenuItem(trayMenu, "About", self.OnAbout)
         trayMenu.AppendSeparator()
@@ -520,6 +521,11 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
             self.SetIcon(self.iconRunning, self.tooltip)
         else:    
             self.SetIcon(self.iconNormal, self.tooltip)
+            
+    def ShowMainWindow(self, event=None):
+        self.parent.Show()
+        self.parent.Raise()
+        self.parent.SetFocus()
             
 class Main(wx.Frame):
 
