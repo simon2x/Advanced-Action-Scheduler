@@ -771,7 +771,7 @@ class Main(wx.Frame):
     def commandState(self, value):
         self._commandState = value
         self.UpdateTitlebar()
-        
+
     def AddLogMessage(self, message):
         """ insert log message as first item to schedule messenger list """
         
@@ -1936,10 +1936,15 @@ class Main(wx.Frame):
             
     def SaveStateToUndoStack(self):
         logging.info("Saved State To Undo Stack")
+        n = self._appConfig["maxUndoCount"]
+        if n == 0:
+            return
         state = self.GetCommandState()
         self._undoStack.append(state)
+        if len(self._undoStack) > n:
+            del self._undoStack[0]
         self.UpdateToolbar()
-        
+        self.UpdateTitlebar()
         self.commandState += 1
     
     def SetGroupTree(self, data):
@@ -2199,9 +2204,18 @@ class Main(wx.Frame):
         if self._appConfig["keepFileList"] == False:
             self.ClearRecentFiles()
         
+        n = self._appConfig["maxUndoCount"]
+        if n == 0:
+            self._undoStack = []
+            self._redoStack = []
+        elif len(self._undoStack) > n:
+            self._undoStack = self._undoStack[len(self._undoStack)-n:]
+            
         self.SetupHotkeys()
         self.UpdateTrayIcon()
         self.UpdateToolbarSize()
+        self.UpdateToolbar()
+        self.UpdateTitlebar()
         
     def UpdateTitlebar(self):
         unsaved = ""
