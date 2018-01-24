@@ -561,11 +561,12 @@ class Main(wx.Frame):
     def __init__(self, parent=None):
 
         self._title = "{0} {1}".format(__title__, __version__)
-
+       
         wx.Frame.__init__(self,
                           parent=parent,
                           title=self._title)
         
+        self._ids = {}
         self._appConfig = DEFAULTCONFIG 
         self._aboutDialog = None
         self._settingsDialog = None
@@ -599,7 +600,8 @@ class Main(wx.Frame):
         hSizerGroup = wx.WrapSizer(wx.HORIZONTAL)
         self.groupBtns = {}
         for label in ["Add Group", "Up", "Down", "Edit", "Toggle", "Delete"]:
-            btn = wx.Button(leftPanel, label=label, name=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
+            wxId = self.ids("group_"+label)
+            btn = wx.Button(leftPanel, wxId, label, name=label, style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
             if label != "Add Group":
                 btn.Disable()
             self.groupBtns[label] = btn
@@ -643,7 +645,8 @@ class Main(wx.Frame):
         hSizerFunctions = wx.WrapSizer(wx.HORIZONTAL)
         self.schedBtns = {}
         for label in ["Add Schedule", "Up", "Down", "Edit", "Toggle", "Delete"]:
-            btn = wx.Button(schedPanel, label=label, name=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
+            wxId = self.ids("schedule_"+label)
+            btn = wx.Button(schedPanel, wxId, label, name=label, style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
             btn.Disable()
             self.schedBtns[label] = btn
             img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
@@ -754,7 +757,14 @@ class Main(wx.Frame):
         
         #setup hotkeys
         self.SetupHotkeys()
+        self.SetupAcceleratorTable()
         
+    def ids(self, value):
+        """ return existing ID or create a new ID """
+        if value not in self._ids:
+            self._ids[value] = wx.NewId()
+        return self._ids[value]
+            
     @property
     def taskBarIcon(self):
         return self._taskBarIcon
@@ -864,41 +874,41 @@ class Main(wx.Frame):
         
     def CreateMenu(self):
         menubar = wx.MenuBar()
-
         menuFile = wx.Menu()
-        fileMenus = [("New", "New Schedule File", True, wx.ID_ANY),
-                     ("Open...", "Open Schedule File", True, wx.ID_ANY),
-                     ("Save", "Save Schedule File", True, wx.ID_ANY),
-                     ("Save As...", "Save Schedule File As...", True, wx.ID_ANY),
-                     ("Close File", "Close Schedule File", True, wx.ID_ANY),
-                     ("Import", "Import Schedule File", True, wx.ID_ANY),
-                     ("Settings", "Open Settings...", True, wx.ID_ANY),
-                     ("Exit", "Exit Program", True, wx.ID_ANY)]
-        for item, helpStr, state, wxId in fileMenus:
-            self._menus[item] = menuFile.Append(wxId, item, helpStr)
-            self._menus[item].Enable(state)
+        fileMenus = [
+            ("New", "Ctrl+N", "New Schedule File", wx.ID_NEW),
+            ("Open...", "Ctrl+O", "Open Schedule File", wx.ID_OPEN),
+            ("Save", "Ctrl+S", "Save Schedule File", wx.ID_SAVE),
+            ("Save As...", "Ctrl+Shift+S", "Save Schedule File As...", wx.ID_SAVEAS),
+            ("Close File", "Ctrl+W", "Close Schedule File", wx.ID_CLOSE),
+            ("Import", "Ctrl+I", "Import Schedule File", wx.ID_CDROM), # because no import id
+            ("Settings", "Alt+P", "Open Settings...", wx.ID_PREFERENCES),
+            ("Exit", "Ctrl+Q", "Exit Program", wx.ID_EXIT)]
+        for item, accelHint, helpStr, wxId in fileMenus:
+            self._menus[item] = menuFile.Append(wxId, item+"\t"+accelHint, helpStr)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
 
             if item == "Import":
                 menuFile.AppendSeparator()
             elif item == "Settings":
                 menuFile.AppendSeparator()
+                
         self.menuFile = menuFile
         
         menuRun = wx.Menu()
-        runMenus = [("Enable Schedule Manager", "Enable Schedule Manager"),
-                    ("Disable Schedule Manager", "Disable Schedule Manager")]
-        for item, helpStr in runMenus:
-            self._menus[item] = menuRun.Append(wx.ID_ANY, item, helpStr)
+        runMenus = [("Enable Schedule Manager", "Enable Schedule Manager", wx.ID_EXECUTE),
+                    ("Disable Schedule Manager", "Disable Schedule Manager", wx.ID_STOP)]
+        for item, helpStr, wxId in runMenus:
+            self._menus[item] = menuRun.Append(wxId, item, helpStr)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
             
         self._menus["Disable Schedule Manager"].Enable(False)
             
         menuHelp = wx.Menu()
-        helpMenus = [("Check for updates", "Check for updates (Not Yet Implemented)"),
-                     ("About", "Import Images From Folder")]
-        for item, helpStr in helpMenus:
-            self._menus[item] = menuHelp.Append(wx.ID_ANY, item, helpStr)
+        helpMenus = [("Check for updates", "Check for updates (Not Yet Implemented)", wx.ID_ANY),
+                     ("About\tF1", "Import Images From Folder", wx.ID_ABOUT)]
+        for item, helpStr, wxId in helpMenus:
+            self._menus[item] = menuHelp.Append(wxId, item, helpStr)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
 
         menubar.Append(menuFile, "&File")
@@ -906,7 +916,7 @@ class Main(wx.Frame):
         menubar.Append(menuHelp, "&Help")
         self.menubar = menubar
         self.SetMenuBar(menubar)
-
+        
     def CreateToolbar(self):
         self._tools = {}
         toolbar = wx.ToolBar(self, style=wx.TB_FLAT)
@@ -918,14 +928,17 @@ class Main(wx.Frame):
             ("Save", "Save", True, wx.ID_SAVE),
             ("Save As...", "Save As...", True, wx.ID_SAVEAS),
             ("Close", "Close", True, wx.ID_CLOSE),
-            ("Import", "Import", True, wx.ID_ANY),
-            ("Add Group", "Add Group", True, wx.ID_ADD),
-            ("Remove Group", "Remove Selected Group", False, wx.ID_REMOVE),
+            ("Import", "Import", True, None),
+            ("Add Group", "Add Group", True, None),
+            ("Remove Group", "Remove Selected Group", False, None),
             ("Undo", "Undo", False, wx.ID_UNDO),
             ("Redo", "Redo", False, wx.ID_REDO),
-            ("Enable Schedule Manager", "Enable Schedule Manager", True, wx.ID_ANY),
-            ("Settings", "Settings", True, wx.ID_ANY)]:
-
+            ("Enable Schedule Manager", "Enable Schedule Manager", True, wx.ID_EXECUTE),
+            ("Settings", "Settings", True, wx.ID_PREFERENCES)]:
+            
+            if wxId is None:
+                wxId = self.ids(label)
+            
             try:
                 img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "").replace(".","")))
                 img.Rescale(toolSize[0],toolSize[1], wx.IMAGE_QUALITY_HIGH)
@@ -934,8 +947,7 @@ class Main(wx.Frame):
             except:
                 bmp = wx.Bitmap(toolSize)
                 tool = toolbar.AddTool(wxId, label=label, bitmap=bmp, shortHelp=help)
-            self.Bind(wx.EVT_TOOL, self.OnToolBar, tool)
-            
+            self.Bind(wx.EVT_TOOL, self.OnMenu, tool)
             self._tools[label] = tool
             tool.Enable(state)
             
@@ -988,6 +1000,8 @@ class Main(wx.Frame):
             self.taskBarIcon.SetTrayIcon(running=False)
         
     def DoRedo(self):
+        if self._redoStack == []:
+            return
         state = self._redoStack[-1]
         self._undoStack.append(self.GetCommandState())
         del self._redoStack[-1]
@@ -995,6 +1009,8 @@ class Main(wx.Frame):
         self.commandState += 1
         
     def DoUndo(self):
+        if self._undoStack == []:
+            return
         state = self._undoStack[-1]
         self._redoStack.append(self.GetCommandState())
         del self._undoStack[-1]
@@ -1494,13 +1510,13 @@ class Main(wx.Frame):
             print(groupSel==item)
             if groupSel != item:
                 continue
-            self.toolbar.EnableTool(wx.ID_REMOVE, True)
+            self.toolbar.EnableTool(self._ids["Remove Group"], True)
             self.SetScheduleTree(data)
             
             self.schedBtns["Add Schedule"].Enable()
             return
         
-        self.toolbar.EnableTool(wx.ID_REMOVE, False)
+        self.toolbar.EnableTool(self._ids["Remove Group"], False)
         
         self.schedBtns["Add Schedule"].Disable()
         self.UpdateScheduleToolbar()
@@ -1534,30 +1550,41 @@ class Main(wx.Frame):
     def OnMenu(self, event):
         e = event.GetEventObject()
         id = event.GetId()
-        label = e.GetLabel(id)
-
-        if label == "About":
+        
+        if id == wx.ID_ABOUT:
             self.ShowAboutDialog()
-        elif label == "Close File":
+        elif id == wx.ID_CLOSE:
             self.CloseFile()  
-        elif label == "Check for updates":
+        elif id == wx.ID_ABOUT:
             self.ShowCheckForUpdatesDialog()  
-        elif label == "Disable Schedule Manager":
-            self.DisableScheduleManager()
-        elif label == "Enable Schedule Manager":
+        elif  id == wx.ID_EXECUTE:
             self.EnableScheduleManager() 
-        elif label == "Exit":
+        elif id == wx.ID_EXIT:
             self.Close()
-        elif label == "Import":
+        elif id == wx.ID_CDROM:
             self.ShowImportDialog()
-        elif label == "New":
+        elif id == wx.ID_NEW:
             self.CloseFile()
-        elif label == "Open...":
-            self.OpenFile()
-        elif label == "Save As...":
-            self.SaveFileAs()  
-        elif label == "Settings":
+        elif id == wx.ID_PREFERENCES:
             self.ShowSettingsDialog() 
+        elif id == wx.ID_OPEN:
+            self.OpenFile()
+        elif id == wx.ID_REDO:
+            self.DoRedo()
+        elif id == wx.ID_SAVE:
+            self.SaveData()  
+        elif id == wx.ID_SAVEAS:
+            self.SaveFileAs()  
+        elif id == wx.ID_STOP:
+            self.DisableScheduleManager()
+        elif id == wx.ID_UNDO:
+            self.DoUndo()
+        elif id == self._ids["Add Group"]:
+            self.ShowAddGroupDialog() 
+        elif id == self._ids["Import"]:
+            self.ShowImportDialog()    
+        elif id == self._ids["Remove Group"]:
+            self.ShowRemoveGroupDialog()    
     
     def OnRecentFile(self, event):
         e = event.GetEventObject()
@@ -1756,9 +1783,11 @@ class Main(wx.Frame):
     def OnToolBar(self, event):
         e = event.GetEventObject()
         id = event.GetId()
-        tool = e.FindById(id)
-        label = tool.GetLabel()
-        logging.info("OnToolBar event: %s" % label)
+        label = e.GetLabel(id)
+        print("ada",label)
+        # tool = e.FindById(id)
+        # label = tool.GetLabel()
+        # logging.info("OnToolBar event: %s" % label)
 
         if label == "Add Group":
             self.ShowAddGroupDialog()
@@ -1875,6 +1904,8 @@ class Main(wx.Frame):
         jsonData = self.GetDataForJSON()
         if self._appConfig["currentFile"] is not False:
             self.SaveDataToJSON(self._appConfig["currentFile"], jsonData)
+            self.commandState = 0
+            self.UpdateTitlebar()
             return
             
         wildcard = "JSON files (*.json)|*.json"
@@ -1893,6 +1924,7 @@ class Main(wx.Frame):
         self.SaveDataToJSON(self._appConfig["currentFile"], jsonData)
         self.commandState = 0
         self.UpdateRecentFiles(filePath)
+        self.UpdateTitlebar()
         
     def SaveDataToJSON(self, filePath, data):    
         with open(filePath, "w") as file:
@@ -1981,8 +2013,26 @@ class Main(wx.Frame):
         self.GetTopLevelParent().SetStatusText(status)
 
         if event:
-            event.Skip()   
-
+            event.Skip() 
+            
+    def SetupAcceleratorTable(self):
+        self.accelTable = wx.AcceleratorTable([
+            (wx.ACCEL_CTRL, ord('N'), wx.ID_NEW),
+            (wx.ACCEL_CTRL, ord('O'), wx.ID_OPEN),
+            (wx.ACCEL_CTRL, ord('S'), wx.ID_SAVE),
+            (wx.ACCEL_CTRL|wx.ACCEL_SHIFT, ord('S'), wx.ID_SAVEAS),
+            (wx.ACCEL_CTRL, ord('W'), wx.ID_CLOSE),
+            (wx.ACCEL_CTRL, ord('I'), wx.ID_CDROM),
+            (wx.ACCEL_ALT, ord('P'), wx.ID_PREFERENCES),
+            (wx.ACCEL_CTRL, ord('Q'), wx.ID_EXIT),
+            (wx.ACCEL_CTRL, ord('Y'), wx.ID_REDO),
+            (wx.ACCEL_CTRL, ord('Z'), wx.ID_UNDO),
+            (wx.ACCEL_CTRL, ord('I'), self._ids["Import"]),
+            (wx.ACCEL_CTRL, ord('G'), self._ids["group_Add Group"]),
+            (wx.ACCEL_NORMAL, 304, wx.ID_ABOUT), # F1
+          ])
+        self.SetAcceleratorTable(self.accelTable)
+        
     def SetupHotkeys(self):
         """ hook global hotkeys """
         keyboard.unhook_all()
@@ -2212,7 +2262,7 @@ class Main(wx.Frame):
             self._redoStack = []
         elif len(self._undoStack) > n:
             self._undoStack = self._undoStack[len(self._undoStack)-n:]
-            
+        
         self.SetupHotkeys()
         self.UpdateTrayIcon()
         self.UpdateToolbarSize()
