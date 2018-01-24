@@ -1015,7 +1015,6 @@ class Main(wx.Frame):
         img = img.Rescale(width, height, wx.IMAGE_QUALITY_HIGH)
         bmp = wx.Bitmap(img)
         self._tools["Enable Schedule Manager"].SetNormalBitmap(bmp)
-        self.toolbar.Realize()
         
         sendData = {}
         for item, scheds in self._data.items():
@@ -1023,9 +1022,10 @@ class Main(wx.Frame):
                 # continue
             itemText = self.groupList.GetItemText(item)
             sendData[itemText] = scheds
-            
+        self.toolbar.Realize()    
         if not sendData:
-            self.DisableScheduleManager()
+            # so user can briefly see the icon change
+            wx.CallLater(250, self.DisableScheduleManager)
             return
         self._schedManager.SetSchedules(sendData)
         self._schedManager.Start()
@@ -1984,6 +1984,7 @@ class Main(wx.Frame):
             event.Skip()   
 
     def SetupHotkeys(self):
+        """ hook global hotkeys """
         keyboard.unhook_all()
         keyboard.add_hotkey(self._appConfig["toggleSchedManHotkey"], self.ToggleScheduleManager)
             
