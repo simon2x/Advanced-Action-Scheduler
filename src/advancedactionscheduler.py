@@ -1938,14 +1938,15 @@ class Main(wx.Frame):
         logging.info("Saved State To Undo Stack")
         n = self._appConfig["maxUndoCount"]
         if n == 0:
-            return
-        state = self.GetCommandState()
-        self._undoStack.append(state)
-        if len(self._undoStack) > n:
-            del self._undoStack[0]
+            pass
+        else:    
+            state = self.GetCommandState()
+            self._undoStack.append(state)
+            if len(self._undoStack) > n:
+                del self._undoStack[0]
+        self.commandState += 1        
         self.UpdateToolbar()
         self.UpdateTitlebar()
-        self.commandState += 1
     
     def SetGroupTree(self, data):
         """ set the group list tree """
