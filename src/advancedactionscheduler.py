@@ -148,12 +148,13 @@ DEFAULTCONFIG = {
     "loadLastFile": True, # the currently opened schedule file
     "fileList": [], # recently opened schedule files
     "keepFileList": True,
+    "maxUndoCount": 10, # maximum number of undo operations a user can do
     "newProcessPresets": [], # list of saved commands
     "openUrlPresets": [], # list of saved urls
     "onClose": 0, # on close window
     "onTrayIconLeft": 0,
     "onTrayIconLeftDouble": 1,
-    "schedManagerLogCount": 10, # number of logs before clearing table
+    "schedManagerLogCount": 20, # number of logs before clearing table
     "schedManagerSwitchTab": True, # auto switch to Manager tab when schedules enabled
     "showSplashScreen": True,
     "showTrayIcon": True,
@@ -215,6 +216,14 @@ class AboutDialog(wx.Frame):
         
         self.Raise()
         self.Show()
+        
+        self.Bind(wx.EVT_CHAR_HOOK, self.OnChar)
+     
+    def OnChar(self, event):
+        e = event.GetEventObject()
+        keycode = event.GetKeyCode()
+        if keycode == wx.WXK_ESCAPE:
+            self.Destroy()
         
 class SettingsFrame(wx.Frame):
 
@@ -283,6 +292,12 @@ class SettingsFrame(wx.Frame):
         gridBag.Add(self.schedMgrLogCount, pos=(row,1), flag=wx.ALL, border=5)
         
         row += 1
+        lbl = wx.StaticText(panel, label="Maximum Undo History")
+        self.maxUndoCount = wx.SpinCtrl(panel, min=0, max=1000)
+        gridBag.Add(lbl, pos=(row,0), flag=wx.ALL, border=5)
+        gridBag.Add(self.maxUndoCount, pos=(row,1), flag=wx.ALL, border=5)
+        
+        row += 1
         lblSchedMgrHotkey = wx.StaticText(panel, label="Toggle Schedule Manager Hotkey")
         self.schedMgrHotkey = wx.TextCtrl(panel)
         # self.schedMgrHotkey.Bind(wx.EVT_TEXT, self.OnHotkeyText)
@@ -308,6 +323,8 @@ class SettingsFrame(wx.Frame):
         self.SetMaxSize(self.GetSize())
         
         self.SetDefaults()
+        
+        self.Bind(wx.EVT_CHAR_HOOK, self.OnChar)
      
     def GetValue(self):
         data = {}
@@ -320,6 +337,7 @@ class SettingsFrame(wx.Frame):
         data["keepFileList"] = self.chkRecentFiles.GetValue()
         data["schedManagerSwitchTab"] = self.chkSchedMgrSwitch.GetValue()
         data["schedManagerLogCount"] = self.schedMgrLogCount.GetValue()
+        data["maxUndoCount"] = self.maxUndoCount.GetValue()
         data["toggleSchedManHotkey"] = self.schedMgrHotkey.GetValue().upper()
         return data
         
@@ -332,6 +350,12 @@ class SettingsFrame(wx.Frame):
             self.GetParent().UpdateSettingsDict(self.GetValue())
             self.Destroy()
     
+    def OnChar(self, event):
+        e = event.GetEventObject()
+        keycode = event.GetKeyCode()
+        if keycode == wx.WXK_ESCAPE:
+            self.Destroy()
+            
     def OnHotkeyEdit(self, event):
         e = event.GetEventObject()
         keycode = event.GetKeyCode()
@@ -399,6 +423,7 @@ class SettingsFrame(wx.Frame):
             ["keepFileList", self.chkRecentFiles.SetValue, True],
             ["schedManagerSwitchTab", self.chkSchedMgrSwitch.SetValue, True],
             ["schedManagerLogCount", self.schedMgrLogCount.SetValue, 100],
+            ["maxUndoCount", self.maxUndoCount.SetValue, 20],
             ["toggleSchedManHotkey", self.schedMgrHotkey.SetValue, ""]):
             
             try:
@@ -551,6 +576,7 @@ class Main(wx.Frame):
         self._menus = {}
         self._redoStack = []
         self._undoStack = []
+        self._commandState = 0
         self._schedManager = schedulemanager.Manager(self)
         self._taskBarIcon = None
         self.toolbar = None 
@@ -737,6 +763,15 @@ class Main(wx.Frame):
     def taskBarIcon(self, value):
         self._taskBarIcon = value
         
+    @property
+    def commandState(self):
+        return self._commandState
+        
+    @commandState.setter
+    def commandState(self, value):
+        self._commandState = value
+        self.UpdateTitlebar()
+
     def AddLogMessage(self, message):
         """ insert log message as first item to schedule messenger list """
         
@@ -788,9 +823,15 @@ class Main(wx.Frame):
         self.groupList.DeleteAllItems()
         self.schedList.DeleteAllItems()
         self._data = {}
+        
+        self.commandState = 0
+        self._undoStack = []
+        self._redoStack = [] 
+        
         self._appConfig["currentFile"] = False
         self.UpdateScheduleToolbar()
         self.UpdateGroupToolbar()
+        self.UpdateToolbar()
         self.UpdateTitlebar()
         
     def CloseFile(self):
@@ -798,25 +839,27 @@ class Main(wx.Frame):
         self.Raise()
         self.Restore()
         self.Show()
-        dlg = wx.MessageDialog(self,
-                               message="Save file before closing?",
-                               caption="Close File",
-                               style=wx.YES_NO|wx.CANCEL|wx.CANCEL_DEFAULT)
-        ret = dlg.ShowModal()                 
-        if ret == wx.ID_CANCEL:
-            return wx.ID_CANCEL
         
-        if ret == wx.ID_YES:
-            self.SaveData()
-        
-        if self._appConfig["loadLastFile"] == False:
-            self._appConfig["currentFile"] = False # clear
-        if self._appConfig["keepFileList"] == False:
-            self._appConfig["fileList"] = []
-        else: 
-            self._appConfig["fileList"] = self._fileList
-        self.SaveDataToJSON("config.json", self._appConfig)
+        if self._commandState != 0:
+            dlg = wx.MessageDialog(self,
+                                   message="Save file before closing?",
+                                   caption="Close File",
+                                   style=wx.YES_NO|wx.CANCEL|wx.CANCEL_DEFAULT)
+            ret = dlg.ShowModal()                 
+            if ret == wx.ID_CANCEL:
+                return wx.ID_CANCEL
             
+            if ret == wx.ID_YES:
+                self.SaveData()
+            
+            if self._appConfig["loadLastFile"] == False:
+                self._appConfig["currentFile"] = False # clear
+            if self._appConfig["keepFileList"] == False:
+                self._appConfig["fileList"] = []
+            else: 
+                self._appConfig["fileList"] = self._fileList
+
+        self.SaveDataToJSON("config.json", self._appConfig)
         self.ClearUI()
         
     def CreateMenu(self):
@@ -949,12 +992,14 @@ class Main(wx.Frame):
         self._undoStack.append(self.GetCommandState())
         del self._redoStack[-1]
         self.RestoreState(state)
+        self.commandState += 1
         
     def DoUndo(self):
         state = self._undoStack[-1]
         self._redoStack.append(self.GetCommandState())
         del self._undoStack[-1]
         self.RestoreState(state)
+        self.commandState -= 1
         
     def EnableScheduleManager(self):
         # Enable/Disable menu item accordingly
@@ -970,7 +1015,6 @@ class Main(wx.Frame):
         img = img.Rescale(width, height, wx.IMAGE_QUALITY_HIGH)
         bmp = wx.Bitmap(img)
         self._tools["Enable Schedule Manager"].SetNormalBitmap(bmp)
-        self.toolbar.Realize()
         
         sendData = {}
         for item, scheds in self._data.items():
@@ -978,9 +1022,10 @@ class Main(wx.Frame):
                 # continue
             itemText = self.groupList.GetItemText(item)
             sendData[itemText] = scheds
-            
+        self.toolbar.Realize()    
         if not sendData:
-            self.DisableScheduleManager()
+            # so user can briefly see the icon change
+            wx.CallLater(250, self.DisableScheduleManager)
             return
         self._schedManager.SetSchedules(sendData)
         self._schedManager.Start()
@@ -1126,6 +1171,7 @@ class Main(wx.Frame):
             
         self.UpdateTrayIcon()
         self.UpdateToolbarSize()
+        self.UpdateTitlebar()
         wx.CallLater(800, self.Show)
         self.Raise()
         
@@ -1141,8 +1187,6 @@ class Main(wx.Frame):
             self.SaveDataToJSON("config.json", self._appConfig)
             self.UpdateTitlebar()
             
-            # self.menubar.Enable(wx.ID_CLOSE, True)
-            
         except FileNotFoundError:
             logging.error("{0}".format(FileNotFoundError))
             return
@@ -1151,20 +1195,8 @@ class Main(wx.Frame):
             logging.error("{0}".format(json.JSONDecodeError))
             return
             
-        if self._appConfig["keepFileList"] == False:
-            return
-            
-        if filePath in self._fileList:
-            self.menuFile.Delete(self._fileListMenuItems[filePath])
-            del self._fileListMenuItems[filePath]
-            del self._fileList[self._fileList.index(filePath)]
-            
-        self._fileListMenuItems[filePath] = item = wx.MenuItem(id=wx.ID_ANY, text=filePath)
-        self.Bind(wx.EVT_MENU, self.OnRecentFile, item)
-        item.SetHelp("Open File: {0}".format(filePath))
-        self.menuFile.Insert(self.menuFile.GetMenuItemCount()-len(self._fileList)-1, item)
-        self._fileList.insert(0, filePath)
-    
+        self.UpdateRecentFiles(filePath)
+        
     def MoveGroupItemDown(self):
         # valid item selection?
         selection = self.groupList.GetSelection()
@@ -1594,9 +1626,9 @@ class Main(wx.Frame):
                 continue
                 
             item = menu.Append(wx.ID_ANY, label)        
-            if not self.schedManagerBtns[label].IsEnabled():
-                item.Enable(False)
-                continue
+            # if not self.schedManagerBtns[label].IsEnabled():
+                # item.Enable(False)
+                # continue
         menu.Bind(wx.EVT_MENU, self.OnScheduleManagerToolbar)
         self.PopupMenu(menu)    
         
@@ -1855,10 +1887,12 @@ class Main(wx.Frame):
         if file.ShowModal() == wx.ID_CANCEL:
             return
            
-        self._appConfig["currentFile"] = file.GetPath()
+        filePath = file.GetPath()   
+        self._appConfig["currentFile"] = filePath
         self.SaveDataToJSON("config.json", self._appConfig)
         self.SaveDataToJSON(self._appConfig["currentFile"], jsonData)
-        self.UpdateTitlebar()
+        self.commandState = 0
+        self.UpdateRecentFiles(filePath)
         
     def SaveDataToJSON(self, filePath, data):    
         with open(filePath, "w") as file:
@@ -1882,11 +1916,14 @@ class Main(wx.Frame):
         if file.ShowModal() == wx.ID_CANCEL:
             return
         
+        filePath = file.GetPath()
         jsonData = self.GetDataForJSON()
-        self._appConfig["currentFile"] = file.GetPath()
+        self._appConfig["currentFile"] = filePath
         self.SaveDataToJSON("config.json", self._appConfig)
-        self.SaveDataToJSON(file.GetPath(), jsonData)
-        self.UpdateTitlebar()
+        self.SaveDataToJSON(filePath, jsonData)
+        
+        self.commandState = 0
+        self.UpdateRecentFiles(filePath)
         
     def SaveScheduleTreeToData(self):
         """ cache schedule tree to selected group item in data """
@@ -1899,9 +1936,17 @@ class Main(wx.Frame):
             
     def SaveStateToUndoStack(self):
         logging.info("Saved State To Undo Stack")
-        state = self.GetCommandState()
-        self._undoStack.append(state)
+        n = self._appConfig["maxUndoCount"]
+        if n == 0:
+            pass
+        else:    
+            state = self.GetCommandState()
+            self._undoStack.append(state)
+            if len(self._undoStack) > n:
+                del self._undoStack[0]
+        self.commandState += 1        
         self.UpdateToolbar()
+        self.UpdateTitlebar()
     
     def SetGroupTree(self, data):
         """ set the group list tree """
@@ -1939,6 +1984,7 @@ class Main(wx.Frame):
             event.Skip()   
 
     def SetupHotkeys(self):
+        """ hook global hotkeys """
         keyboard.unhook_all()
         keyboard.add_hotkey(self._appConfig["toggleSchedManHotkey"], self.ToggleScheduleManager)
             
@@ -2088,6 +2134,20 @@ class Main(wx.Frame):
 
         self.SaveStateToUndoStack()
             
+    def UpdateRecentFiles(self, filePath):
+        if self._appConfig["keepFileList"] == False:
+            return
+        if filePath in self._fileList:
+            self.menuFile.Delete(self._fileListMenuItems[filePath])
+            del self._fileListMenuItems[filePath]
+            del self._fileList[self._fileList.index(filePath)]
+            
+        self._fileListMenuItems[filePath] = item = wx.MenuItem(id=wx.ID_ANY, text=filePath)
+        self.Bind(wx.EVT_MENU, self.OnRecentFile, item)
+        item.SetHelp("Open File: {0}".format(filePath))
+        self.menuFile.Insert(self.menuFile.GetMenuItemCount()-len(self._fileList)-1, item)
+        self._fileList.insert(0, filePath)
+        
     def UpdateGroupToolbar(self):
         selection = self.groupList.GetSelection()
         state = True
@@ -2146,19 +2206,31 @@ class Main(wx.Frame):
         if self._appConfig["keepFileList"] == False:
             self.ClearRecentFiles()
         
+        n = self._appConfig["maxUndoCount"]
+        if n == 0:
+            self._undoStack = []
+            self._redoStack = []
+        elif len(self._undoStack) > n:
+            self._undoStack = self._undoStack[len(self._undoStack)-n:]
+            
         self.SetupHotkeys()
         self.UpdateTrayIcon()
         self.UpdateToolbarSize()
+        self.UpdateToolbar()
+        self.UpdateTitlebar()
         
     def UpdateTitlebar(self):
+        unsaved = ""
+        if self.commandState != 0:
+            unsaved = "*"
+        
         try:
             _, name = os.path.split(self._appConfig["currentFile"])
-            self.SetTitle("{0} - {1} {2}".format(name, __title__, __version__))
+            self.SetTitle("{0}{1} - {2} {3}".format(unsaved, name, __title__, __version__))
         except:
-            self.SetTitle("{0} {1}".format(__title__, __version__))
+            self.SetTitle("{0}New File.json - {1} {2}".format(unsaved, __title__, __version__))
             
     def UpdateToolbar(self):
-    
         if self._undoStack:
             self.toolbar.EnableTool(wx.ID_UNDO, True)
         else:    
