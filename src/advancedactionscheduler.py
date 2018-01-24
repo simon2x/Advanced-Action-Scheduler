@@ -148,12 +148,13 @@ DEFAULTCONFIG = {
     "loadLastFile": True, # the currently opened schedule file
     "fileList": [], # recently opened schedule files
     "keepFileList": True,
+    "maxUndoCount": 10, # maximum number of undo operations a user can do
     "newProcessPresets": [], # list of saved commands
     "openUrlPresets": [], # list of saved urls
     "onClose": 0, # on close window
     "onTrayIconLeft": 0,
     "onTrayIconLeftDouble": 1,
-    "schedManagerLogCount": 10, # number of logs before clearing table
+    "schedManagerLogCount": 20, # number of logs before clearing table
     "schedManagerSwitchTab": True, # auto switch to Manager tab when schedules enabled
     "showSplashScreen": True,
     "showTrayIcon": True,
@@ -291,6 +292,12 @@ class SettingsFrame(wx.Frame):
         gridBag.Add(self.schedMgrLogCount, pos=(row,1), flag=wx.ALL, border=5)
         
         row += 1
+        lbl = wx.StaticText(panel, label="Maximum Undo History")
+        self.maxUndoCount = wx.SpinCtrl(panel, min=0, max=1000)
+        gridBag.Add(lbl, pos=(row,0), flag=wx.ALL, border=5)
+        gridBag.Add(self.maxUndoCount, pos=(row,1), flag=wx.ALL, border=5)
+        
+        row += 1
         lblSchedMgrHotkey = wx.StaticText(panel, label="Toggle Schedule Manager Hotkey")
         self.schedMgrHotkey = wx.TextCtrl(panel)
         # self.schedMgrHotkey.Bind(wx.EVT_TEXT, self.OnHotkeyText)
@@ -330,6 +337,7 @@ class SettingsFrame(wx.Frame):
         data["keepFileList"] = self.chkRecentFiles.GetValue()
         data["schedManagerSwitchTab"] = self.chkSchedMgrSwitch.GetValue()
         data["schedManagerLogCount"] = self.schedMgrLogCount.GetValue()
+        data["maxUndoCount"] = self.maxUndoCount.GetValue()
         data["toggleSchedManHotkey"] = self.schedMgrHotkey.GetValue().upper()
         return data
         
@@ -415,6 +423,7 @@ class SettingsFrame(wx.Frame):
             ["keepFileList", self.chkRecentFiles.SetValue, True],
             ["schedManagerSwitchTab", self.chkSchedMgrSwitch.SetValue, True],
             ["schedManagerLogCount", self.schedMgrLogCount.SetValue, 100],
+            ["maxUndoCount", self.maxUndoCount.SetValue, 20],
             ["toggleSchedManHotkey", self.schedMgrHotkey.SetValue, ""]):
             
             try:
