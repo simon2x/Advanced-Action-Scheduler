@@ -141,9 +141,8 @@ class Manager:
             logData["Message"] = "OpenURL: {0}, {1}".format(kwargs["url"], kwargs["browser"])  
             
         elif action == "Power":
-            action = kwargs["action"]
-            alert = kwargs["alert"]
-            logData["Message"] = "Power: {0}, {1}".format(action, alert)  
+            logData["Message"] = "Power: {0}, {1}".format(kwargs["action"], kwargs["alert"])
+            self.GetParent().OnPowerAction(kwargs)
 
         elif action == "SwitchWindow":
             kwargs["matches"] = 1
