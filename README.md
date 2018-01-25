@@ -21,11 +21,11 @@ https://github.com/swprojects/Advanced-Action-Scheduler/releases
 - [ ] Linux Support
 - [ ] Improved Dialogs And Options
 - [ ] Implement More Actions
-- [ ] Undo And Redo Operations
-- [ ] Global Hotkeys (mainly to toggle schedule manager)
+- [x] Undo And Redo Operations
+- [x] Global Hotkeys (mainly to toggle schedule manager)
 - [ ] Local Hotkeys
 - [ ] Automatic Startup 
 - [ ] Check For Updates
 - [ ] Importing Other Schedule Files
 - [ ] Support Saving To And Handling Different Formats (SQL)
-
+- [ ] Add copy and paste operations
