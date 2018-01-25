@@ -200,7 +200,16 @@ class PowerAlertDialog(wx.Frame):
         self.center_x, self.center_y = x1 + (x2/2), y1 + (y2/2)
     
     def SetValue(self, kwargs):
+        try:
+            self.timeout = int(kwargs["alert"])
+            if self.timeout < 10:
+                self.timeout = 60
+        except:
+            self.timeout = 60
+         
         self.action = kwargs["action"]
         self.flags = self.actionMsg[self.action][1]
-        self.timeout = int(kwargs["alert"])
+        
         self.timer.Start(1000)
+        
+#

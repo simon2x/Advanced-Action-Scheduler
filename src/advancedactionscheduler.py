@@ -1,4 +1,5 @@
 #!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*
 """
 @author Simon Wu <swprojects@runbox.com>
@@ -21,8 +22,6 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
-from apscheduler.triggers.cron import CronTrigger
-from apscheduler.schedulers.background import BackgroundScheduler
 from ast import literal_eval as make_tuple
 from time import gmtime, strftime
 
@@ -45,8 +44,6 @@ import wx.lib.agw.aui as aui
 from dialogs import *
 import wx.adv
 from wx.lib.scrolledpanel import ScrolledPanel
-from wx.lib.pubsub import setuparg1
-from wx.lib.pubsub import pub
 from wx.lib.agw import hyperlink
 
 import base

@@ -99,14 +99,20 @@ class AddSchedule(wx.Dialog):
 
         sboxSizer.Add(hSizer, 0, wx.ALL, 5)
 
-        hSizerClear = wx.BoxSizer(wx.HORIZONTAL)
-        btn = wx.Button(panel, label="Reset")
-        btn.Bind(wx.EVT_BUTTON, self.OnButtonReset)
-        hSizerClear.Add(btn, 0, wx.ALL|wx.EXPAND, 5)      
+        hSizerClear = wx.BoxSizer(wx.HORIZONTAL)   
         for label in ["Days","Hours","Minutes","Seconds"]:
             btn = wx.Button(panel, label="Clear {0}".format(label), name=label)
             btn.Bind(wx.EVT_BUTTON, self.OnButtonClear)
-            hSizerClear.Add(btn, 0, wx.ALL|wx.EXPAND, 5)      
+            hSizerClear.Add(btn, 0, wx.ALL|wx.EXPAND, 5)  
+            
+        hSizerEvery = wx.BoxSizer(wx.HORIZONTAL)   
+        for label in ["Day","Hour","Minute","Second"]:
+            btn = wx.Button(panel, label="Every {0}".format(label), name=label)
+            btn.Bind(wx.EVT_BUTTON, self.OnButtonSetAll)
+            hSizerEvery.Add(btn, 0, wx.ALL|wx.EXPAND, 5)      
+        
+        btnReset = wx.Button(panel, label="Reset")
+        btnReset.Bind(wx.EVT_BUTTON, self.OnButtonReset)
         
         #-----
         hSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -121,17 +127,13 @@ class AddSchedule(wx.Dialog):
         #add to main sizer
         sizer.Add(sboxSizer, 0, wx.ALL|wx.EXPAND, 2)
         sizer.Add(hSizerClear, 0, wx.ALL|wx.EXPAND, 5)
+        sizer.Add(hSizerEvery, 0, wx.ALL|wx.EXPAND, 5)
+        sizer.Add(btnReset, 0, wx.ALL, 5)
         sizer.Add(hSizer, 0, wx.ALL|wx.EXPAND, 5)
 
         panel.SetSizer(sizer)
-
         w, h = sizer.Fit(self)
-
-        try:
-            self.SetIcon(theme.GetIcon("psu_png"))
-        except:
-            pass
-
+        
     def GetValue(self):
 
         data = []
@@ -220,7 +222,27 @@ class AddSchedule(wx.Dialog):
                 p[q].SetBackgroundColour("default")
                 
         if self.resetValue:
-            self.SetValue(self.resetValue)        
+            self.SetValue(self.resetValue)       
+
+    def OnButtonSetAll(self, event):
+        """ set all buttons on """ 
+        e = event.GetEventObject()
+        label = e.GetLabel()        
+        if "Day" in label:
+            t = self.dayOfWeek
+        elif "Hour" in label:
+            t = self.hours
+        elif "Minute" in label:
+            t = self.mins
+        elif "Second" in label:
+            t = self.secs
+            
+        for btn in t.values():
+            btn.SetName("1")
+            btn.SetBackgroundColour("green")
+                
+        if self.resetValue:
+            self.SetValue(self.resetValue)  
                 
     def OnScheduleNameEdit(self, event):
         e = event.GetEventObject()

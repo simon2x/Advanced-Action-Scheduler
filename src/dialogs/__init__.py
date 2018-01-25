@@ -1,4 +1,9 @@
-from os.path import dirname, basename, isfile
-import glob
-modules = glob.glob(dirname(__file__)+"/*.py")
-__all__ = [basename(f)[:-3] for f in modules if isfile(f)]
+import dialogs.browser
+import dialogs.power
+import dialogs.delay
+import dialogs.mouseabsolute
+import dialogs.mouserelative
+import dialogs.power
+import dialogs.process
+import dialogs.schedule
+import dialogs.window
