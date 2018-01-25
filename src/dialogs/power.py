@@ -119,3 +119,88 @@ class AddPower(wx.Dialog):
         
     def GetValue(self):
         data = []
+        data.append(("action", self.cboxPower.GetValue()))
+        data.append(("alert", self.spinAlert.GetValue()))
+        data.append(("primary", self.chkPrimary.GetValue()))
+        return str(data)
+        
+    def SetValue(self, data):
+        for arg, func, default in (
+            ["action", self.cboxPower.SetValue, "Shutdown"],
+            ["alert", self.spinAlert.SetValue, "60"],
+            ["primary", self.chkPrimary.SetValue, False],
+            ):
+            
+            try:
+                func(data[arg])
+            except Exception as e:
+                print(e)
+                func(default)
+        
+class PowerAlertDialog(wx.Frame):  
+    
+    def __init__(self):                    
+        wx.Frame.__init__(self,
+                          parent=None,
+                          style=wx.SIMPLE_BORDER|wx.STAY_ON_TOP)        
+        
+        self.actionMsg = {
+            "Shutdown": ("Shutting Down", wx.SHUTDOWN_POWEROFF),
+            "Shutdown (force)": ("(Force) Shutting Down", wx.SHUTDOWN_FORCE),
+            "Restart": ("Restarting", wx.SHUTDOWN_REBOOT),
+            "Logoff": ("Logging Off", wx.SHUTDOWN_LOGOFF),
+        }        
+        
+        self.SetTitle("Advanced Action Scheduler: Power")
+        self.panel = panel = wx.Panel(self)    
+        self.sizer = sizer = wx.BoxSizer(wx.VERTICAL)
+        self.message = wx.StaticText(panel, label="")
+        font = wx.Font(15, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, True)
+        self.message.SetFont(font)
+        button = wx.Button(panel, wx.ID_CANCEL, label="Cancel")
+        button.Bind(wx.EVT_BUTTON, self.OnHide)
+        sizer.Add(self.message, 1, wx.ALL|wx.ALIGN_CENTRE, 5)
+        sizer.Add(button, 0, wx.ALL|wx.EXPAND, 5)
+        panel.SetSizerAndFit(sizer)
+        self.Fit()
+        self.Centre()
+        w, h = self.GetSize()
+        self.SetMinSize(self.GetSize())
+        
+        self.Raise()
+        self.Show()
+        self.Center()
+        
+        self.timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
+        
+    def OnHide(self, event):
+        self.Hide()
+        
+    def OnTimer(self, event):
+        self.timeout -= 1
+        message = "{0}: {1} seconds".format(self.actionMsg[self.action][0], self.timeout)
+        self.message.SetLabel(message)
+        if self.timeout == 0:
+            wx.Shutdown(flags=self.flags)
+            self.Hide()
+            
+        self.panel.Fit()
+        self.Fit()
+        self.CentreInRect()
+        
+    def CentreInRect(self):
+        w, h = self.GetSize()
+        x, y = int(self.center_x-(w/2)), int(self.center_y-(h/2))        
+        if self.GetPosition() != (x, y):
+            self.SetPosition((x, y))
+        
+    def SetContainingRect(self, rect):
+        x1, y1, x2, y2 = rect
+        self.center_x, self.center_y = x1 + (x2/2), y1 + (y2/2)
+    
+    def SetValue(self, kwargs):
+        self.action = kwargs["action"]
+        self.flags = self.actionMsg[self.action][1]
+        self.timeout = int(kwargs["alert"])
+        self.timer.Start(1000)
