@@ -6,3 +6,5 @@ src/test.py
 src/schedules.json
 *.xcf
 src/config.json
+src/build/
+src/dist/
