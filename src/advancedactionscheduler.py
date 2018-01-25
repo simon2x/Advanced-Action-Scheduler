@@ -1,4 +1,5 @@
 #!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*
 """
 @author Simon Wu <swprojects@runbox.com>
@@ -43,8 +44,6 @@ import wx.lib.agw.aui as aui
 from dialogs import *
 import wx.adv
 from wx.lib.scrolledpanel import ScrolledPanel
-from wx.lib.pubsub import setuparg1
-from wx.lib.pubsub import pub
 from wx.lib.agw import hyperlink
 
 import base
