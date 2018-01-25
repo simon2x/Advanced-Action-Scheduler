@@ -224,7 +224,7 @@ class AboutDialog(wx.Frame):
         keycode = event.GetKeyCode()
         if keycode == wx.WXK_ESCAPE:
             self.Destroy()
-        
+                          
 class SettingsFrame(wx.Frame):
 
     def __init__(self, parent):
@@ -569,6 +569,8 @@ class Main(wx.Frame):
         self._ids = {}
         self._appConfig = DEFAULTCONFIG 
         self._aboutDialog = None
+        self._powerAction = None
+        self._powerDialog = []
         self._settingsDialog = None
         self._fileList = []
         self._fileListMenuItems = {}
@@ -759,6 +761,11 @@ class Main(wx.Frame):
         self.SetupHotkeys()
         self.SetupAcceleratorTable()
         
+        #
+        self.powerTimer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.OnPowerTimer, self.powerTimer)
+        self.powerTimer.Start(1000)
+        
     def ids(self, value):
         """ return existing ID or create a new ID """
         if value not in self._ids:
@@ -818,6 +825,11 @@ class Main(wx.Frame):
             except:
                 pass
         
+    def CancelPowerAlerts(self):
+        for d in self._powerDialog:
+            d.Close()
+        self._powerDialog = []
+            
     def ClearRecentFiles(self):
         for item in self._fileListMenuItems.values():
             self.menuFile.Delete(item)
@@ -987,7 +999,6 @@ class Main(wx.Frame):
         self._tools["Enable Schedule Manager"].SetLabel("Enable Schedule Manager")
         self._tools["Enable Schedule Manager"].SetShortHelp("Enable Schedule Manager")
         width, height = self.toolbar.GetToolBitmapSize()
-        
         img = wx.Image("icons/enableschedulemanager.png")            
         img = img.Rescale(width, height, wx.IMAGE_QUALITY_HIGH)
         bmp = wx.Bitmap(img)
@@ -998,7 +1009,7 @@ class Main(wx.Frame):
         
         if self.taskBarIcon:
             self.taskBarIcon.SetTrayIcon(running=False)
-        
+            
     def DoRedo(self):
         if self._redoStack == []:
             return
@@ -1018,6 +1029,8 @@ class Main(wx.Frame):
         self.commandState -= 1
         
     def EnableScheduleManager(self):
+        self.CancelPowerAlerts()
+        
         # Enable/Disable menu item accordingly
         self._menus["Disable Schedule Manager"].Enable(True)
         self._menus["Enable Schedule Manager"].Enable(False)
@@ -1034,14 +1047,11 @@ class Main(wx.Frame):
         
         sendData = {}
         for item, scheds in self._data.items():
-            # if self.groupList.GetCheckedState(item) == 0:
-                # continue
             itemText = self.groupList.GetItemText(item)
             sendData[itemText] = scheds
         self.toolbar.Realize()    
         if not sendData:
-            # so user can briefly see the icon change
-            wx.CallLater(250, self.DisableScheduleManager)
+            self.DisableScheduleManager()
             return
         self._schedManager.SetSchedules(sendData)
         self._schedManager.Start()
@@ -1176,8 +1186,8 @@ class Main(wx.Frame):
             else:
                self._appConfig["currentFile"] = False
                
-        if self._appConfig["showSplashScreen"] is True:
-            SplashScreen(800)
+        # if self._appConfig["showSplashScreen"] is True:
+            # SplashScreen(800)
             
         try:
             x, y = make_tuple(self._appConfig["windowSize"])
@@ -1189,6 +1199,7 @@ class Main(wx.Frame):
         self.UpdateToolbarSize()
         self.UpdateTitlebar()
         wx.CallLater(800, self.Show)
+        self.Show()
         self.Raise()
         
     def LoadFile(self, filePath):
@@ -1388,7 +1399,8 @@ class Main(wx.Frame):
         """
         self._appConfig["windowSize"] = str(self.GetSize())
         if self.CloseFile() == wx.ID_CANCEL:
-            return        
+            return
+        self.CancelPowerAlerts()
         self._schedManager.Stop()
         
         try:
@@ -1558,7 +1570,7 @@ class Main(wx.Frame):
         elif id == wx.ID_ABOUT:
             self.ShowCheckForUpdatesDialog()  
         elif  id == wx.ID_EXECUTE:
-            self.EnableScheduleManager() 
+            self.ToggleScheduleManager() 
         elif id == wx.ID_EXIT:
             self.Close()
         elif id == wx.ID_CDROM:
@@ -1586,6 +1598,41 @@ class Main(wx.Frame):
         elif id == self._ids["Remove Group"]:
             self.ShowRemoveGroupDialog()    
     
+    def OnPowerAction(self, kwargs):
+        self._powerAction = kwargs        
+        self.DisableScheduleManager()
+        
+    def OnPowerTimer(self, event):
+        """ 
+        alert the user with notice of impending power action
+        with a always on top dialog on each display/monitor
+        or user specified
+        
+        the user can cancel this action by pressing cancel button,
+        which subsequently destroys any other alerts
+        """
+        if self._powerAction and not self._powerDialog:
+            primary = self._powerAction["primary"]
+            displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
+            for display in displays:
+                if primary is True and not display.IsPrimary():
+                    continue
+                rectDisplay = display.GetGeometry()
+                d = dialogs.power.PowerAlertDialog()
+                d.SetContainingRect(rectDisplay)
+                d.SetValue(self._powerAction)
+                self._powerDialog.append(d)
+            self._powerAction = None
+        
+        cancelAction = None
+        for d in self._powerDialog:
+            if not d.IsShown():
+                cancelAction = True
+                
+        if cancelAction:
+            self.CancelPowerAlerts()
+            self.AddLogMessage({"Message":"User cancelled power action"})
+        
     def OnRecentFile(self, event):
         e = event.GetEventObject()
         id = event.GetId()
