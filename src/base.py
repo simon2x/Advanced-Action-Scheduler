@@ -68,6 +68,8 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
         while (itemIter != item):
             itemIter = self.GetNextItem(itemIter)
             n += 1
+            if not itemIter.IsOk():
+                break
         
         return n
         
@@ -138,7 +140,18 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             item = self.GetNextItem(item)
 
         return idx
-            
+    
+    def GetLastChild(self, item):
+        child = self.GetFirstChild(item)
+        while child.IsOk():
+            child = self.GetNextSibling(child)
+        return child
+        
+    def GetLastSibling(self, item):
+        while self.GetNextSibling(item).IsOk():
+            item = self.GetNextSibling(item)
+        return item
+        
     def GetPreviousSibling(self, item):
         parent = self.GetItemParent(item)
         sib = self.GetNextItem(parent)
@@ -156,6 +169,10 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
         # we stop when item is a sibling
         selectedDepth = self.GetItemDepth(item)
         nextSib = self.GetNextSibling(item)
+        if not nextSib.IsOk():
+            parent = self.GetItemParent(item)
+            nextSib = self.GetNextSibling(parent) #  not actually next sibling
+            
         data = []
         columnCount = self.GetColumnCount()
         depth = selectedDepth
@@ -205,7 +222,12 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             item = self.GetNextItem(item)
 
         return data
-
+    
+    def GetTopLevelParent(self, item):
+        while self.GetItemParent(item) != self.GetRootItem():
+            item = self.GetItemParent(item)
+        return item
+     
     def GetTree(self):
         data = []
         item = self.GetFirstItem()
@@ -292,7 +314,21 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
 
             columns = idxData["columns"]
             if "," not in idx:
-                item = self.InsertItem(self.GetItemParent(previous), previous, columns["0"])
+                try:
+                    # this ensures top level items pasted in correct order
+                    previous = items[str(int(idx)-1)]
+                except:
+                    pass
+                    
+                if previous == -1:
+                    item = self.PrependItem(self.GetItemParent(self.GetSelection()), columns["0"])
+                elif not previous.IsOk():
+                    if self.GetSelection().IsOk():
+                        item = self.AppendItem(self.GetSelection(), columns["0"])
+                    else:    
+                        item = self.AppendItem(self.GetRootItem(), columns["0"])
+                else:
+                    item = self.InsertItem(self.GetItemParent(previous), previous, columns["0"])
             else:
                 parent = idx.split(",")[:-1]
                 parent = ",".join(parent)
@@ -322,8 +358,12 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
         for item in expandedItems:
             self.Expand(item)
     
+    def IsTopLevel(self, item):
+        return self.GetItemParent(item) == self.GetRootItem()
+        
     def SelectItemByOrder(self, n):
         """ step through until we reach the nth item """
+        # print("SelectItemByOrder", n)
         if n is None:
             return
         assert n >= 0, "Must be greater/equal to 0" 
@@ -332,7 +372,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
         itemIter = self.GetFirstItem()
         # if not itemIter.IsOk():
             # return None
-        print(count, n)
+        # print(count, n)
         while n != count:
             itemIter = self.GetNextItem(itemIter)
             count += 1
