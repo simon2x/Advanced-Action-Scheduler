@@ -1,4 +1,3 @@
-#!/usr/bin/python
 #!/usr/bin/python3
 # -*- coding: utf-8 -*
 """
@@ -21,10 +20,8 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
-
-from ast import literal_eval as make_tuple
-from time import gmtime, strftime
-
+import wx
+import base
 import keyboard # global hotkey
 import psutil
 import json
@@ -33,7 +30,6 @@ import dialogs
 import platform
 import sys
 import time
-import wx
 import os
 import os.path
 import subprocess
@@ -46,9 +42,14 @@ import wx.adv
 from wx.lib.scrolledpanel import ScrolledPanel
 from wx.lib.agw import hyperlink
 
-import base
+from ast import literal_eval as make_tuple
+from time import gmtime, strftime
+from copy import deepcopy
+from pprint import pprint
 
-__version__ = 0.1
+
+
+__version__ = [0, 1, 0]
 __title__ = "Advanced Action Scheduler"
 
 PLATFORM = platform.system()
@@ -152,6 +153,7 @@ DEFAULTCONFIG = {
     "onTrayIconLeft": 0,
     "onTrayIconLeftDouble": 1,
     "schedManagerLogCount": 20, # number of logs before clearing table
+    "groupSelectionSwitchTab": True, # auto switch to Schedules tab when group item changed
     "schedManagerSwitchTab": True, # auto switch to Manager tab when schedules enabled
     "showSplashScreen": True,
     "showTrayIcon": True,
@@ -184,7 +186,8 @@ class AboutDialog(wx.Frame):
         link = hyperlink.HyperLinkCtrl(panel, label=g, URL=g)
         grid.Add(link, 1, wx.ALL|wx.EXPAND, 5)
         grid.Add(wx.StaticText(panel, label="Version:"), 0, wx.ALL, 5)
-        grid.Add(wx.StaticText(panel, label=str(__version__)), 0, wx.ALL, 5)
+        version = "v" + ".".join([str(x) for x in __version__])
+        grid.Add(wx.StaticText(panel, label=version), 0, wx.ALL, 5)
         
         sboxSizer1.Add(grid, 1, wx.ALL|wx.EXPAND, 5)
         
@@ -279,6 +282,10 @@ class SettingsFrame(wx.Frame):
         gridBag.Add(self.chkRecentFiles, pos=(row,0), flag=wx.ALL, border=5)
         
         row += 1        
+        self.chkGroupSelectionSwitch = wx.CheckBox(panel, label="Automatically Switch To Schedules Tab On Group Selection")
+        gridBag.Add(self.chkGroupSelectionSwitch, pos=(row,0), flag=wx.ALL, border=5)
+        
+        row += 1        
         self.chkSchedMgrSwitch = wx.CheckBox(panel, label="Automatically Switch To Manager Tab On Enable")
         gridBag.Add(self.chkSchedMgrSwitch, pos=(row,0), flag=wx.ALL, border=5)
         
@@ -325,6 +332,7 @@ class SettingsFrame(wx.Frame):
      
     def GetValue(self):
         data = {}
+        data["groupSelectionSwitchTab"] = self.chkGroupSelectionSwitch.GetValue()
         data["showTrayIcon"] = self.chkShowTray.GetValue()
         data["showSplashScreen"] = self.chkShowSplash.GetValue()
         data["onTrayIconLeft"] = self.cboxTrayLeft.GetSelection()
@@ -419,6 +427,7 @@ class SettingsFrame(wx.Frame):
             ["loadLastFile", self.chkLoadLastFile.SetValue, False],
             ["keepFileList", self.chkRecentFiles.SetValue, True],
             ["schedManagerSwitchTab", self.chkSchedMgrSwitch.SetValue, True],
+            ["groupSelectionSwitchTab", self.chkGroupSelectionSwitch.SetValue, True],
             ["schedManagerLogCount", self.schedMgrLogCount.SetValue, 100],
             ["maxUndoCount", self.maxUndoCount.SetValue, 20],
             ["toggleSchedManHotkey", self.schedMgrHotkey.SetValue, ""]):
@@ -557,18 +566,18 @@ class Main(wx.Frame):
 
     def __init__(self, parent=None):
 
-        self._title = "{0} {1}".format(__title__, __version__)
-       
-        wx.Frame.__init__(self,
-                          parent=parent,
-                          title=self._title)
-        
+        self._title = "{0}".format(__title__)
+        wx.Frame.__init__(self, parent=parent, title=self._title)
+                          
         self._ids = {}
         self._appConfig = DEFAULTCONFIG 
         self._aboutDialog = None
         self._powerAction = None
         self._powerDialog = []
         self._settingsDialog = None
+        self._clipboard = None
+        self._currentSelectionType = None
+        self._currentTreeFocus = None
         self._fileList = []
         self._fileListMenuItems = {}
         self._overrideToolSize = None
@@ -881,6 +890,31 @@ class Main(wx.Frame):
         self.SaveDataToJSON("config.json", self._appConfig)
         self.ClearUI()
         
+    def CopySelection(self):
+    
+        if self._currentSelectionType == "group":
+            selection = self.groupList.GetSelection()
+            index = self.GetGroupListIndex(selection)
+            self._clipboard = {"origin": "group",
+                               "type": "copy",
+                               "schedules": self._data[index],
+                               "name": self.groupList.GetItemText(selection)}
+            self._clipboard["toplevel"] = True
+            
+        elif self._currentSelectionType == "schedule":
+            selection = self.schedList.GetSelection()
+            self._clipboard = {"origin": "schedule",
+                               "type": "copy",
+                               "schedules": self.schedList.GetSubTree(selection),
+                               "name": self.groupList.GetItemText(selection)}
+            if self.schedList.IsTopLevel(selection):
+                self._clipboard["toplevel"] = True
+            else:
+                self._clipboard["toplevel"] = False
+                
+        self._currentSelectionType = None
+        self.UpdateToolbar()
+        
     def CreateMenu(self):
         menubar = wx.MenuBar()
         menuFile = wx.Menu()
@@ -896,7 +930,6 @@ class Main(wx.Frame):
         for item, accelHint, helpStr, wxId in fileMenus:
             self._menus[item] = menuFile.Append(wxId, item+"\t"+accelHint, helpStr)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
-
             if item == "Import":
                 menuFile.AppendSeparator()
             elif item == "Settings":
@@ -914,7 +947,7 @@ class Main(wx.Frame):
         self._menus["Disable Schedule Manager"].Enable(False)
             
         menuHelp = wx.Menu()
-        helpMenus = [("Check for updates", "Check for updates (Not Yet Implemented)", wx.ID_ANY),
+        helpMenus = [("Check for updates", "Check for updates", wx.ID_SETUP),
                      ("About\tF1", "Import Images From Folder", wx.ID_ABOUT)]
         for item, helpStr, wxId in helpMenus:
             self._menus[item] = menuHelp.Append(wxId, item, helpStr)
@@ -940,6 +973,8 @@ class Main(wx.Frame):
             ("Import", "Import", True, None),
             ("Add Group", "Add Group", True, None),
             ("Remove Group", "Remove Selected Group", False, None),
+            ("Cut", "Cut", False, wx.ID_CUT),
+            ("Copy", "Copy", False, wx.ID_COPY),
             ("Undo", "Undo", False, wx.ID_UNDO),
             ("Redo", "Redo", False, wx.ID_REDO),
             ("Enable Schedule Manager", "Enable Schedule Manager", True, wx.ID_EXECUTE),
@@ -962,6 +997,8 @@ class Main(wx.Frame):
             
             if label == "Close":
                 toolbar.AddSeparator() 
+            elif label == "Paste":
+                toolbar.AddSeparator()      
             elif label == "Remove Group":
                 toolbar.AddSeparator()    
             elif label == "Redo":
@@ -978,6 +1015,34 @@ class Main(wx.Frame):
             self.taskBarIcon.RemoveTray()
         self.taskBarIcon = TaskBarIcon(self)
         
+    def CutSelection(self):
+        self.SaveStateToUndoStack()
+        if self._currentSelectionType == "group":
+            selection = self.groupList.GetSelection()
+            index = self.GetGroupListIndex(selection)
+            self._clipboard = {"origin": "group",
+                               "type": "cut",
+                               "schedules": self._data[index],
+                               "name": self.groupList.GetItemText(selection)}
+            self.groupList.DeleteItem(selection)
+            self.schedList.DeleteAllItems()
+            del self._data[index]
+            self._clipboard["toplevel"] = True
+        elif self._currentSelectionType == "schedule":
+            selection = self.schedList.GetSelection()
+            self._clipboard = {"origin": "schedule",
+                               "type": "cut",
+                               "schedules": self.schedList.GetSubTree(selection),
+                               "name": self.groupList.GetItemText(selection)}
+            if self.schedList.IsTopLevel(selection):
+                self._clipboard["toplevel"] = True
+            else:
+                self._clipboard["toplevel"] = False
+            self.schedList.DeleteItem(selection)
+            
+        self._currentSelectionType = None
+        self.UpdateToolbar()
+            
     def DeleteScheduleItem(self):   
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
@@ -1006,6 +1071,25 @@ class Main(wx.Frame):
         
         if self.taskBarIcon:
             self.taskBarIcon.SetTrayIcon(running=False)
+         
+    def DoPaste(self, append=0):
+        assert self._clipboard != None
+        
+        clip = self._clipboard
+        item = None
+        if self._currentTreeFocus == "group":                    
+            self.groupList.GetSelection()
+            name, schedules = clip["name"], clip["schedules"]
+            try:
+                name = name.split(DELIMITER)[0]
+            except:
+                pass
+            item = self.ShowAddGroupDialog(name, "Paste Contents Into New Group",
+                                           schedules, append)
+                                           
+        if clip["type"] == "cut" and item is not None:
+            self._clipboard = None
+            self.UpdateToolbar()
             
     def DoRedo(self):
         if self._redoStack == []:
@@ -1060,6 +1144,18 @@ class Main(wx.Frame):
         if self.taskBarIcon:
             self.taskBarIcon.SetTrayIcon(running=True)    
             
+    def ExtractContentsFromSchedules(self, schedules):
+        """"""
+        result = {}
+        for (index, itemData) in schedules:
+            if "," not in index:
+                n = int(index)
+                result[n] = []
+                continue
+            newIndex = ",".join(index.split(",")[1:])
+            result[n].append((newIndex, itemData))
+        return result
+    
     def GetAppConfig(self):
         return self._appConfig
         
@@ -1163,6 +1259,26 @@ class Main(wx.Frame):
         data = self.schedList.GetTree()
         return data
     
+    def GetUniqueSchedules(self, schedules):
+        """ rename names in tree structure if schedule already exists """
+        schedules = deepcopy(schedules)
+        result = []
+        schedNames = self.GetScheduleNames()
+        for (index, itemData) in schedules:
+            if "," not in index:
+                name, data = itemData["columns"]["0"].split(DELIMITER)
+                n = 1
+                newName = name
+                while newName in schedNames:
+                    newName = name + "_%d" % n
+                    n += 1
+                schedNames.append(newName)
+                itemData["columns"]["0"] = newName + DELIMITER + data 
+                result.append((index, itemData))
+                continue
+            result.append((index, itemData))
+        return result
+        
     def LoadConfig(self):
         """ load application config and restore config settings """
         try:
@@ -1183,8 +1299,8 @@ class Main(wx.Frame):
             else:
                self._appConfig["currentFile"] = False
                
-        # if self._appConfig["showSplashScreen"] is True:
-            # SplashScreen(800)
+        if self._appConfig["showSplashScreen"] is True:
+            SplashScreen(800)
             
         try:
             x, y = make_tuple(self._appConfig["windowSize"])
@@ -1195,7 +1311,7 @@ class Main(wx.Frame):
         self.UpdateTrayIcon()
         self.UpdateToolbarSize()
         self.UpdateTitlebar()
-        wx.CallLater(800, self.Show)
+        wx.CallLater(900, self.Show)
         self.Show()
         self.Raise()
         
@@ -1461,6 +1577,35 @@ class Main(wx.Frame):
         self.schedList.Expand(newItem)
         self.schedList.SetFocus()
                
+    def OnGroupContextMenu(self, event):
+        menu = wx.Menu()
+        subMenu = wx.Menu()  
+        pastes = []
+        if self._clipboard and self._clipboard["toplevel"] is True:
+            pastes = ["Paste As New Group"]
+            if self.groupList.GetSelection().IsOk():
+                pastes.extend(["Paste Before", "Paste After", "Paste Into Group"])
+            for label in pastes:
+                item = subMenu.Append(wx.ID_ANY, label)
+            
+        for label in ["Edit","Add Group","","Up","Down","Toggle","","Delete"]:
+            if not label:
+                menu.AppendSeparator()
+                continue
+            if label == "Add Group":
+                if self.groupList.GetSelection().IsOk():
+                    item = menu.Append(wx.ID_ANY, "Cut")  
+                    item = menu.Append(wx.ID_ANY, "Copy")  
+                if self._clipboard and pastes != []:
+                    item = menu.AppendSubMenu(subMenu, "Paste")
+            
+            item = menu.Append(wx.ID_ANY, label)        
+            if not self.groupBtns[label].IsEnabled():
+                item.Enable(False)
+                continue
+        menu.Bind(wx.EVT_MENU, self.OnGroupToolBar)
+        self.PopupMenu(menu)
+        
     def OnGroupItemChecked(self, event):
         return
         
@@ -1512,7 +1657,12 @@ class Main(wx.Frame):
             
     def OnGroupItemSelectionChanged(self, event=None):
         """ update group buttons and schedule list """
+        self._currentTreeFocus = "group"
+        if self._appConfig["groupSelectionSwitchTab"] is True:
+            self.notebook.SetSelection(0)
+        
         self.UpdateGroupToolbar()
+        self.UpdateToolbar()
         
         groupSel = self.groupList.GetSelection()
         for item, data in self._data.items():
@@ -1540,19 +1690,26 @@ class Main(wx.Frame):
 
         if name == "Add Group":
             self.ShowAddGroupDialog()
-                
+        elif name == "Copy":
+            self.CopySelection()    
+        elif name == "Cut":
+            self.CutSelection()      
         elif name == "Delete":
-            self.ShowRemoveGroupDialog()  
-            
+            self.ShowRemoveGroupDialog() 
         elif name == "Down":
             self.MoveGroupItemDown()
-            
         elif name == "Edit":
             self.OnGroupItemEdit()
-            
+        elif name == "Paste After":
+            self.DoPaste(append=2)    
+        elif name == "Paste As New Group":
+            self.DoPaste(append=0)
+        elif name == "Paste Before":
+            self.DoPaste(append=1)
+        elif name == "Paste Into Group":
+            self.PasteIntoGroup(append=0)
         elif name == "Toggle":
             self.ToggleGroupSelection()
-            
         elif name == "Up":
             self.MoveGroupItemUp()   
             
@@ -1563,8 +1720,12 @@ class Main(wx.Frame):
         if id == wx.ID_ABOUT:
             self.ShowAboutDialog()
         elif id == wx.ID_CLOSE:
-            self.CloseFile()  
-        elif id == wx.ID_ABOUT:
+            self.CloseFile()
+        elif id == wx.ID_COPY:
+            self.CopySelection()     
+        elif id == wx.ID_CUT:
+            self.CutSelection()    
+        elif id == wx.ID_SETUP:
             self.ShowCheckForUpdatesDialog()  
         elif  id == wx.ID_EXECUTE:
             self.ToggleScheduleManager() 
@@ -1641,43 +1802,58 @@ class Main(wx.Frame):
         self.CloseFile()    
         self.LoadFile(filePath)
         
-    def OnGroupContextMenu(self, event):
-        menu = wx.Menu()
-        subMenu = wx.Menu()
-        if self.cboxFunctions.IsEnabled():
-            for label in FUNCTIONS:
-                item = subMenu.Append(wx.ID_ANY, label)
-            
-        for label in ["Edit", "Add Group", "", "Up", "Down",
-                      "Toggle", "", "Delete"]:
-            if not label:
-                menu.AppendSeparator()
-                continue
-                
-            item = menu.Append(wx.ID_ANY, label)        
-            if not self.groupBtns[label].IsEnabled():
-                item.Enable(False)
-                continue
-        menu.Bind(wx.EVT_MENU, self.OnGroupToolBar)
-        self.PopupMenu(menu)
-        
     def OnScheduleContextMenu(self, event):
         menu = wx.Menu()
-        subMenu = wx.Menu()
+        self._currentSelectionType = "schedule"
+        subMenu = wx.Menu()            
+        schedSel = self.schedList.GetSelection()
+        pastes = []
+        if self._clipboard:
+            print(self._clipboard["toplevel"])
+            if schedSel.IsOk():
+                if self._clipboard["toplevel"] is False and not self.schedList.IsTopLevel(schedSel):
+                    if self._clipboard["origin"] == "schedule":
+                        pastes.extend(["Paste Before","Paste After","Paste Into"])
+                    pastes.append("Paste Append")
+                elif self._clipboard["toplevel"] is False and self.schedList.IsTopLevel(schedSel):
+                    pastes.append("Paste Into")
+                elif self._clipboard["toplevel"] is True and self.schedList.IsTopLevel(schedSel):
+                    pastes.extend(["Paste Before","Paste After"])
+                    if self._clipboard["origin"] == "schedule":
+                        pastes.append("Paste Into")
+                    pastes.append("Paste Append")
+                elif self._clipboard["toplevel"] is True and not self.schedList.IsTopLevel(schedSel):
+                    pastes.append("Paste Append")
+            else:        
+                pastes.append("Paste Append")
+            for label in pastes:
+                item = subMenu.Append(wx.ID_ANY, label)
+                    
+        subMenuFunctions = wx.Menu()
         if self.cboxFunctions.IsEnabled():
             for label in FUNCTIONS:
-                item = subMenu.Append(wx.ID_ANY, label)
+                item = subMenuFunctions.Append(wx.ID_ANY, label)
             
         for label in ["Edit", "Add Schedule", "", "Up", "Down",
                       "Toggle", "", "Delete"]:
             if not label:
                 menu.AppendSeparator()
                 continue
-            if label == "Add Schedule":
-                item = menu.AppendSubMenu(subMenu, "Add Function")
+            if label == "Add Schedule":                        
+                item = menu.AppendSubMenu(subMenuFunctions, "Add Function")
                 if not self.cboxFunctions.IsEnabled():
                     item.Enable(False)
-            item = menu.Append(wx.ID_ANY, label)        
+                    
+            item = menu.Append(wx.ID_ANY, label)  
+
+            if label == "Add Schedule":
+                if self.schedList.GetSelection().IsOk():
+                    menu.AppendSeparator()
+                    item = menu.Append(wx.ID_ANY, "Cut")  
+                    item = menu.Append(wx.ID_ANY, "Copy")  
+                if self._clipboard:
+                    item = menu.AppendSubMenu(subMenu, "Paste")
+                    
             if not self.schedBtns[label].IsEnabled():
                 item.Enable(False)
                 continue
@@ -1763,22 +1939,26 @@ class Main(wx.Frame):
 
         if name == "Add Function":
             self.OnComboboxFunction()
-
         elif name == "Add Schedule":
             self.ShowAddScheduleDialog()
-                
+        elif name == "Copy":
+            self.CopySelection()
+        elif name == "Cut":
+            self.CutSelection()
         elif name == "Delete":
             self.DeleteScheduleItem()   
-            
         elif name == "Down":
             self.MoveScheduleItemDown()
-            
         elif name == "Edit":
             self.OnScheduleItemEdit()
-            
-        elif name == "Toggle":
-            self.ToggleScheduleSelection()
-            
+        elif name == "Paste Before":
+            self.PasteIntoGroup(append=1)
+        elif name == "Paste After":
+            self.PasteIntoGroup(append=2)
+        elif name == "Paste Append":
+            self.PasteIntoGroup(append=0)
+        elif name == "Paste Into":
+            self.PasteIntoGroup(append=3)
         elif name == "Up":
             self.MoveScheduleItemUp()   
             
@@ -1797,18 +1977,17 @@ class Main(wx.Frame):
         self.OnScheduleItemEdit(None)        
         
     def OnScheduleTreeSelectionChanged(self, event=None):
-    
         """ update the schedule item information """
-
         selection = self.schedList.GetSelection()
-       
+        self._currentTreeFocus = "group"
         try:
             text = self.schedList.GetItemText(selection)
             self.infoSched.SetValue(text)
         except:
             self.infoSched.SetValue("")
             
-        self.UpdateScheduleToolbar()    
+        self.UpdateScheduleToolbar()   
+        self.UpdateToolbar()
             
     def OnScheduleTreeItemChecked(self, event):
         selection = self.schedList.GetSelection()
@@ -1828,15 +2007,13 @@ class Main(wx.Frame):
         e = event.GetEventObject()
         id = event.GetId()
         label = e.GetLabel(id)
-        print("ada",label)
-        # tool = e.FindById(id)
-        # label = tool.GetLabel()
-        # logging.info("OnToolBar event: %s" % label)
 
         if label == "Add Group":
             self.ShowAddGroupDialog()
         elif label == "Close":
             self.CloseFile()    
+        elif label == "Cut":
+            self.CutSelection()
         elif label == "Disable Schedule Manager":
             self.DisableScheduleManager()
         elif label == "Enable Schedule Manager":
@@ -1890,6 +2067,83 @@ class Main(wx.Frame):
         _, file = os.path.split(path)
         self.LoadFile(path)
         
+    def PasteIntoGroup(self, append=0):
+        assert self._clipboard != None
+        self.SaveStateToUndoStack()
+        self.ClearRedoStack()
+        
+        clip = self._clipboard
+        name, schedules, origin = clip["name"], clip["schedules"], clip["origin"]
+        selection = self.groupList.GetSelection()
+        schedSel = self.schedList.GetSelection()
+        index = self.GetGroupListIndex(selection)
+        
+        # no items in this group
+        if not self.schedList.GetFirstItem().IsOk():
+            self.SetScheduleTree(schedules)
+            self._data[index] = schedules
+        
+        # append
+        elif append == 0 and clip["toplevel"] is True:
+            if schedSel.IsOk():
+                toplevel = self.schedList.GetTopLevelParent(schedSel)
+                previous = self.schedList.GetLastSibling(toplevel)
+            else:
+                previous = self.schedList.GetLastChild(self.schedList.GetRootItem())
+            schedules = self.GetUniqueSchedules(schedules)
+            newItem = self.schedList.InsertSubTree(previous, schedules)
+            
+        # insert schedule
+        elif append == 1 and clip["toplevel"] is True:
+            toplevel = self.schedList.GetTopLevelParent(schedSel)
+            previous = self.schedList.GetPreviousSibling(toplevel)
+            schedules = self.GetUniqueSchedules(schedules)
+            newItem = self.schedList.InsertSubTree(previous, schedules)
+         
+        # insert schedule after 
+        elif append == 2 and clip["toplevel"] is True:
+            toplevel = self.schedList.GetTopLevelParent(schedSel)
+            schedules = self.GetUniqueSchedules(schedules)
+            newItem = self.schedList.InsertSubTree(toplevel, schedules)
+            
+        # append schedule contents inside another item 
+        elif append == 3 and clip["toplevel"] is True:
+            toplevel = self.schedList.GetTopLevelParent(schedSel)
+            last = self.schedList.GetLastChild(schedSel)
+            extract = self.ExtractContentsFromSchedules(schedules)
+            for n in sorted(extract.keys()):
+                e = extract[n]
+                self.schedList.InsertSubTree(last, e)
+                
+        # append
+        elif append == 0 and clip["toplevel"] is False:
+            previous = self.schedList.GetLastSibling(schedSel)
+            newItem = self.schedList.InsertSubTree(previous, schedules)
+            
+        # insert schedule
+        elif append == 1 and clip["toplevel"] is False:
+            previous = self.schedList.GetPreviousSibling(schedSel)
+            newItem = self.schedList.InsertSubTree(previous, schedules)
+         
+        # insert schedule after 
+        elif append == 2 and clip["toplevel"] is False:
+            newItem = self.schedList.InsertSubTree(schedSel, schedules)
+            
+        # append schedule contents inside another item 
+        elif append == 3 and clip["toplevel"] is False:
+            child = self.schedList.GetFirstChild(schedSel)
+            if not child.IsOk():
+                self.schedList.InsertSubTree(child, schedules)
+            else:    
+                last = self.schedList.GetLastChild(child)
+                self.schedList.InsertSubTree(last, schedules)
+        
+        if clip["type"] == "cut":
+            self._clipboard = None
+            self.UpdateToolbar()
+            
+        self._data[index] = self.GetScheduleTree()
+        
     def PrependSubTree(self, previous, data):
         """ insert sub tree before item """
 
@@ -1932,6 +2186,7 @@ class Main(wx.Frame):
             tree.Expand(item)
     
     def RestoreState(self, state):
+        # print("Restore State", state)
         self._data = {}
         self.groupList.DeleteAllItems()
         self.schedList.DeleteAllItems()
@@ -2011,7 +2266,7 @@ class Main(wx.Frame):
             self._data[groupSel] = schedules
             
     def SaveStateToUndoStack(self):
-        logging.info("Saved State To Undo Stack")
+        logging.info("Save State To Undo Stack")
         n = self._appConfig["maxUndoCount"]
         if n == 0:
             pass
@@ -2088,20 +2343,33 @@ class Main(wx.Frame):
             self._aboutDialog.Bind(wx.EVT_CLOSE, self.OnAboutDialogClose)
         self._aboutDialog.Show()    
             
-    def ShowAddGroupDialog(self):   
-        m = "Group Name:"
+    def ShowAddGroupDialog(self, uid=None, caption="Add Group", schedules=[], append=0):
+        """ 
+        optional to pass schedules/custom caption. In cases, such as copy and paste
+        where we use this dialog
         
-        # find unique group name
-        i = 1
-        b = "group_"
-        uid = b + str(i)
+        append option: 0 = append, 1 = before selected item, 2 = after selected item
+        """
+        m = "Group Name:"
         groupNames = self.GetGroupNames()
-        while uid in groupNames:
-            i += 1
+        if uid is None:
+            # find unique group name
+            i = 1
+            b = "group_"
             uid = b + str(i)
-                
+            while uid in groupNames:
+                i += 1
+                uid = b + str(i)
+        else:
+            i = 1
+            b = uid
+            uid = b
+            while uid in groupNames:
+                uid = b + "_%d" % i
+                i += 1
+                        
         while True:            
-            dlg = wx.TextEntryDialog(self, message=m, caption="Add Group", value=uid)
+            dlg = wx.TextEntryDialog(self, message=m, caption=caption, value=uid)
             ret = dlg.ShowModal()
             if ret == wx.ID_CANCEL:
                 return
@@ -2117,16 +2385,30 @@ class Main(wx.Frame):
 
             self.SaveStateToUndoStack()
             newName = dlg.GetValue()
-            newItem = self.groupList.AppendItemToRoot(newName)
+            if append == 0: # append
+                newItem = self.groupList.AppendItemToRoot(newName)
+            elif append == 1: # paste before
+                selection = self.groupList.GetSelection()
+                previous = self.groupList.GetPreviousSibling(selection)
+                if previous == -1:
+                    newItem = self.groupList.PrependItem(self.groupListRoot, newName)
+                else:    
+                    newItem = self.groupList.InsertItem(self.groupListRoot, previous, newName)
+            elif append == 2: # paste after
+                selection = self.groupList.GetSelection()
+                newItem = self.groupList.InsertItem(self.groupListRoot, selection, newName)
+                
             self.schedList.DeleteAllItems()
 
-            self._data[newItem] = []
+            self._data[newItem] = schedules
+            self.OnGroupItemSelectionChanged()
+            self.SetScheduleTree(schedules)
 
             self.groupList.Select(newItem)
             self.groupList.SetFocus()
             
             self.ClearRedoStack()
-            return
+            return newItem
             
     def ShowAddScheduleDialog(self):   
     
@@ -2159,10 +2441,9 @@ class Main(wx.Frame):
         self.SaveScheduleTreeToData()
         
     def ShowCheckForUpdatesDialog(self):
-        message = "Not yet implemented"
-        dlg = wx.MessageDialog(self,
-                               message,
-                               caption="Checking for updates...")
+        print("Checking For Updates...")
+        import updatechecker
+        dlg = updatechecker.CheckForUpdates(self, __version__)
         dlg.ShowModal()
         
     def ShowImportDialog(self):
@@ -2171,6 +2452,7 @@ class Main(wx.Frame):
                                message,
                                caption="Import Schedule File")
         dlg.ShowModal()
+        
         
     def ShowRemoveGroupDialog(self):
         groupIdx = self.GetGroupListIndex(self.groupList.GetSelection())
@@ -2247,7 +2529,9 @@ class Main(wx.Frame):
         state = True
         if not selection.IsOk():
             state = False
-        
+            self._currentSelectionType = None
+        else:    
+            self._currentSelectionType = "group"
         for label, btn in self.groupBtns.items():
             if label == "Add Group":
                 btn.Enable()
@@ -2271,9 +2555,11 @@ class Main(wx.Frame):
                 btn.Disable()
             # stop user from being able add function     
             self.cboxFunctions.Disable()
-            self.btnAddFunction.Disable()    
+            self.btnAddFunction.Disable()   
+            self._currentSelectionType = None
             return
-        
+        else:    
+            self._currentSelectionType = "schedule"
         # enable user to add function     
         self.cboxFunctions.Enable()
         self.btnAddFunction.Enable()
@@ -2320,11 +2606,23 @@ class Main(wx.Frame):
         
         try:
             _, name = os.path.split(self._appConfig["currentFile"])
-            self.SetTitle("{0}{1} - {2} {3}".format(unsaved, name, __title__, __version__))
+            self.SetTitle("{0}{1} - {2}".format(unsaved, name, __title__))
         except:
-            self.SetTitle("{0}New File.json - {1} {2}".format(unsaved, __title__, __version__))
+            self.SetTitle("{0}New File.json - {1}".format(unsaved, __title__))
             
     def UpdateToolbar(self):
+        if self._currentSelectionType:
+            self.toolbar.EnableTool(wx.ID_CUT, True)
+            self.toolbar.EnableTool(wx.ID_COPY, True)
+        elif not self.groupList.GetSelection().IsOk():
+            self.toolbar.EnableTool(wx.ID_CUT, False)
+            self.toolbar.EnableTool(wx.ID_COPY, False)
+            
+        if self._clipboard:
+            self.toolbar.EnableTool(wx.ID_PASTE, True)
+        else:
+            self.toolbar.EnableTool(wx.ID_PASTE, False)
+            
         if self._undoStack:
             self.toolbar.EnableTool(wx.ID_UNDO, True)
         else:    
