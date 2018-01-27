@@ -567,13 +567,74 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         self.parent.Raise()
         self.parent.SetFocus()
             
+class ToolTip(wx.Frame):  
+    
+    def __init__(self, parent):                    
+        style = wx.SIMPLE_BORDER|wx.STAY_ON_TOP|wx.FRAME_NO_TASKBAR
+        wx.Frame.__init__(self, parent=parent, style=style)        
+        
+        self.panel = panel = wx.Panel(self)    
+        self.sizer = sizer = wx.BoxSizer(wx.VERTICAL)
+        self._message = wx.StaticText(panel, label="")
+        self._message.SetFont(self.font)
+        
+        sizer.Add(self._message, 1, wx.ALL|wx.ALIGN_CENTRE, 5)
+        panel.SetSizerAndFit(sizer)
+        self.Fit()
+        self.Centre()
+        w, h = self.GetSize()
+        self.SetMinSize(self.GetSize())
+        
+        self.timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
+        
+        self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
+        
+        self.SetBackgroundColour("yellow")
+    
+    @property
+    def font(self):
+        return wx.Font(8, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False)
+        
+    @property    
+    def message(self):
+        return self._message
+        
+    @message.setter    
+    def message(self, value):
+        self.SetPosition(wx.GetMousePosition()+(25,15))
+        self._message.SetLabel(value)
+        self.panel.Fit()
+        self.Fit()
+        self.Show()
+        # self.Raise()
+        self.trans = 70
+        self.coolDown = False
+        self.SetTransparent(self.trans)
+        self.timer.Start(100)
+        
+    def OnLeftUp(self, event):
+        self.Hide()
+        self.timer.Stop()
+    
+    def OnTimer(self, event):
+        if self.coolDown is True:
+            self.trans -= 5
+            if self.trans == 50:
+                self.Hide()
+                self.timer.Stop()
+        else:        
+            self.trans += 10
+        self.SetTransparent(self.trans)
+        
+        
 class Main(wx.Frame):
 
     def __init__(self, parent=None):
 
         self._title = "{0}".format(__title__)
         wx.Frame.__init__(self, parent=parent, title=self._title)
-                          
+                                  
         self._ids = {}
         self._appConfig = DEFAULTCONFIG 
         self._aboutDialog = None
@@ -594,6 +655,7 @@ class Main(wx.Frame):
         self._schedManager = schedulemanager.Manager(self)
         self._taskBarIcon = None
         self.toolbar = None 
+        self.toolTip = ToolTip(self)
         
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_SIZE, self.OnSize)
