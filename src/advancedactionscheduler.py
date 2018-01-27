@@ -1077,7 +1077,26 @@ class Main(wx.Frame):
         toolbar.Realize()
         self.toolbar = toolbar
         self.SetToolBar(toolbar)
-
+        
+    def CreateToolbarBitmaps(self):
+        for label in ["New", "Open", "Save", "Save As...", "Close",
+                      "Import", "Add Group", "Remove Group", 
+                      "Remove Group", "Cut", "Copy", "Paste",
+                      "Undo", "Redo", "Enable Schedule Manager",
+                      "Disable Schedule Manager", "Settings"]:
+            for size in [16,32,48,64,128,256]:
+                # print(label)
+                img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "").replace(".","")))
+                img.Rescale(size,size, wx.IMAGE_QUALITY_HIGH)
+                bmp = wx.Bitmap(img)
+                
+                try:
+                    self._toolbarBitmaps[size]
+                except:
+                    self._toolbarBitmaps[size] = {}
+                    
+                self._toolbarBitmaps[size][label] = bmp
+    
     def CreateTrayIcon(self):   
         if self.taskBarIcon:
             self.taskBarIcon.RemoveTray()
