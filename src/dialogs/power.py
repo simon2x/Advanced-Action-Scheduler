@@ -15,7 +15,9 @@ import sys
 import time
 import wx
 import base
-
+import platform
+PLATFORM = platform.system()
+    
 class AddPower(wx.Dialog):
 
     def __init__(self, parent, title="Add Power Action"):
@@ -39,9 +41,9 @@ class AddPower(wx.Dialog):
         row = 0
         lblFunction = wx.StaticText(panel, label="Power action:")
         choices = ["Shutdown",
-                   "Shutdown (Force)", 
-                   "Restart",
-                   "Logoff"]
+                   "Restart"]
+        if PLATFORM == "Windows":
+            choices.extend(["Shutdown (Force)", "Logoff"])
         self.cboxPower = wx.ComboBox(panel, choices=choices, style=wx.CB_READONLY)
         self.cboxPower.SetSelection(0)
         grid.Add(lblFunction, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
