@@ -1683,7 +1683,7 @@ class Main(wx.Frame):
             n += 1
             itm = self.schedList.GetNextItem(itm)
             
-        self._data[groupSel].insert(n, (idx, {'columns': {"0": value}, 
+        self._data[groupSel]["schedules"].insert(n, (idx, {'columns': {"0": value}, 
                                               'expanded': False, 
                                               'selected': True, 
                                               'checked': 1}))
@@ -2088,10 +2088,10 @@ class Main(wx.Frame):
                 
         idx = self.schedList.GetItemIndex(selection)
         groupSel = self.groupList.GetSelection()
-        for n, (j, k) in enumerate(self._data[groupSel]):
+        for n, (j, k) in enumerate(self._data[groupSel]["schedules"]):
             if not j == idx:
                 continue 
-            self._data[groupSel][n][1]["columns"]["0"] = value
+            self._data[groupSel]["schedules"][n][1]["columns"]["0"] = value
             break
           
         self.schedList.SetFocus()
