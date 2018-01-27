@@ -157,9 +157,9 @@ class PowerAlertDialog(wx.Frame):
         self.panel = panel = wx.Panel(self)    
         self.sizer = sizer = wx.BoxSizer(wx.VERTICAL)
         self.message = wx.StaticText(panel, label="")
-        font = wx.Font(15, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, True)
-        self.message.SetFont(font)
-        button = wx.Button(panel, wx.ID_CANCEL, label="Cancel")
+        self.message.SetFont(self.font)
+        button = wx.Button(panel, wx.ID_CANCEL, label="Cancel", style=wx.SUNKEN_BORDER)
+        button.SetFont(self.buttonFont)
         button.Bind(wx.EVT_BUTTON, self.OnHide)
         sizer.Add(self.message, 1, wx.ALL|wx.ALIGN_CENTRE, 5)
         sizer.Add(button, 0, wx.ALL|wx.EXPAND, 5)
@@ -169,12 +169,26 @@ class PowerAlertDialog(wx.Frame):
         w, h = self.GetSize()
         self.SetMinSize(self.GetSize())
         
+        colour = wx.Colour(240, 240, 240)
+        self.SetBackgroundColour(colour)
+        self.panel.SetBackgroundColour(colour)
+        button.SetBackgroundColour(colour)
+        
         self.Raise()
         self.Show()
         self.Center()
         
         self.timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
+        # self.SetTransparent(100)
+        
+    @property
+    def font(self):
+        return wx.Font(14, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False)
+     
+    @property
+    def buttonFont(self):
+        return wx.Font(9, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False)
         
     def OnHide(self, event):
         self.Hide()

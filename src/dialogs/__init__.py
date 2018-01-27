@@ -1,4 +1,5 @@
 import dialogs.browser
+import dialogs.control
 import dialogs.power
 import dialogs.delay
 import dialogs.mouseabsolute
