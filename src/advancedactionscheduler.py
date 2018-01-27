@@ -129,6 +129,7 @@ RESERVEDHOTKEYS = [
  
 FUNCTIONS = [
     "CloseWindow",
+    "Control",
     "Delay",
     # "KillProcess",
     "IfWindowOpen",
@@ -1286,6 +1287,8 @@ class Main(wx.Frame):
 
         if label == "CloseWindow":
             dlg = dialogs.window.WindowDialog(self, title="Close Window")
+        elif label == "Control":
+            dlg = dialogs.control.AddControl(self)
         elif label == "Delay":
             dlg = dialogs.delay.AddDelay(self)
         elif label == "IfWindowNotOpen":
