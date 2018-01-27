@@ -57,6 +57,11 @@ if PLATFORM == "Windows":
     pass
 elif PLATFORM == "Linux":
     pass
+    
+# switch to applications directory
+full_path = os.path.realpath(__file__)
+path, filename = os.path.split(full_path)
+os.chdir(path)
 
 #----- logging -----#
 logging.basicConfig(level=logging.INFO)
