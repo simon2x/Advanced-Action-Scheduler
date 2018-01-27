@@ -85,7 +85,7 @@ class Manager:
         
         if action == "CloseWindow":
             actman.CloseWindow(kwargs)
-            logData["Message"] = "SwitchWindow: {0}".format(kwargs["window"])  
+            logData["Message"] = "CloseWindow: {0}".format(kwargs["window"])  
             
         elif action == "Delay":
             delay = kwargs["delay"]
