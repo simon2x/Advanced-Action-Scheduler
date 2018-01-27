@@ -661,6 +661,7 @@ class Main(wx.Frame):
         self.Bind(wx.EVT_SIZE, self.OnSize)
         #-----
         self.CreateMenu()
+        self.CreateToolbarBitmaps()
         self.CreateToolbar()
         self.CreateStatusBar()
         self.SetIcon(wx.Icon("icons/icon.png"))
