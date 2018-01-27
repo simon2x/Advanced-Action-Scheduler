@@ -301,6 +301,48 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
 
         return data
 
+    def AppendSubTree(self, parent, data):
+        """ append sub tree to item """
+
+        if not data:
+            return
+
+        items = {}
+        expandedItems = []
+
+        for idx, idxData in data:
+            columns = idxData["columns"]
+            if "," not in idx:
+                item = self.AppendItem(parent, columns["0"])
+            else:
+                parentIdx = idx.split(",")[:-1]
+                parentIdx = ",".join(parentIdx)
+                item = self.AppendItem(items[parentIdx], columns["0"])
+
+            for c in range(1, len(columns)):
+                try:
+                    self.SetItemText(items[idx], str(c), columns[c])
+                except:
+                    pass
+
+            items[idx] = item
+
+            checked = idxData["checked"]
+            if checked == 1:
+                self.CheckItem(item)
+            else:
+                self.UncheckItem(item)
+            selected = idxData["selected"]
+            if selected is True:
+                self.Select(item)
+            expanded = idxData["expanded"]
+            if expanded is True:
+                expandedItems.append(item)
+            items[idx] = item
+
+        for item in expandedItems:
+            self.Expand(item)
+            
     def InsertSubTree(self, previous, data):
         """ insert sub tree after previous item """
 
