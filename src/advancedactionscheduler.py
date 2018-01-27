@@ -855,6 +855,14 @@ class Main(wx.Frame):
         self._taskBarIcon = value
         
     @property
+    def groupSelection(self):
+        return self.groupList.GetSelection()
+     
+    @property
+    def scheduleSelection(self):
+        return self.schedList.GetSelection()
+        
+    @property
     def commandState(self):
         return self._commandState
         
