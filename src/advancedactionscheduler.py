@@ -593,7 +593,7 @@ class ToolTip(wx.Frame):
     @property
     def font(self):
         return wx.Font(8, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False)
-        
+     
     @property    
     def message(self):
         return self._message
@@ -752,7 +752,7 @@ class Main(wx.Frame):
         self.cboxFunctions = wx.ComboBox(schedPanel, style=wx.CB_READONLY, choices=FUNCTIONS)
         self.cboxFunctions.SetSelection(0)
         self.cboxFunctions.Disable()
-        self.cboxFunctions.Bind(wx.EVT_COMBOBOX, self.OnComboboxFunction)
+        self.cboxFunctions.Bind(wx.EVT_COMBOBOX_CLOSEUP, self.OnComboboxFunction)
 
         self.btnAddFunction = wx.Button(schedPanel, label="Add Function", name="Add Function", size=(-1, -1))
         self.btnAddFunction.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
@@ -1697,6 +1697,8 @@ class Main(wx.Frame):
         key = event.GetKeyCode()
         if key == wx.WXK_DELETE:
             self.DeleteGroupItem()
+            return
+        event.Skip()
                
     def OnGroupContextMenu(self, event):
         menu = wx.Menu()
@@ -1969,6 +1971,8 @@ class Main(wx.Frame):
         key = event.GetKeyCode()
         if key == wx.WXK_DELETE:
             self.DeleteScheduleItem()
+            return
+        event.Skip()
             
     def OnScheduleContextMenu(self, event):
         menu = wx.Menu()
