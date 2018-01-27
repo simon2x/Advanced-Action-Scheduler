@@ -696,6 +696,7 @@ class Main(wx.Frame):
         leftSizer.Add(hSizerGroup, 0, wx.ALL|wx.EXPAND, 5)
         
         self.groupList = base.TreeListCtrl(leftPanel)
+        self.groupList.Bind(wx.EVT_CHAR, self.OnGroupChar)
         self.groupList.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnGroupItemSelectionChanged)
         self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_CONTEXT_MENU, self.OnGroupContextMenu)
         self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_CHECKED, self.OnGroupItemChecked)
@@ -763,6 +764,7 @@ class Main(wx.Frame):
         self.splitter2 = wx.SplitterWindow(schedPanel)
 
         self.schedList = base.TreeListCtrl(self.splitter2, style=wx.dataview.TL_CHECKBOX)
+        self.schedList.Bind(wx.EVT_CHAR, self.OnScheduleChar)
         self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_CONTEXT_MENU, self.OnScheduleContextMenu)
         self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self.OnScheduleTreeActivated)
         self.schedList.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnScheduleTreeSelectionChanged)
@@ -1685,6 +1687,11 @@ class Main(wx.Frame):
         self.schedList.CheckItem(newItem)
         self.schedList.Expand(newItem)
         self.schedList.SetFocus()
+    
+    def OnGroupChar(self, event):
+        key = event.GetKeyCode()
+        if key == wx.WXK_DELETE:
+            self.DeleteGroupItem()
                
     def OnGroupContextMenu(self, event):
         menu = wx.Menu()
@@ -1911,6 +1918,11 @@ class Main(wx.Frame):
         self.CloseFile()    
         self.LoadFile(filePath)
         
+    def OnScheduleChar(self, event):
+        key = event.GetKeyCode()
+        if key == wx.WXK_DELETE:
+            self.DeleteScheduleItem()
+            
     def OnScheduleContextMenu(self, event):
         menu = wx.Menu()
         self._currentSelectionType = "schedule"
