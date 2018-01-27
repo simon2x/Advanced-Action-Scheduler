@@ -1872,6 +1872,45 @@ class Main(wx.Frame):
         elif id == self._ids["Remove Group"]:
             self.ShowRemoveGroupDialog()    
     
+    def OnGroupListPaste(self, append=0):
+        """ 
+        This handles the hotkey or toolbar press and not
+        the context menu paste.
+        By default, we paste clipboard contents into a new group 
+        appended to end of group list.
+        """
+        
+        # we only allow schedules to be pasted onto the group list
+        if self._clipboard["toplevel"] is False:
+            self.toolTip.message = ("Actions can only be pasted inside a schedule")
+            return
+        
+        name = self._clipboard["name"]
+        # if we are pasting a schedule into a group, we take
+        # the schedule's name as new group name
+        try:
+            name = name.split(DELIMITER)[0]
+        except:
+            pass # not a schedule
+            
+        res = self.ShowAddGroupDialog(name, 
+                                      "Paste Contents Into New Group",
+                                      self._clipboard["schedules"], append)                                           
+        
+        # clear the clipboard
+        if self._clipboard["type"] == "cut" and res is not None:
+            self._clipboard = None
+            self.UpdateToolbar()
+             
+    def OnPaste(self):
+        """ user pressed shortcut or toolbar paste button """
+        if self._clipboard is None:
+            return 
+        if self._currentSelectionType == "group":
+            self.OnGroupListPaste()
+        elif self._currentSelectionType == "schedule":
+            self.OnScheduleTreePaste()
+            
     def OnPowerAction(self, kwargs):
         self._powerAction = kwargs        
         self.DisableScheduleManager()
@@ -2119,7 +2158,32 @@ class Main(wx.Frame):
                 continue 
             self._data[groupSel][n][1]["checked"] = self.schedList.GetCheckedState(selection)
             break
-      
+            
+    def OnScheduleTreePaste(self, append=0):
+        """ user pastes on the schedule list """
+        
+        if self._clipboard["toplevel"] is False:
+            if not self.scheduleSelection.IsOk():
+                self.toolTip.message = "Cannot paste action item outside of a schedule"
+                return
+
+        if not self.scheduleSelection.IsOk():
+            self.AppendSchedules()
+            
+        # ensure that a non-schedule item is inserted in schedule
+        # rather than a sibling of a schedule
+        elif self.schedList.IsTopLevel(self.scheduleSelection):
+            if self._clipboard["toplevel"] is False:
+                self.PasteIntoGroup(3)
+            else:
+                self.PasteIntoGroup(0)
+        else:        
+            self.PasteIntoGroup(2)
+        # clear the clipboard
+        if self._clipboard["type"] == "cut":
+            self._clipboard = None
+            self.UpdateToolbar()
+            
     def OnSize(self, event):
         wx.CallAfter(self.UpdateToolbarSize)
         event.Skip()
