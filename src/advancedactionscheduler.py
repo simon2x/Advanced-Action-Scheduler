@@ -898,7 +898,21 @@ class Main(wx.Frame):
                 self.schedLog.SetItem(item, columnNames[k], v)
             except:
                 pass
+       
+    def AppendSchedules(self):
+        if self._clipboard["toplevel"] is False:
+            return
+        self.SaveStateToUndoStack()
+        self.ClearRedoStack()
         
+        clip = self._clipboard
+        name, schedules, origin = clip["name"], clip["schedules"], clip["origin"]    
+        schedules = self.GetUniqueSchedules(schedules)
+        self.schedList.AppendSubTree(self.schedList.GetRootItem(), schedules)
+        
+        index = self.GetGroupListIndex(self.groupSelection)
+        self._data[index]["schedules"] = self.GetScheduleTree()
+    
     def CancelPowerAlerts(self):
         for d in self._powerDialog:
             d.Close()
