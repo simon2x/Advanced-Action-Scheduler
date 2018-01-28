@@ -19,7 +19,7 @@ PLATFORM = platform.system()
 
 class TreeListCtrl(wx.dataview.TreeListCtrl):
 
-    def __init__(self, parent, style=None):
+    def __init__(self, parent, style=None, **kwargs):
         """
         Tree data format
 
@@ -28,10 +28,11 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
         are children of the left n
 
         """
+        self.parent = parent
 
         if not style:
             style = wx.dataview.TL_CHECKBOX
-        wx.dataview.TreeListCtrl.__init__(self, parent, style=style)
+        wx.dataview.TreeListCtrl.__init__(self, parent, style=style, **kwargs)
         
     def AppendItemToRoot(self, value):
         item = self.AppendItem(self.GetRootItem(), value)

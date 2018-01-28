@@ -648,6 +648,9 @@ class Main(wx.Frame):
         self._currentTreeFocus = None
         self._fileList = []
         self._fileListMenuItems = {}
+        self._imageList = wx.ImageList(32, 32)
+        self._schedImageList = wx.ImageList(32, 32)
+        self._imageListRef = []
         self._overrideToolSize = None
         self._data = {}
         self._menus = {}
@@ -664,6 +667,7 @@ class Main(wx.Frame):
         self.Bind(wx.EVT_SIZE, self.OnSize)
         #-----
         self.CreateMenu()
+        self.CreateImageList()
         self.CreateToolbarBitmaps()
         self.CreateToolbar()
         self.CreateStatusBar()
@@ -699,6 +703,7 @@ class Main(wx.Frame):
         leftSizer.Add(hSizerGroup, 0, wx.ALL|wx.EXPAND, 5)
         
         self.groupList = base.TreeListCtrl(leftPanel)
+        self.groupList.AssignImageList(self.imageList)
         self.groupList.Bind(wx.EVT_CHAR, self.OnGroupChar)
         self.groupList.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnGroupItemSelectionChanged)
         self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_CONTEXT_MENU, self.OnGroupContextMenu)
@@ -746,16 +751,20 @@ class Main(wx.Frame):
         schedSizer.Add(hSizerFunctions, 0, wx.ALL|wx.EXPAND, 2)
 
         schedSizer.Add(wx.StaticLine(schedPanel), 0, wx.ALL|wx.EXPAND, 2)
-
+        # schedPanel.SetBackgroundColour("lightgray")
         # -----
         hSizerFunctions2 = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.cboxFunctions = wx.ComboBox(schedPanel, style=wx.CB_READONLY, choices=FUNCTIONS)
+        self.cboxFunctions = wx.ComboBox(schedPanel, style=wx.CB_READONLY, choices=FUNCTIONS, size=(-1, -1))
         self.cboxFunctions.SetSelection(0)
         self.cboxFunctions.Disable()
         self.cboxFunctions.Bind(wx.EVT_COMBOBOX_CLOSEUP, self.OnComboboxFunction)
 
         self.btnAddFunction = wx.Button(schedPanel, label="Add Function", name="Add Function", size=(-1, -1))
+        img = wx.Image("icons/add.png")
+        img = img.Rescale(24,24, wx.IMAGE_QUALITY_HIGH)
+        bmp = wx.Bitmap(img)
+        self.btnAddFunction.SetBitmap(bmp)
         self.btnAddFunction.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
         self.btnAddFunction.Disable()
         hSizerFunctions2.Add(self.cboxFunctions, 0, wx.ALL|wx.CENTRE, 5)
@@ -765,6 +774,7 @@ class Main(wx.Frame):
         # -----
         self.splitter2 = wx.SplitterWindow(schedPanel)
         self.schedList = base.TreeListCtrl(self.splitter2, style=wx.dataview.TL_CHECKBOX)
+        self.schedList.AssignImageList(self.schedImageList)
         self.schedList.Bind(wx.EVT_CHAR, self.OnScheduleChar)
         self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_CONTEXT_MENU, self.OnScheduleContextMenu)
         self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self.OnScheduleTreeActivated)
@@ -773,18 +783,29 @@ class Main(wx.Frame):
         self.schedList.AppendColumn("Schedule")
 
         infoPanel = wx.Panel(self.splitter2)
-        infoPanelSizer = wx.BoxSizer(wx.VERTICAL)
-        self.infoSched = wx.TextCtrl(infoPanel, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH)
-
-        infoPanelSizer.Add(self.infoSched, 1, wx.ALL|wx.EXPAND, 0)
+        infoPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.infoSchedButton = wx.Button(infoPanel, style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
+        self.infoSchedButton.Bind(wx.EVT_BUTTON, self.OnScheduleItemEdit)
+        self.infoSchedButton.SetBitmap(wx.Bitmap())
+        self.infoSched = wx.TextCtrl(infoPanel, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.infoSched.SetFont(self.infoSchedFont)
+        self.infoSched.SetBackgroundColour(wx.Colour(60,60,60))
+        self.infoSched.SetForegroundColour(wx.Colour(250,250,250))
+        infoPanel.SetBackgroundColour(wx.Colour(60,60,60))
+        self.infoSchedButton.Hide()
+        infoPanelSizer.Add(self.infoSchedButton, 1, wx.ALL|wx.EXPAND, 0)
+        infoPanelSizer.Add(self.infoSched, 4, wx.ALL|wx.EXPAND, 5)
         infoPanel.SetSizer(infoPanelSizer)
-
+        self.infoPanelSizer = infoPanelSizer
         self.splitter2.SplitHorizontally(self.schedList, infoPanel)
         self.splitter2.SetSashGravity(0.8)
 
-        schedSizer.Add(self.splitter2, 1, wx.ALL|wx.EXPAND, 5)
+        schedSizer.Add(self.splitter2, 1, wx.ALL|wx.EXPAND, 0)
         schedPanel.SetSizer(schedSizer)
 
+        self.schedList.SetForegroundColour(wx.Colour(30,30,30))
+        self.groupList.SetForegroundColour(wx.Colour(30,30,30))
+        
         # the schedule manager panel/tab page
         schedManagerPanel = wx.Panel(self.notebook)
         schedManagerSizer = wx.BoxSizer(wx.VERTICAL)
@@ -874,6 +895,21 @@ class Main(wx.Frame):
         self._commandState = value
         self.UpdateTitlebar()
 
+    @property
+    def infoSchedFont(self):
+        return wx.Font(8, wx.FONTFAMILY_MODERN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False)
+        
+    @property
+    def imageList(self):
+        return self._imageList
+        
+    @property
+    def schedImageList(self):
+        return self._schedImageList
+        
+    def imageListIndex(self, label):
+        return self._imageListRef.index(label.lower().replace(" ",""))
+        
     def AddLogMessage(self, message):
         """ insert log message as first item to schedule messenger list """
         
@@ -923,7 +959,8 @@ class Main(wx.Frame):
         
         index = self.GetGroupListIndex(self.groupSelection)
         self._data[index]["schedules"] = self.GetScheduleTree()
-    
+        self.UpdateScheduleImageList()
+        
     def CancelPowerAlerts(self):
         for d in self._powerDialog:
             d.Close()
@@ -1005,6 +1042,17 @@ class Main(wx.Frame):
                 
         self.UpdateToolbar()
         
+    def CreateImageList(self):
+        labels = ["group", "schedule"]
+        labels.extend(FUNCTIONS)
+        for label in labels:
+            img = wx.Image("images/{0}.png".format(label.lower()))
+            img.Rescale(32, 32, wx.IMAGE_QUALITY_HIGH)
+            bmp = wx.Bitmap(img)
+            self.imageList.Add(bmp)
+            self.schedImageList.Add(bmp)
+            self._imageListRef.append(label.lower())
+        
     def CreateMenu(self):
         menubar = wx.MenuBar()
         menuFile = wx.Menu()
@@ -1038,7 +1086,7 @@ class Main(wx.Frame):
             
         menuHelp = wx.Menu()
         helpMenus = [("Check for updates", "Check for updates", wx.ID_SETUP),
-                     ("About\tF1", "Import Images From Folder", wx.ID_ABOUT)]
+                     ("About\tCtrl+F1", "Import Images From Folder", wx.ID_ABOUT)]
         for item, helpStr, wxId in helpMenus:
             self._menus[item] = menuHelp.Append(wxId, item, helpStr)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
@@ -1359,6 +1407,14 @@ class Main(wx.Frame):
             child = self.groupList.GetNextSibling(child)
         return groupNames
         
+    def GetBitmapFromImage(self, name, size=None):
+        img = wx.Image("images/{0}.png".format(name.lower().replace(" ","")))
+        if size:
+            w, h = size
+            img = img.Rescale(w, h, wx.IMAGE_QUALITY_HIGH)
+        bmp = wx.Bitmap(img)
+        return bmp
+        
     def GetGroupTree(self):
         """ retrieve tree structure, used for saving data """
         data = self.groupList.GetTree()
@@ -1672,9 +1728,12 @@ class Main(wx.Frame):
         ret = dlg.ShowModal()
         if ret == wx.ID_CANCEL:
             return
+        self.SaveStateToUndoStack()
+        self.ClearRedoStack()
 
         value = label + DELIMITER + dlg.GetValue()
         newItem = self.schedList.AppendItem(self.scheduleSelection, value)
+        self.schedList.SetItemImage(newItem, self.imageListIndex(label))
         
         schedSelIdx = self.schedList.GetItemIndex(self.scheduleSelection)
         idx = self.schedList.GetItemIndex(newItem)
@@ -1700,6 +1759,18 @@ class Main(wx.Frame):
         key = event.GetKeyCode()
         if key == wx.WXK_DELETE:
             self.DeleteGroupItem()
+            return
+        
+        if key == 341: # F2
+            self.OnGroupItemEdit()
+            return
+            
+        # important, as the control toggles item 
+        # even if item is not OK...therefore
+        # causes issues with saving state correctly
+        if key == wx.WXK_SPACE:
+            if self.groupSelection.IsOk():
+                event.Skip()
             return
         event.Skip()
                
@@ -1914,6 +1985,8 @@ class Main(wx.Frame):
         if self._clipboard["type"] == "cut" and res is not None:
             self._clipboard = None
             self.UpdateToolbar()
+        
+        self.UpdateGroupImageList()
              
     def OnPaste(self):
         """ user pressed shortcut or toolbar paste button """
@@ -1974,6 +2047,18 @@ class Main(wx.Frame):
         key = event.GetKeyCode()
         if key == wx.WXK_DELETE:
             self.DeleteScheduleItem()
+            return
+        
+        if key == 341: # F2
+            self.OnScheduleItemEdit()
+            return
+            
+        # important, as the control toggles item 
+        # even if item is not OK...therefore
+        # causes issues with saving state correctly
+        if key == wx.WXK_SPACE:
+            if self.scheduleSelection.IsOk():
+                event.Skip()
             return
         event.Skip()
             
@@ -2100,7 +2185,7 @@ class Main(wx.Frame):
         self.schedList.SetFocus()
 
         # updated information
-        self.infoSched.SetValue(value)    
+        self.UpdateScheduleInfo()    
 
     def OnScheduleManagerToolbar(self, event):
         try:
@@ -2152,16 +2237,12 @@ class Main(wx.Frame):
     def OnScheduleTreeSelectionChanged(self, event=None):
         """ update the schedule item information """
         self._currentSelectionType = "schedule"
-        try:
-            text = self.schedList.GetItemText(self.scheduleSelection)
-            self.infoSched.SetValue(text)
-        except:
-            self.infoSched.SetValue("")
-            
+        self.UpdateScheduleInfo()
         self.UpdateScheduleToolbar()   
         self.UpdateToolbar()
             
     def OnScheduleTreeItemChecked(self, event):
+        self.schedList.Select(self.scheduleSelection)    
         self.SaveStateToUndoStack()
         self.ClearRedoStack()
         groupSel = self.GetGroupListIndex(self.groupSelection)
@@ -2196,6 +2277,8 @@ class Main(wx.Frame):
         if self._clipboard["type"] == "cut":
             self._clipboard = None
             self.UpdateToolbar()
+            
+        self.UpdateScheduleImageList()
             
     def OnSize(self, event):
         wx.CallAfter(self.UpdateToolbarSize)
@@ -2340,6 +2423,7 @@ class Main(wx.Frame):
             self.UpdateToolbar()
             
         self._data[index]["schedules"] = self.GetScheduleTree()
+        self.UpdateScheduleImageList()
         
     def PrependSubTree(self, previous, data):
         """ insert sub tree before item """
@@ -2480,6 +2564,7 @@ class Main(wx.Frame):
         """ set the group list tree """
         for idx in sorted([int(x) for x in data.keys() if x != "__version__"]):
             item = self.groupList.AppendItemToRoot(data[str(idx)]["columns"]["0"])
+            self.groupList.SetItemImage(item, self.imageListIndex("group"))
             self.groupList.CheckItem(item, data[str(idx)]["checked"])
             self._data[item] = {"checked": data[str(idx)]["checked"], 
                                 "schedules": data[str(idx)]["schedules"]}
@@ -2501,6 +2586,7 @@ class Main(wx.Frame):
     def SetScheduleTree(self, data):
         """ set the schedule list tree """
         self.schedList.SetTree(data)
+        self.UpdateScheduleImageList()
 
     def SetStatusBar(self, event=None):
         """ update status bar when selecting a tree item on sequence"""
@@ -2530,7 +2616,7 @@ class Main(wx.Frame):
             (wx.ACCEL_CTRL, ord('G'), self._ids["group_Add Group"]),
             # (wx.ACCEL_NORMAL, wx.WXK_DELETE, self._ids["schedule_Delete"]),
             # (wx.ACCEL_NORMAL, wx.WXK_DELETE, self._ids["group_Delete"]),
-            (wx.ACCEL_NORMAL, 304, wx.ID_ABOUT), # F1
+            (wx.ACCEL_CTRL, 304, wx.ID_ABOUT), # F1
           ])
         self.SetAcceleratorTable(self.accelTable)
         
@@ -2609,6 +2695,7 @@ class Main(wx.Frame):
             self.groupList.Select(newItem)
             self.groupList.SetFocus()
             
+            self.UpdateGroupImageList()
             self.ClearRedoStack()
             return newItem
             
@@ -2702,7 +2789,13 @@ class Main(wx.Frame):
         item.SetHelp("Open File: {0}".format(filePath))
         self.menuFile.Insert(self.menuFile.GetMenuItemCount()-len(self._fileList)-1, item)
         self._fileList.insert(0, filePath)
-        
+     
+    def UpdateGroupImageList(self):
+        item = self.groupList.GetFirstItem()
+        while item.IsOk():
+            self.groupList.SetItemImage(item, self.imageListIndex("group"))
+            item = self.groupList.GetNextItem(item)
+            
     def UpdateGroupToolbar(self):
         selection = self.groupList.GetSelection()
         state = True
@@ -2725,6 +2818,36 @@ class Main(wx.Frame):
             
         self.toolbar.EnableTool(wx.ID_REMOVE, state)
             
+    def UpdateScheduleInfo(self):
+        try:
+            text = self.schedList.GetItemText(self.scheduleSelection)
+            if self.schedList.IsTopLevel(self.scheduleSelection):
+                name = "schedule"
+                _, params = text.split(DELIMITER)
+            else:
+                name, params = text.split(DELIMITER)
+            params = make_tuple(params)
+            
+            self.infoSched.SetValue(name)
+            for x, y in params:
+                self.infoSched.AppendText("\n - {0} = {1}".format(x, y))
+            self.infoSchedButton.Show()
+            self.infoPanelSizer.Layout()
+            w, h = self.infoSchedButton.GetSize()
+            if w > h:
+                d = h
+            else:
+                d = w
+            self.infoSchedButton.SetBitmap(self.GetBitmapFromImage(name, (d, d)))
+            
+        except Exception as e:
+            print(e)
+            self.infoSched.SetValue("")
+            self.infoSchedButton.Hide()
+            self.infoPanelSizer.Layout()
+        self.infoSchedButton.SetLabel(name)    
+        self.infoSched.Refresh()   
+    
     def UpdateScheduleToolbar(self):
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
@@ -2755,6 +2878,19 @@ class Main(wx.Frame):
             self.schedBtns["Up"].Enable()
         else:
             self.schedBtns["Up"].Disable()
+            
+    def UpdateScheduleImageList(self):
+        item = self.schedList.GetFirstItem()
+        while item.IsOk():
+            if self.schedList.GetItemParent(item) == self.schedList.GetRootItem():
+                self.schedList.SetItemImage(item, self.imageListIndex("schedule"))
+            else:
+                action = self.schedList.GetItemText(item).split(DELIMITER)[0]
+                try:
+                    self.schedList.SetItemImage(item, self.imageListIndex(action.lower()))
+                except:
+                    pass
+            item = self.schedList.GetNextItem(item)
       
     def UpdateSettingsDict(self, data):
         self._appConfig.update(data)
