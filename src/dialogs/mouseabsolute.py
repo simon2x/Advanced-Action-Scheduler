@@ -64,10 +64,7 @@ class FindPosition(wx.Frame):
         
         self._position.SetForegroundColour("white")
         self.SetBackgroundColour("blue")
-
-    # def OnKillFocus(self, event):
-        # self.Destroy()
-
+        
     def GetValue(self):
         print(self.absolutePos)
         return self.absolutePos
@@ -238,6 +235,13 @@ class MouseClickAbsolute(wx.Dialog):
 
         panel.SetSizer(sizer)
         sizer.Fit(self)
+        
+        try:
+            icon = wx.Icon("images/mouseclickabsolute.png")
+            self.SetIcon(icon)
+        except Exception as e:
+            print(e)
+            
 
     def FindPosition(self): 
         try:

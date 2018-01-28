@@ -111,11 +111,11 @@ class AddSchedule(wx.Dialog):
             btn.Bind(wx.EVT_BUTTON, self.OnButtonSetAll)
             hSizerEvery.Add(btn, 0, wx.ALL|wx.EXPAND, 5)      
         
-        btnReset = wx.Button(panel, label="Reset")
-        btnReset.Bind(wx.EVT_BUTTON, self.OnButtonReset)
-        
         #-----
         hSizer = wx.BoxSizer(wx.HORIZONTAL)
+        btnReset = wx.Button(panel, label="Reset")
+        btnReset.Bind(wx.EVT_BUTTON, self.OnButtonReset)
+        hSizer.Add(btnReset, 0, wx.ALL|wx.EXPAND, 5)
         hSizer.AddStretchSpacer()
         btnCancel = wx.Button(panel, label="Cancel", id=wx.ID_CANCEL)
         btnCancel.Bind(wx.EVT_BUTTON, self.OnButton)
@@ -128,12 +128,17 @@ class AddSchedule(wx.Dialog):
         sizer.Add(sboxSizer, 0, wx.ALL|wx.EXPAND, 2)
         sizer.Add(hSizerClear, 0, wx.ALL|wx.EXPAND, 5)
         sizer.Add(hSizerEvery, 0, wx.ALL|wx.EXPAND, 5)
-        sizer.Add(btnReset, 0, wx.ALL, 5)
         sizer.Add(hSizer, 0, wx.ALL|wx.EXPAND, 5)
 
         panel.SetSizer(sizer)
         w, h = sizer.Fit(self)
         
+        try:
+            icon = wx.Icon("images/schedule.png")
+            self.SetIcon(icon)
+        except Exception as e:
+            print(e)  
+            
     def GetValue(self):
 
         data = []
@@ -410,9 +415,21 @@ class StartSchedule(ScheduleDialog):
     def __init__(self, parent):
 
         ScheduleDialog.__init__(self, parent, "Start Schedule")
+        
+        try:
+            icon = wx.Icon("images/startschedule.png")
+            self.SetIcon(icon)
+        except Exception as e:
+            print(e)  
 
 class StopSchedule(ScheduleDialog):
 
     def __init__(self, parent):
 
         ScheduleDialog.__init__(self, parent, "Stop Schedule")
+        
+        try:
+            icon = wx.Icon("images/stopschedule.png")
+            self.SetIcon(icon)
+        except Exception as e:
+            print(e)  

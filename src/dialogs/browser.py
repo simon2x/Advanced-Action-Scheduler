@@ -137,6 +137,12 @@ class OpenURL(wx.Dialog):
         self.SetMinSize((w*2, h*1.5))
         self.SetSize((w*2, h*1.5))
         
+        try:
+            icon = wx.Icon("images/openurl.png")
+            self.SetIcon(icon)
+        except Exception as e:
+            print(e)
+        
     def FindBrowserDialog(self):
         dlg = wx.FileDialog(self, 
                             defaultDir="",

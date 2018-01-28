@@ -103,6 +103,12 @@ class WindowDialog(wx.Dialog):
         panel.SetSizer(sizer)
 
         w, h = sizer.Fit(self)
+        
+        try:
+            icon = wx.Icon("images/ifwindowopen.png")
+            self.SetIcon(icon)
+        except Exception as e:
+            print(e)
 
     def OnButton(self, event):
         e = event.GetEventObject()
