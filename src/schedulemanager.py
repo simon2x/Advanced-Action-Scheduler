@@ -162,7 +162,7 @@ class Manager:
         for index, action, params in self._schedData[groupName][schedName]:
             if childIgnore and not index.startswith(childIgnore):
                 continue
-            print(action)    
+            # print(action)    
             if action == "StopSchedule":
                 schedule = params["schedule"]
                 self.StartSchedule(groupName, schedule, enable=0)
@@ -173,6 +173,17 @@ class Manager:
                 schedule = params["schedule"]
                 self.StartSchedule(groupName, schedule, enable=1)
                 if schedule == schedName:
+                    return
+            
+            elif action == "Control":
+                logData = {"Group": groupName, "Schedule": schedName}
+                logData["Message"] = "Control: {0}".format(params["action"])
+                if params["action"] == "END":
+                    self.SendLog(logData)
+                    return
+                elif params["action"] == "Disable Schedule Manager":
+                    self.GetParent().DisableScheduleManager()
+                    self.SendLog(logData)
                     return
                     
             else:
