@@ -1062,13 +1062,13 @@ class Main(wx.Frame):
             ("Save", "Ctrl+S", "Save Schedule File", wx.ID_SAVE),
             ("Save As...", "Ctrl+Shift+S", "Save Schedule File As...", wx.ID_SAVEAS),
             ("Close File", "Ctrl+W", "Close Schedule File", wx.ID_CLOSE),
-            ("Import", "Ctrl+I", "Import Schedule File", wx.ID_CDROM), # because no import id
+            # ("Import", "Ctrl+I", "Import Schedule File", wx.ID_CDROM), # because no import id
             ("Settings", "Alt+P", "Open Settings...", wx.ID_PREFERENCES),
             ("Exit", "Ctrl+Q", "Exit Program", wx.ID_EXIT)]
         for item, accelHint, helpStr, wxId in fileMenus:
             self._menus[item] = menuFile.Append(wxId, item+"\t"+accelHint, helpStr)
             self.Bind(wx.EVT_MENU, self.OnMenu, self._menus[item])
-            if item == "Import":
+            if item == "Close File":
                 menuFile.AppendSeparator()
             elif item == "Settings":
                 menuFile.AppendSeparator()
@@ -1108,7 +1108,7 @@ class Main(wx.Frame):
             ("Save", "Save", True, wx.ID_SAVE),
             ("Save As...", "Save As...", True, wx.ID_SAVEAS),
             ("Close", "Close", True, wx.ID_CLOSE),
-            ("Import", "Import", True, None),
+            # ("Import", "Import", True, None),
             ("Add Group", "Add Group", True, None),
             ("Remove Group", "Remove Selected Group", False, None),
             ("Cut", "Cut", False, wx.ID_CUT),
@@ -2619,7 +2619,7 @@ class Main(wx.Frame):
             (wx.ACCEL_CTRL, ord('S'), wx.ID_SAVE),
             (wx.ACCEL_CTRL|wx.ACCEL_SHIFT, ord('S'), wx.ID_SAVEAS),
             (wx.ACCEL_CTRL, ord('W'), wx.ID_CLOSE),
-            (wx.ACCEL_CTRL, ord('I'), wx.ID_CDROM),
+            # (wx.ACCEL_CTRL, ord('I'), wx.ID_CDROM),
             (wx.ACCEL_ALT, ord('P'), wx.ID_PREFERENCES),
             (wx.ACCEL_CTRL, ord('Q'), wx.ID_EXIT),
             (wx.ACCEL_CTRL, ord('Y'), wx.ID_REDO),
@@ -2627,7 +2627,7 @@ class Main(wx.Frame):
             (wx.ACCEL_CTRL, ord('C'), wx.ID_COPY),
             (wx.ACCEL_CTRL, ord('X'), wx.ID_CUT),
             (wx.ACCEL_CTRL, ord('V'), wx.ID_PASTE),
-            (wx.ACCEL_CTRL, ord('I'), self._ids["Import"]),
+            # (wx.ACCEL_CTRL, ord('I'), self._ids["Import"]),
             (wx.ACCEL_CTRL, ord('G'), self._ids["group_Add Group"]),
             # (wx.ACCEL_NORMAL, wx.WXK_DELETE, self._ids["schedule_Delete"]),
             # (wx.ACCEL_NORMAL, wx.WXK_DELETE, self._ids["group_Delete"]),
