@@ -1263,6 +1263,7 @@ class Main(wx.Frame):
         del self._redoStack[-1]
         self.RestoreState(state)
         self.commandState += 1
+        self.UpdateScheduleInfo()
         
     def DoUndo(self):
         if self._undoStack == []:
@@ -1272,6 +1273,7 @@ class Main(wx.Frame):
         del self._undoStack[-1]
         self.RestoreState(state)
         self.commandState -= 1
+        self.UpdateScheduleInfo()
         
     def EnableScheduleManager(self):
         self.CancelPowerAlerts()
@@ -1477,9 +1479,19 @@ class Main(wx.Frame):
                
         if self._appConfig["showSplashScreen"] is True:
             SplashScreen(800)
-            
+           
+        # set position of window providing that the users monitor geometry 
+        # (albeit with some arbitrary leeway) contains the last mouse position
         try:
-            x, y = make_tuple(self._appConfig["windowSize"])
+            x, y = [int(v) for v in make_tuple(self._appConfig["windowPos"])]
+            displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
+            for display in displays:
+                x1,y1,w,h = display.GetGeometry()
+                if x in range(x1-200,x1+w) and y in range(y1-200,y1+h):
+                    self.SetPosition((x,y))
+                    break
+                continue
+            x, y = [int(v) for v in make_tuple(self._appConfig["windowSize"])]
             self.SetSize((x, y))
         except Exception as e:
             print(e)
@@ -1487,8 +1499,8 @@ class Main(wx.Frame):
         self.UpdateTrayIcon()
         self.UpdateToolbarSize()
         self.UpdateTitlebar()
-        wx.CallLater(900, self.Show)
-        self.Show()
+        wx.CallLater(1000, self.Show)
+        # self.Show()
         self.Raise()
         
     def LoadFile(self, filePath):
@@ -1687,6 +1699,7 @@ class Main(wx.Frame):
         disable the schedule manager directly
         """
         self._appConfig["windowSize"] = str(self.GetSize())
+        self._appConfig["windowPos"] = str(self.GetPosition())
         if self.CloseFile() == wx.ID_CANCEL:
             return
         self.CancelPowerAlerts()
@@ -1870,12 +1883,14 @@ class Main(wx.Frame):
             self.toolbar.EnableTool(self._ids["Remove Group"], True)
             self.SetScheduleTree(data["schedules"])
             self.schedBtns["Add Schedule"].Enable()
+            self.UpdateScheduleInfo()
             return
         
         self.toolbar.EnableTool(self._ids["Remove Group"], False)
         
         self.schedBtns["Add Schedule"].Disable()
         self.UpdateScheduleToolbar()
+        self.UpdateScheduleInfo()
                     
     def OnGroupToolBar(self, event):
         try:
@@ -2696,6 +2711,7 @@ class Main(wx.Frame):
             self.groupList.SetFocus()
             
             self.UpdateGroupImageList()
+            self.UpdateScheduleInfo()
             self.ClearRedoStack()
             return newItem
             
@@ -2753,29 +2769,43 @@ class Main(wx.Frame):
         self._settingsDialog.Raise()    
         
     def ToggleGroupSelection(self):
-        selection = self.groupList.GetSelection()
-        checked = self.groupList.GetCheckedState(selection)
+        if not self.groupSelection.IsOk():
+            return
+        self.SaveStateToUndoStack()
+        self.ClearRedoStack()
+        checked = self.groupList.GetCheckedState(self.groupSelection)
         if checked == 1:
-            self.groupList.UncheckItem(selection)
+            self.groupList.UncheckItem(self.groupSelection)
+            checked = 0
         else:
-            self.groupList.CheckItem(selection)
-        
+            self.groupList.CheckItem(self.groupSelection)
+            checked = 1
+            
+        index = self.GetGroupListIndex(self.groupSelection)
+        self._data[index]["checked"] = checked
+            
     def ToggleScheduleManager(self):
         if self._tools["Enable Schedule Manager"].GetLabel() == "Enable Schedule Manager":
             self.EnableScheduleManager()
         else:       
             self.DisableScheduleManager()
-    
+                
     def ToggleScheduleSelection(self):
-        selection = self.schedList.GetSelection()
-        checked = self.schedList.GetCheckedState(selection)
-        if checked == 1:
-            self.schedList.UncheckItem(selection)
-        else:
-            self.schedList.CheckItem(selection)
-
+        if not self.scheduleSelection.IsOk():
+            return
         self.SaveStateToUndoStack()
+        self.ClearRedoStack()
+        checked = self.schedList.GetCheckedState(self.scheduleSelection)
+        if checked == 1:
+            self.schedList.UncheckItem(self.scheduleSelection)
+            checked = 0
+        else:
+            self.schedList.CheckItem(self.scheduleSelection)
+            checked = 1
             
+        index = self.GetGroupListIndex(self.groupSelection)
+        self._data[index]["schedules"] = self.GetScheduleTree()
+                    
     def UpdateRecentFiles(self, filePath):
         if self._appConfig["keepFileList"] == False:
             return
@@ -2819,6 +2849,13 @@ class Main(wx.Frame):
         self.toolbar.EnableTool(wx.ID_REMOVE, state)
             
     def UpdateScheduleInfo(self):
+        if not self.scheduleSelection.IsOk():
+            self.infoSched.SetValue("")
+            self.infoSchedButton.Hide()
+            self.infoPanelSizer.Layout()
+            self.infoSched.Refresh() 
+            return
+            
         try:
             text = self.schedList.GetItemText(self.scheduleSelection)
             if self.schedList.IsTopLevel(self.scheduleSelection):
@@ -2839,13 +2876,13 @@ class Main(wx.Frame):
             else:
                 d = w
             self.infoSchedButton.SetBitmap(self.GetBitmapFromImage(name, (d, d)))
-            
+            self.infoSchedButton.SetLabel(name) 
         except Exception as e:
             print(e)
             self.infoSched.SetValue("")
             self.infoSchedButton.Hide()
             self.infoPanelSizer.Layout()
-        self.infoSchedButton.SetLabel(name)    
+           
         self.infoSched.Refresh()   
     
     def UpdateScheduleToolbar(self):
