@@ -125,7 +125,7 @@ class AddSchedule(wx.Dialog):
         hSizer.Add(self.btnOk, 0, wx.ALL|wx.EXPAND, 5)
 
         #add to main sizer
-        sizer.Add(sboxSizer, 0, wx.ALL|wx.EXPAND, 2)
+        sizer.Add(sboxSizer, 0, wx.ALL|wx.EXPAND, 5)
         sizer.Add(hSizerClear, 0, wx.ALL|wx.EXPAND, 5)
         sizer.Add(hSizerEvery, 0, wx.ALL|wx.EXPAND, 5)
         sizer.Add(hSizer, 0, wx.ALL|wx.EXPAND, 5)
