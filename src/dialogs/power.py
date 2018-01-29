@@ -93,6 +93,12 @@ class AddPower(wx.Dialog):
         panel.SetSizer(sizer)  
         w, h = sizer.Fit(self)
         self.SetSize(w*1.5, h)
+        
+        try:
+            icon = wx.Icon("images/power.png")
+            self.SetIcon(icon)
+        except Exception as e:
+            print(e)
             
     def OnButton(self, event):
         e = event.GetEventObject()

@@ -56,6 +56,12 @@ class AddDelay(wx.Dialog):
         w, h = sizer.Fit(self)
 
         self.Bind(wx.EVT_KEY_UP, self.OnKeyUp)
+        
+        try:
+            icon = wx.Icon("images/delay.png")
+            self.SetIcon(icon)
+        except Exception as e:
+            print(e)
 
     def GetValue(self):
         data = [("delay", str(self.spinDelay.GetValue()))]
