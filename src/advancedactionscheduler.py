@@ -41,6 +41,7 @@ from dialogs import *
 import wx.adv
 from wx.lib.scrolledpanel import ScrolledPanel
 from wx.lib.agw import hyperlink
+from userguide import UserGuideFrame
 
 from ast import literal_eval as make_tuple
 from time import gmtime, strftime
@@ -149,6 +150,7 @@ DEFAULTCONFIG = {
     "currentFile": False, # the currently opened schedule file
     "loadLastFile": True, # the currently opened schedule file
     "fileList": [], # recently opened schedule files
+    "firstStart": True,
     "keepFileList": True,
     "maxUndoCount": 10, # maximum number of undo operations a user can do
     "newProcessPresets": [], # list of saved commands
@@ -643,6 +645,7 @@ class Main(wx.Frame):
         self._powerAction = None
         self._powerDialog = []
         self._settingsDialog = None
+        self._userGuideDialog = None
         self._clipboard = None
         self._currentSelectionType = None
         self._currentTreeFocus = None
@@ -760,7 +763,7 @@ class Main(wx.Frame):
         self.cboxFunctions.Disable()
         self.cboxFunctions.Bind(wx.EVT_COMBOBOX_CLOSEUP, self.OnComboboxFunction)
 
-        self.btnAddFunction = wx.Button(schedPanel, label="Add Function", name="Add Function", size=(-1, -1))
+        self.btnAddFunction = wx.Button(schedPanel, label="Add Action", name="Add Action", size=(-1, -1))
         img = wx.Image("icons/add.png")
         img = img.Rescale(24,24, wx.IMAGE_QUALITY_HIGH)
         bmp = wx.Bitmap(img)
@@ -1043,7 +1046,7 @@ class Main(wx.Frame):
         self.UpdateToolbar()
         
     def CreateImageList(self):
-        labels = ["group", "schedule"]
+        labels = ["group", "schedule", "groupchecked"]
         labels.extend(FUNCTIONS)
         for label in labels:
             img = wx.Image("images/{0}.png".format(label.lower()))
@@ -1085,7 +1088,8 @@ class Main(wx.Frame):
         self._menus["Disable Schedule Manager"].Enable(False)
             
         menuHelp = wx.Menu()
-        helpMenus = [("Check for updates", "Check for updates", wx.ID_SETUP),
+        helpMenus = [("User Guide\tCtrl+H", "Open User Guide", wx.ID_HELP),
+                     ("Check for updates", "Check for updates", wx.ID_SETUP),
                      ("About\tCtrl+F1", "Import Images From Folder", wx.ID_ABOUT)]
         for item, helpStr, wxId in helpMenus:
             self._menus[item] = menuHelp.Append(wxId, item, helpStr)
@@ -1192,6 +1196,7 @@ class Main(wx.Frame):
                 return
             self.SaveStateToUndoStack()  
             index = self.GetGroupListIndex(self.groupSelection)
+            nextItem = self.groupList.GetNextSibling(self.groupSelection)                
             self._clipboard = {"origin": "schedule",
                                "type": "cut",
                                "schedules": self.schedList.GetSubTree(self.scheduleSelection),
@@ -1203,7 +1208,10 @@ class Main(wx.Frame):
             self.schedList.DeleteItem(self.scheduleSelection)
             self._data[index]["schedules"] = self.GetScheduleTree()
             
-        # self._currentSelectionType = None
+            if nextItem.IsOk():
+                self.groupList.Select(nextItem)
+
+        self.UpdateScheduleInfo()
         self.UpdateToolbar()
             
     def DeleteGroupItem(self):
@@ -1222,6 +1230,7 @@ class Main(wx.Frame):
             self.groupList.Select(next)
             self.UpdateGroupToolbar()
             self.UpdateScheduleToolbar()
+        self.UpdateScheduleInfo()
             
     def DeleteScheduleItem(self):
         if not self.scheduleSelection.IsOk():
@@ -1235,6 +1244,7 @@ class Main(wx.Frame):
         if next.IsOk():
             self.schedList.Select(next)
             self.UpdateScheduleToolbar()
+        self.UpdateScheduleInfo()    
        
     def DisableScheduleManager(self):
         # Enable/Disable menu item accordingly
@@ -1264,6 +1274,7 @@ class Main(wx.Frame):
         self.RestoreState(state)
         self.commandState += 1
         self.UpdateScheduleInfo()
+        self.UpdateGroupImageList()
         
     def DoUndo(self):
         if self._undoStack == []:
@@ -1274,6 +1285,7 @@ class Main(wx.Frame):
         self.RestoreState(state)
         self.commandState -= 1
         self.UpdateScheduleInfo()
+        self.UpdateGroupImageList()
         
     def EnableScheduleManager(self):
         self.CancelPowerAlerts()
@@ -1499,9 +1511,13 @@ class Main(wx.Frame):
         self.UpdateTrayIcon()
         self.UpdateToolbarSize()
         self.UpdateTitlebar()
-        wx.CallLater(1000, self.Show)
-        # self.Show()
+        # wx.CallLater(1000, self.Show)
+        self.Show()
         self.Raise()
+        
+        if self._appConfig["firstStart"]:
+            self.ShowUserGuide()
+            self._appConfig["firstStart"] = False
         
     def LoadFile(self, filePath):
         """ load a schedule file by file path """
@@ -1549,6 +1565,7 @@ class Main(wx.Frame):
         
         self.groupList.Select(newItem)
         
+        self.UpdateGroupImageList()
         self.SaveScheduleTreeToData()
         self.ClearRedoStack()
         
@@ -1579,6 +1596,7 @@ class Main(wx.Frame):
         self.SaveScheduleTreeToData()
         self.ClearRedoStack()
         
+        self.UpdateGroupImageList()
         self.UpdateGroupToolbar()
         
     def MoveScheduleItemDown(self):
@@ -1632,7 +1650,7 @@ class Main(wx.Frame):
         
         self.schedList.Select(self.schedList.GetNextSibling(next))
         self.UpdateScheduleToolbar()
-        
+        self.UpdateScheduleImageList()
         self.SaveScheduleTreeToData()
         self.ClearRedoStack()
     
@@ -1679,7 +1697,7 @@ class Main(wx.Frame):
                 groupScheds[n] = (idx, idxData)
                 idxIncr.append(n)
                 
-        print(idxDecr, idxIncr)
+        # print(idxDecr, idxIncr)
         newScheds = groupScheds[:idxIncr[0]]
         for x in idxDecr:
             newScheds.append(groupScheds[x])
@@ -1690,7 +1708,7 @@ class Main(wx.Frame):
         
         self.SaveScheduleTreeToData()
         self.ClearRedoStack()
-        
+        self.UpdateScheduleImageList()
         self.UpdateScheduleToolbar()
          
     def OnClose(self, event=None):
@@ -1821,6 +1839,7 @@ class Main(wx.Frame):
         self.ClearRedoStack()
         groupSel = self.GetGroupListIndex(self.groupSelection)
         self._data[groupSel]["checked"] = self.groupList.GetCheckedState(self.groupSelection)
+        self.UpdateGroupImageList()
         
     def OnGroupItemEdit(self, event=None):
         selection = self.groupList.GetSelection()
@@ -1883,8 +1902,7 @@ class Main(wx.Frame):
             self.toolbar.EnableTool(self._ids["Remove Group"], True)
             self.SetScheduleTree(data["schedules"])
             self.schedBtns["Add Schedule"].Enable()
-            self.UpdateScheduleInfo()
-            return
+            break
         
         self.toolbar.EnableTool(self._ids["Remove Group"], False)
         
@@ -1964,10 +1982,12 @@ class Main(wx.Frame):
             self.DisableScheduleManager()
         elif id == wx.ID_UNDO:
             self.DoUndo()
+        elif id == wx.ID_HELP:
+            self.ShowUserGuide()
         elif id == self._ids["Add Group"]:
             self.ShowAddGroupDialog() 
-        elif id == self._ids["Import"]:
-            self.ShowImportDialog()    
+        # elif id == self._ids["Import"]:
+            # self.ShowImportDialog()    
         elif id == self._ids["Remove Group"]:
             self.DeleteGroupItem()    
     
@@ -1997,9 +2017,9 @@ class Main(wx.Frame):
                                       self._clipboard["schedules"], append)                                           
         
         # clear the clipboard
-        if self._clipboard["type"] == "cut" and res is not None:
-            self._clipboard = None
-            self.UpdateToolbar()
+        # if self._clipboard["type"] == "cut" and res is not None:
+            # self._clipboard = None
+            # self.UpdateToolbar()
         
         self.UpdateGroupImageList()
              
@@ -2113,7 +2133,7 @@ class Main(wx.Frame):
                 menu.AppendSeparator()
                 continue
             if label == "Add Schedule":                        
-                item = menu.AppendSubMenu(subMenuFunctions, "Add Function")
+                item = menu.AppendSubMenu(subMenuFunctions, "Add Action")
                 if not self.cboxFunctions.IsEnabled():
                     item.Enable(False)
                     
@@ -2221,7 +2241,7 @@ class Main(wx.Frame):
             id = event.GetId()
             name = e.GetLabel(id)
 
-        if name == "Add Function":
+        if name == "Add Action":
             self.OnComboboxFunction()
         elif name == "Add Schedule":
             self.ShowAddScheduleDialog()
@@ -2289,9 +2309,9 @@ class Main(wx.Frame):
         else:        
             self.PasteIntoGroup(2)
         # clear the clipboard
-        if self._clipboard["type"] == "cut":
-            self._clipboard = None
-            self.UpdateToolbar()
+        # if self._clipboard["type"] == "cut":
+            # self._clipboard = None
+            # self.UpdateToolbar()
             
         self.UpdateScheduleImageList()
             
@@ -2433,9 +2453,9 @@ class Main(wx.Frame):
                 last = self.schedList.GetLastChild(child)
                 self.schedList.InsertSubTree(last, schedules)
         
-        if clip["type"] == "cut":
-            self._clipboard = None
-            self.UpdateToolbar()
+        # if clip["type"] == "cut":
+            # self._clipboard = None
+            # self.UpdateToolbar()
             
         self._data[index]["schedules"] = self.GetScheduleTree()
         self.UpdateScheduleImageList()
@@ -2579,10 +2599,11 @@ class Main(wx.Frame):
         """ set the group list tree """
         for idx in sorted([int(x) for x in data.keys() if x != "__version__"]):
             item = self.groupList.AppendItemToRoot(data[str(idx)]["columns"]["0"])
-            self.groupList.SetItemImage(item, self.imageListIndex("group"))
             self.groupList.CheckItem(item, data[str(idx)]["checked"])
             self._data[item] = {"checked": data[str(idx)]["checked"], 
                                 "schedules": data[str(idx)]["schedules"]}
+                                
+        self.UpdateGroupImageList()
         self.groupList.UnselectAll()
         
     def SetRecentFiles(self):
@@ -2627,6 +2648,7 @@ class Main(wx.Frame):
             (wx.ACCEL_CTRL, ord('C'), wx.ID_COPY),
             (wx.ACCEL_CTRL, ord('X'), wx.ID_CUT),
             (wx.ACCEL_CTRL, ord('V'), wx.ID_PASTE),
+            (wx.ACCEL_CTRL, ord('H'), wx.ID_HELP),
             # (wx.ACCEL_CTRL, ord('I'), self._ids["Import"]),
             (wx.ACCEL_CTRL, ord('G'), self._ids["group_Add Group"]),
             # (wx.ACCEL_NORMAL, wx.WXK_DELETE, self._ids["schedule_Delete"]),
@@ -2768,6 +2790,17 @@ class Main(wx.Frame):
         
         self._settingsDialog.Raise()    
         
+    def ShowUserGuide(self):
+    
+        try:
+            self._userGuideDialog.Show()
+            self._userGuideDialog.Raise()
+        except:    
+            self._userGuideDialog = UserGuideFrame(self)
+            self._userGuideDialog.CentreOnParent()
+            self._userGuideDialog.Raise()
+            self._userGuideDialog.Show()
+    
     def ToggleGroupSelection(self):
         if not self.groupSelection.IsOk():
             return
@@ -2781,8 +2814,9 @@ class Main(wx.Frame):
             self.groupList.CheckItem(self.groupSelection)
             checked = 1
             
+        self.UpdateGroupImageList()
         index = self.GetGroupListIndex(self.groupSelection)
-        self._data[index]["checked"] = checked
+        self._data[index]["checked"] = checked        
             
     def ToggleScheduleManager(self):
         if self._tools["Enable Schedule Manager"].GetLabel() == "Enable Schedule Manager":
@@ -2823,7 +2857,10 @@ class Main(wx.Frame):
     def UpdateGroupImageList(self):
         item = self.groupList.GetFirstItem()
         while item.IsOk():
-            self.groupList.SetItemImage(item, self.imageListIndex("group"))
+            if self.groupList.GetCheckedState(item) == 1:
+                self.groupList.SetItemImage(item, self.imageListIndex("groupchecked"))
+            else:
+                self.groupList.SetItemImage(item, self.imageListIndex("group"))
             item = self.groupList.GetNextItem(item)
             
     def UpdateGroupToolbar(self):
