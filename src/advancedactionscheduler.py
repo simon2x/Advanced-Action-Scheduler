@@ -874,6 +874,17 @@ class Main(wx.Frame):
         return self._ids[value]
             
     @property
+    def configPath(self):
+        sp = wx.StandardPaths.Get()
+        path = sp.GetUserConfigDir()
+        dirPath = os.path.join(path, "Advanced Action Scheduler")
+        path = os.path.join(dirPath, "config.json")
+        if not os.path.exists(os.path.join(dirPath)):
+            os.makedirs(dirPath)
+       
+        return path
+        
+    @property
     def taskBarIcon(self):
         return self._taskBarIcon
         
@@ -1020,7 +1031,7 @@ class Main(wx.Frame):
             else: 
                 self._appConfig["fileList"] = self._fileList
 
-        self.SaveDataToJSON("config.json", self._appConfig)
+        self.SaveDataToJSON(self.configPath, self._appConfig)
         self.ClearUI()
         
     def CopySelection(self):
@@ -1472,14 +1483,15 @@ class Main(wx.Frame):
     def LoadConfig(self):
         """ load application config and restore config settings """
         try:
-            with open("config.json", 'r') as file:
+            with open(self.configPath, 'r') as file:
                 self._appConfig.update(json.load(file))
         except FileNotFoundError:
-            with open("config.json", 'w') as file:
+            with open(self.configPath, 'w') as file:
                 json.dump(self._appConfig, file, sort_keys=True, indent=2)
         except json.JSONDecodeError:
-            with open("config.json", 'w') as file:
+            with open(self.configPath, 'w') as file:
                 json.dump(self._appConfig, file, sort_keys=True, indent=2)
+        file.close()
         
         self.SetRecentFiles()
         
@@ -1488,7 +1500,7 @@ class Main(wx.Frame):
                 self.LoadFile(self._appConfig["currentFile"])
             else:
                self._appConfig["currentFile"] = False
-               
+              
         if self._appConfig["showSplashScreen"] is True:
             SplashScreen(800)
            
@@ -1528,7 +1540,7 @@ class Main(wx.Frame):
             self.SetGroupTree(fileData)
             self.schedList.DeleteAllItems()
             self._appConfig["currentFile"] = filePath
-            self.SaveDataToJSON("config.json", self._appConfig)
+            self.SaveDataToJSON(self.configPath, self._appConfig)
             self.UpdateTitlebar()
             
         except FileNotFoundError:
@@ -2536,7 +2548,7 @@ class Main(wx.Frame):
            
         filePath = file.GetPath()   
         self._appConfig["currentFile"] = filePath
-        self.SaveDataToJSON("config.json", self._appConfig)
+        self.SaveDataToJSON(self.configPath, self._appConfig)
         self.SaveDataToJSON(self._appConfig["currentFile"], jsonData)
         self.commandState = 0
         self.UpdateRecentFiles(filePath)
@@ -2567,7 +2579,7 @@ class Main(wx.Frame):
         filePath = file.GetPath()
         jsonData = self.GetDataForJSON()
         self._appConfig["currentFile"] = filePath
-        self.SaveDataToJSON("config.json", self._appConfig)
+        self.SaveDataToJSON(self.configPath, self._appConfig)
         self.SaveDataToJSON(filePath, jsonData)
         
         self.commandState = 0
@@ -2968,7 +2980,7 @@ class Main(wx.Frame):
       
     def UpdateSettingsDict(self, data):
         self._appConfig.update(data)
-        self.SaveDataToJSON("config.json", self._appConfig)
+        self.SaveDataToJSON(self.configPath, self._appConfig)
         
         if self._appConfig["keepFileList"] == False:
             self.ClearRecentFiles()
