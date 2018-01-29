@@ -170,21 +170,19 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
         # we stop when item is a sibling
         selectedDepth = self.GetItemDepth(item)
         nextSib = self.GetNextSibling(item)
-        if not nextSib.IsOk():
-            parent = self.GetItemParent(item)
-            nextSib = self.GetNextSibling(parent) #  not actually next sibling
             
         data = []
         columnCount = self.GetColumnCount()
         depth = selectedDepth
         idx = "0"
-
+        
+        firstItem = item
         while item.IsOk():
 
             d = self.GetItemDepth(item)
 
             # have we reached sibling
-            if item == nextSib:
+            if d <= selectedDepth and firstItem != item:
                 break
 
             # selected item is first item
