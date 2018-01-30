@@ -199,8 +199,8 @@ class UserGuideFrame(wx.Frame):
             link = hyperlink.HyperLinkCtrl(self.rightPanel, label="Github Page", URL=g)
             self.rightSizer.Add(link, 0, wx.ALL|wx.EXPAND, 5)
             
-            g = "https://github.com/swprojects/Advanced-Action-Scheduler"
-            link = hyperlink.HyperLinkCtrl(self.rightPanel, label="SourceForge Page", URL=g)
+            s = "https://sourceforge.net/projects/advanced-action-scheduler/"
+            link = hyperlink.HyperLinkCtrl(self.rightPanel, label="SourceForge Page", URL=s)
             self.rightSizer.Add(link, 0, wx.ALL|wx.EXPAND, 5)
                 
         self.rightSizer.Layout() 
