@@ -1551,7 +1551,7 @@ class Main(wx.Frame):
                 logging.error("{0}".format(json.JSONDecodeError))
                 return
      
-        self.UpdateRecentFiles(filePath)
+            self.UpdateRecentFiles(filePath)
         
     def MoveGroupItemDown(self):
         # valid item selection?
@@ -2865,6 +2865,7 @@ class Main(wx.Frame):
         item.SetHelp("Open File: {0}".format(filePath))
         self.menuFile.Insert(self.menuFile.GetMenuItemCount()-len(self._fileList)-1, item)
         self._fileList.insert(0, filePath)
+        self.UpdateSettingsDict({"fileList":self._fileList})
      
     def UpdateGroupImageList(self):
         item = self.groupList.GetFirstItem()
