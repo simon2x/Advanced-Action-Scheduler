@@ -1551,7 +1551,7 @@ class Main(wx.Frame):
                 logging.error("{0}".format(json.JSONDecodeError))
                 return
      
-        self.UpdateRecentFiles(filePath)
+            self.UpdateRecentFiles(filePath)
         
     def MoveGroupItemDown(self):
         # valid item selection?
@@ -2776,7 +2776,7 @@ class Main(wx.Frame):
         self.schedList.Expand(newItem)
         self.schedList.SetFocus()
         self.UpdateScheduleToolbar()
-        
+        self.UpdateScheduleImageList()
         self.SaveScheduleTreeToData()
         
     def ShowCheckForUpdatesDialog(self):
@@ -2865,6 +2865,7 @@ class Main(wx.Frame):
         item.SetHelp("Open File: {0}".format(filePath))
         self.menuFile.Insert(self.menuFile.GetMenuItemCount()-len(self._fileList)-1, item)
         self._fileList.insert(0, filePath)
+        self.UpdateSettingsDict({"fileList":self._fileList})
      
     def UpdateGroupImageList(self):
         item = self.groupList.GetFirstItem()
@@ -2935,8 +2936,7 @@ class Main(wx.Frame):
         self.infoSched.Refresh()   
     
     def UpdateScheduleToolbar(self):
-        selection = self.schedList.GetSelection()
-        if not selection.IsOk():
+        if not self.scheduleSelection.IsOk():
             for label, btn in self.schedBtns.items():
                 if label == "Add Schedule":
                     continue
@@ -2944,27 +2944,29 @@ class Main(wx.Frame):
             # stop user from being able add function     
             self.cboxFunctions.Disable()
             self.btnAddFunction.Disable()
-            return
+        else:          
+            # enable user to add function     
+            self.cboxFunctions.Enable()
+            self.btnAddFunction.Enable()
             
-        # enable user to add function     
-        self.cboxFunctions.Enable()
-        self.btnAddFunction.Enable()
-        
-        self.schedBtns["Edit"].Enable()
-        self.schedBtns["Toggle"].Enable()
-        self.schedBtns["Delete"].Enable()
+            self.schedBtns["Edit"].Enable()
+            self.schedBtns["Toggle"].Enable()
+            self.schedBtns["Delete"].Enable()
          
-        if self.schedList.GetNextSibling(selection).IsOk():   
-            self.schedBtns["Down"].Enable()
-        else:
-            self.schedBtns["Down"].Disable()
+            if self.schedList.GetNextSibling(self.scheduleSelection).IsOk():   
+                self.schedBtns["Down"].Enable()
+            else:
+                self.schedBtns["Down"].Disable()
+                
+            parent = self.schedList.GetItemParent(self.scheduleSelection)    
+            if self.schedList.GetFirstChild(parent) != self.scheduleSelection:   
+                self.schedBtns["Up"].Enable()
+            else:
+                self.schedBtns["Up"].Disable()
             
-        parent = self.schedList.GetItemParent(selection)    
-        if self.schedList.GetFirstChild(parent) != selection:   
-            self.schedBtns["Up"].Enable()
-        else:
-            self.schedBtns["Up"].Disable()
-            
+        if self.groupSelection.IsOk():
+            self.schedBtns["Add Schedule"].Enable()
+                        
     def UpdateScheduleImageList(self):
         item = self.schedList.GetFirstItem()
         while item.IsOk():
