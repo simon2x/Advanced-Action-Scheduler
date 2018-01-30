@@ -1533,24 +1533,24 @@ class Main(wx.Frame):
         
     def LoadFile(self, filePath):
         """ load a schedule file by file path """
-        try:
-            with open(filePath, 'r') as file:
-                fileData = json.load(file)
-
-            self.SetGroupTree(fileData)
-            self.schedList.DeleteAllItems()
-            self._appConfig["currentFile"] = filePath
-            self.SaveDataToJSON(self.configPath, self._appConfig)
-            self.UpdateTitlebar()
-            
-        except FileNotFoundError:
-            logging.error("{0}".format(FileNotFoundError))
-            return
-        except json.JSONDecodeError:
-            # TODO: raise corrupt/invalid file error
-            logging.error("{0}".format(json.JSONDecodeError))
-            return
-            
+        if filePath:
+            try:
+                with open(filePath, 'r') as file:
+                    fileData = json.load(file)
+                self.SetGroupTree(fileData)
+                self.schedList.DeleteAllItems()
+                self._appConfig["currentFile"] = filePath
+                self.SaveDataToJSON(self.configPath, self._appConfig)
+                self.UpdateTitlebar()
+                
+            except FileNotFoundError:
+                logging.error("{0}".format(FileNotFoundError))
+                return
+            except json.JSONDecodeError:
+                # TODO: raise corrupt/invalid file error
+                logging.error("{0}".format(json.JSONDecodeError))
+                return
+     
         self.UpdateRecentFiles(filePath)
         
     def MoveGroupItemDown(self):
