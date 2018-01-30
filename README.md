@@ -11,6 +11,7 @@ Advanced Action Scheduler is a free, open-source general purpose task scheduler.
 #
 # SCREENSHOTS
 <img align="center" src="resources/images/screenshot_application1.png?raw=true"/>
+<img align="center" src="resources/images/screenshot_application2.png?raw=true"/>
 
 # DOWNLOADS
 https://github.com/swprojects/Advanced-Action-Scheduler/releases
