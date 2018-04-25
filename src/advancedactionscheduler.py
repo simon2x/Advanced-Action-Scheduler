@@ -2671,7 +2671,14 @@ class Main(wx.Frame):
         
     def SetupHotkeys(self):
         """ hook global hotkeys """
-        keyboard.unhook_all()
+        
+        # see https://github.com/boppreh/keyboard/issues/139
+        # should be fixed in future, but now, we only unhook
+        # if hooks are created in the first place
+        try:
+            keyboard.unhook_all()
+        except AttributeError:
+            pass
         keyboard.add_hotkey(self._appConfig["toggleSchedManHotkey"], self.ToggleScheduleManager)
             
     def ShowAboutDialog(self):
