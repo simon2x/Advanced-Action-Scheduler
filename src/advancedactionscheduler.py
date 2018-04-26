@@ -878,6 +878,7 @@ class Main(wx.Frame):
         sp = wx.StandardPaths.Get()
         path = sp.GetUserConfigDir()
         if PLATFORM == "Linux":
+            dirPath = os.path.join(path, ".advancedactionscheduler")
         else:            
             dirPath = os.path.join(path, "Advanced Action Scheduler")
         path = os.path.join(dirPath, "config.json")
