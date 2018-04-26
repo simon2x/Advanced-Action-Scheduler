@@ -2283,6 +2283,8 @@ class Main(wx.Frame):
             self.PasteIntoGroup(append=0)
         elif name == "Paste Into":
             self.PasteIntoGroup(append=3)
+        elif name == "Toggle":
+            self.ToggleScheduleSelection()
         elif name == "Up":
             self.MoveScheduleItemUp()   
                         
@@ -2756,9 +2758,11 @@ class Main(wx.Frame):
             self.OnGroupItemSelectionChanged()
             self.SetScheduleTree(schedules)
 
+            self.groupList.Select(self.groupList.GetFirstItem())
             self.groupList.Select(newItem)
             self.groupList.SetFocus()
-            
+            self.UpdateGroupToolbar()
+            self.UpdateScheduleToolbar()
             self.UpdateGroupImageList()
             self.UpdateScheduleInfo()
             self.ClearRedoStack()
@@ -2829,6 +2833,7 @@ class Main(wx.Frame):
             self._userGuideDialog.Show()
     
     def ToggleGroupSelection(self):
+        logging.debug("ToggleGroupSelection")
         if not self.groupSelection.IsOk():
             return
         self.SaveStateToUndoStack()
