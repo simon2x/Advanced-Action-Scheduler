@@ -22,7 +22,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 import wx
 import base
-import keyboard # global hotkey
 import psutil
 import json
 import logging
@@ -53,9 +52,15 @@ __title__ = "Advanced Action Scheduler"
 
 PLATFORM = platform.system()
 if PLATFORM == "Windows":
-    pass
-elif PLATFORM == "Linux":
-    pass
+    import keyboard
+else:
+    try:
+        import keyboard
+        keyboard.unhook_all()
+    except:    
+        print("Failed to import keyboard. Using dummy keyboard")
+        print("Not run with root privileges?")
+        from dummykeyboard import keyboard        
     
 # switch to applications directory
 full_path = os.path.realpath(__file__)
