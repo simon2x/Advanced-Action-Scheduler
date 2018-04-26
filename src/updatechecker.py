@@ -128,6 +128,7 @@ class CheckForUpdates(wx.Dialog):
         self.btnCheck.SetLabel("Check")
         if self.version == self.latestVersion:
             self.versionStatus.SetLabel("No Updates Are Available")
+            self.timer.Stop()
             return
             
         self.versionStatus.SetLabel("Updates Are Available")
