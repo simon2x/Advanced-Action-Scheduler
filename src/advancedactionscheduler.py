@@ -680,185 +680,7 @@ class Main(wx.Frame):
         self.CreateToolbar()
         self.CreateStatusBar()
         self.SetIcon(wx.Icon("icons/icon.png"))
-
-        #-----
-        self.splitter = wx.SplitterWindow(self)
-
-        leftPanel = wx.Panel(self.splitter)
-        leftPanel.SetBackgroundColour("DARKGREY")
-        leftSizer = wx.BoxSizer(wx.VERTICAL)
-        
-        hSizerGroup = wx.WrapSizer(wx.HORIZONTAL)
-        self.groupBtns = {}
-        for label in ["Add Group", "Up", "Down", "Edit", "Toggle", "Delete"]:
-            wxId = self.ids("group_"+label)
-            btn = wx.Button(leftPanel, wxId, label, name=label, style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
-            if label != "Add Group":
-                btn.Disable()
-            self.groupBtns[label] = btn
-            img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
-            img = img.Rescale(24,24, wx.IMAGE_QUALITY_HIGH)
-            bmp = wx.Bitmap(img)
-            if label == "Edit":
-                btn.Bind(wx.EVT_BUTTON, self.OnGroupItemEdit)
-            else:
-                btn.Bind(wx.EVT_BUTTON, self.OnGroupToolBar)
-            btn.SetBitmap(bmp)
-
-            tooltip = wx.ToolTip(label)
-            btn.SetToolTip(tooltip)
-            hSizerGroup.Add(btn, 0, wx.ALL|wx.EXPAND, 2)
-        leftSizer.Add(hSizerGroup, 0, wx.ALL|wx.EXPAND, 5)
-        
-        self.groupList = base.TreeListCtrl(leftPanel)
-        self.groupList.AssignImageList(self.imageList)
-        self.groupList.Bind(wx.EVT_CHAR, self.OnGroupChar)
-        self.groupList.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnGroupItemSelectionChanged)
-        self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_CONTEXT_MENU, self.OnGroupContextMenu)
-        self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_CHECKED, self.OnGroupItemChecked)
-        self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self.OnGroupItemEdit)
-        self.groupList.AppendColumn("Group")
-        self.groupListRoot = self.groupList.GetRootItem()
-
-        leftSizer.Add(self.groupList, 1, wx.ALL|wx.EXPAND, 5)
-        leftPanel.SetSizer(leftSizer)
-
-        # ----- rhs layout -----
-
-        nbPanel = wx.Panel(self.splitter)
-        self.notebook = wx.Notebook(nbPanel)
-        nbSizer = wx.BoxSizer(wx.VERTICAL)
-        nbSizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 2)
-        # the schedule panel/tab page
-        schedPanel = wx.Panel(self.notebook)
-        schedSizer = wx.BoxSizer(wx.VERTICAL)
-
-        # -----
-        hSizerFunctions = wx.WrapSizer(wx.HORIZONTAL)
-        self.schedBtns = {}
-        for label in ["Add Schedule", "Up", "Down", "Edit", "Toggle", "Delete"]:
-            wxId = self.ids("schedule_"+label)
-            btn = wx.Button(schedPanel, wxId, label, name=label, style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
-            btn.Disable()
-            self.schedBtns[label] = btn
-            img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
-            img = img.Rescale(32,32, wx.IMAGE_QUALITY_HIGH)
-            bmp = wx.Bitmap(img)
-            if label == "Edit":
-                btn.Bind(wx.EVT_BUTTON, self.OnScheduleItemEdit)
-            else:
-                btn.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
-            if label in ["Delete"]:
-                hSizerFunctions.AddStretchSpacer()
-
-            btn.SetBitmap(bmp)
-
-            tooltip = wx.ToolTip(label)
-            btn.SetToolTip(tooltip)
-            hSizerFunctions.Add(btn, 0, wx.ALL|wx.EXPAND, 2)
-        schedSizer.Add(hSizerFunctions, 0, wx.ALL|wx.EXPAND, 2)
-
-        schedSizer.Add(wx.StaticLine(schedPanel), 0, wx.ALL|wx.EXPAND, 2)
-        # schedPanel.SetBackgroundColour("lightgray")
-        # -----
-        hSizerFunctions2 = wx.BoxSizer(wx.HORIZONTAL)
-
-        self.cboxFunctions = wx.ComboBox(schedPanel, style=wx.CB_READONLY, choices=FUNCTIONS, size=(-1, -1))
-        self.cboxFunctions.SetSelection(0)
-        self.cboxFunctions.Disable()
-        # self.cboxFunctions.Bind(wx.EVT_COMBOBOX, self.OnComboboxFunction)
-
-        self.btnAddFunction = wx.Button(schedPanel, label="Add Action", name="Add Action", size=(-1, -1))
-        img = wx.Image("icons/add.png")
-        img = img.Rescale(24,24, wx.IMAGE_QUALITY_HIGH)
-        bmp = wx.Bitmap(img)
-        self.btnAddFunction.SetBitmap(bmp)
-        self.btnAddFunction.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
-        self.btnAddFunction.Disable()
-        hSizerFunctions2.Add(self.cboxFunctions, 0, wx.ALL|wx.CENTRE, 5)
-        hSizerFunctions2.Add(self.btnAddFunction, 0, wx.ALL|wx.CENTRE, 5)
-        schedSizer.Add(hSizerFunctions2, 0, wx.ALL, 0)
-
-        # -----
-        self.splitter2 = wx.SplitterWindow(schedPanel)
-        self.schedList = base.TreeListCtrl(self.splitter2, style=wx.dataview.TL_CHECKBOX)
-        self.schedList.AssignImageList(self.schedImageList)
-        self.schedList.Bind(wx.EVT_CHAR, self.OnScheduleChar)
-        self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_CONTEXT_MENU, self.OnScheduleContextMenu)
-        self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self.OnScheduleTreeActivated)
-        self.schedList.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnScheduleTreeSelectionChanged)
-        self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_CHECKED, self.OnScheduleTreeItemChecked)
-        self.schedList.AppendColumn("Schedule")
-
-        infoPanel = wx.Panel(self.splitter2)
-        infoPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.infoSchedButton = wx.Button(infoPanel, style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
-        self.infoSchedButton.Bind(wx.EVT_BUTTON, self.OnScheduleItemEdit)
-        self.infoSchedButton.SetBitmap(wx.Bitmap())
-        self.infoSched = wx.TextCtrl(infoPanel, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-        self.infoSched.SetFont(self.infoSchedFont)
-        self.infoSched.SetBackgroundColour(wx.Colour(60,60,60))
-        self.infoSched.SetForegroundColour(wx.Colour(250,250,250))
-        infoPanel.SetBackgroundColour(wx.Colour(60,60,60))
-        self.infoSchedButton.Hide()
-        infoPanelSizer.Add(self.infoSchedButton, 1, wx.ALL|wx.EXPAND, 0)
-        infoPanelSizer.Add(self.infoSched, 4, wx.ALL|wx.EXPAND, 5)
-        infoPanel.SetSizer(infoPanelSizer)
-        self.infoPanelSizer = infoPanelSizer
-        self.splitter2.SplitHorizontally(self.schedList, infoPanel)
-        self.splitter2.SetSashGravity(0.8)
-
-        schedSizer.Add(self.splitter2, 1, wx.ALL|wx.EXPAND, 0)
-        schedPanel.SetSizer(schedSizer)
-
-        self.schedList.SetForegroundColour(wx.Colour(30,30,30))
-        self.groupList.SetForegroundColour(wx.Colour(30,30,30))
-        
-        # the schedule manager panel/tab page
-        schedManagerPanel = wx.Panel(self.notebook)
-        schedManagerSizer = wx.BoxSizer(wx.VERTICAL)
-        schedManagerPanel.SetSizer(schedManagerSizer)
-
-        schedManagerHsizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.schedManagerBtns = {}
-        for label in ["Clear"]:
-            if label == "Clear":
-                schedManagerHsizer.AddStretchSpacer()
-            btn = wx.Button(schedManagerPanel, label=label, name=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
-            self.schedBtns[label] = btn
-            img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
-            img = img.Rescale(32,32, wx.IMAGE_QUALITY_HIGH)
-            bmp = wx.Bitmap(img)
-            btn.SetBitmap(bmp)
-            btn.Bind(wx.EVT_BUTTON, self.OnScheduleManagerToolbar)
-            schedManagerHsizer.Add(btn, 0, wx.ALL, 5)
-            self.schedManagerBtns[label] = btn
-            tooltip = wx.ToolTip(label)
-            btn.SetToolTip(tooltip)
-        schedManagerSizer.Add(schedManagerHsizer, 0, wx.ALL|wx.EXPAND, 0)
-
-        self.schedLog = base.BaseList(schedManagerPanel)
-        self.schedLog.Bind(wx.EVT_RIGHT_UP, self.OnScheduleManagerContextMenu)
-        self.schedLog.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self.OnScheduleManagerContextMenu)
-        self.schedLog.InsertColumn(0, "Group")
-        self.schedLog.InsertColumn(1, "Schedule")
-        self.schedLog.InsertColumn(2, "Message")
-        self.schedLog.InsertColumn(4, "Time")
-        self.schedLog.InsertColumn(5, "Date")
-        self.schedLog.InsertColumn(6, "#")
-        self.schedLog.setResizeColumn(3)
-        schedManagerSizer.Add(self.schedLog, 1, wx.ALL|wx.EXPAND, 5)
-
-        self.notebook.AddPage(schedPanel, "Schedules")
-        self.notebook.AddPage(schedManagerPanel, "Manager")
-
-        nbPanel.SetSizer(nbSizer)
-
-        self.splitter.SplitVertically(leftPanel, nbPanel)
-        self.splitter.SetSashGravity(0.2)
-
-        self.SetMinSize((700, 600))
-        self.SetSize((700, 600))
+        self.CreateUI()
 
         #load settings
         self.LoadConfig()
@@ -871,6 +693,9 @@ class Main(wx.Frame):
         self.powerTimer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnPowerTimer, self.powerTimer)
         self.powerTimer.Start(1000)
+        
+        self.SetMinSize((700, 600))
+        self.SetSize((700, 600))      
         
     def ids(self, value):
         """ return existing ID or create a new ID """
@@ -1191,6 +1016,187 @@ class Main(wx.Frame):
             self.taskBarIcon.RemoveTray()
         self.taskBarIcon = TaskBarIcon(self)
         
+    def CreateUI(self):
+        self.splitter = wx.SplitterWindow(self)
+
+        leftPanel = wx.Panel(self.splitter)
+        leftPanel.SetBackgroundColour("DARKGREY")
+        leftSizer = wx.BoxSizer(wx.VERTICAL)
+        
+        hSizerGroup = wx.WrapSizer(wx.HORIZONTAL)
+        self.groupBtns = {}
+        for label in ["Add Group", "Up", "Down", "Edit", "Toggle", "Delete"]:
+            wxId = self.ids("group_"+label)
+            btn = wx.Button(leftPanel, wxId, label, name=label, style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
+            if label != "Add Group":
+                btn.Disable()
+            self.groupBtns[label] = btn
+            img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
+            img = img.Rescale(24,24, wx.IMAGE_QUALITY_HIGH)
+            bmp = wx.Bitmap(img)
+            if label == "Edit":
+                btn.Bind(wx.EVT_BUTTON, self.OnGroupItemEdit)
+            else:
+                btn.Bind(wx.EVT_BUTTON, self.OnGroupToolBar)
+            btn.SetBitmap(bmp)
+
+            tooltip = wx.ToolTip(label)
+            btn.SetToolTip(tooltip)
+            hSizerGroup.Add(btn, 0, wx.ALL|wx.EXPAND, 2)
+        leftSizer.Add(hSizerGroup, 0, wx.ALL|wx.EXPAND, 5)
+        
+        self.groupList = base.TreeListCtrl(leftPanel)
+        self.groupList.AssignImageList(self.imageList)
+        self.groupList.Bind(wx.EVT_CHAR, self.OnGroupChar)
+        self.groupList.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnGroupItemSelectionChanged)
+        self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_CONTEXT_MENU, self.OnGroupContextMenu)
+        self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_CHECKED, self.OnGroupItemChecked)
+        self.groupList.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self.OnGroupItemEdit)
+        self.groupList.AppendColumn("Group")
+        self.groupListRoot = self.groupList.GetRootItem()
+
+        leftSizer.Add(self.groupList, 1, wx.ALL|wx.EXPAND, 5)
+        leftPanel.SetSizer(leftSizer)
+
+        # ----- rhs layout -----
+
+        nbPanel = wx.Panel(self.splitter)
+        self.notebook = wx.Notebook(nbPanel)
+        nbSizer = wx.BoxSizer(wx.VERTICAL)
+        nbSizer.Add(self.notebook, 1, wx.ALL|wx.EXPAND, 2)
+        # the schedule panel/tab page
+        schedPanel = wx.Panel(self.notebook)
+        schedSizer = wx.BoxSizer(wx.VERTICAL)
+
+        # -----
+        hSizerFunctions = wx.WrapSizer(wx.HORIZONTAL)
+        self.schedBtns = {}
+        for label in ["Add Schedule", "Up", "Down", "Edit", "Toggle", "Delete"]:
+            wxId = self.ids("schedule_"+label)
+            btn = wx.Button(schedPanel, wxId, label, name=label, style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
+            btn.Disable()
+            self.schedBtns[label] = btn
+            img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
+            img = img.Rescale(32,32, wx.IMAGE_QUALITY_HIGH)
+            bmp = wx.Bitmap(img)
+            if label == "Edit":
+                btn.Bind(wx.EVT_BUTTON, self.OnScheduleItemEdit)
+            else:
+                btn.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
+            if label in ["Delete"]:
+                hSizerFunctions.AddStretchSpacer()
+
+            btn.SetBitmap(bmp)
+
+            tooltip = wx.ToolTip(label)
+            btn.SetToolTip(tooltip)
+            hSizerFunctions.Add(btn, 0, wx.ALL|wx.EXPAND, 2)
+        schedSizer.Add(hSizerFunctions, 0, wx.ALL|wx.EXPAND, 2)
+
+        schedSizer.Add(wx.StaticLine(schedPanel), 0, wx.ALL|wx.EXPAND, 2)
+        # schedPanel.SetBackgroundColour("lightgray")
+        # -----
+        hSizerFunctions2 = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.cboxFunctions = wx.ComboBox(schedPanel, style=wx.CB_READONLY, choices=FUNCTIONS, size=(-1, -1))
+        self.cboxFunctions.SetSelection(0)
+        self.cboxFunctions.Disable()
+        # self.cboxFunctions.Bind(wx.EVT_COMBOBOX, self.OnComboboxFunction)
+
+        self.btnAddFunction = wx.Button(schedPanel, label="Add Action", name="Add Action", size=(-1, -1))
+        img = wx.Image("icons/add.png")
+        img = img.Rescale(24,24, wx.IMAGE_QUALITY_HIGH)
+        bmp = wx.Bitmap(img)
+        self.btnAddFunction.SetBitmap(bmp)
+        self.btnAddFunction.Bind(wx.EVT_BUTTON, self.OnScheduleToolBar)
+        self.btnAddFunction.Disable()
+        hSizerFunctions2.Add(self.cboxFunctions, 0, wx.ALL|wx.CENTRE, 5)
+        hSizerFunctions2.Add(self.btnAddFunction, 0, wx.ALL|wx.CENTRE, 5)
+        schedSizer.Add(hSizerFunctions2, 0, wx.ALL, 0)
+
+        # -----
+        self.splitter2 = wx.SplitterWindow(schedPanel)
+        schedListPanel = wx.Panel(self.splitter2)
+        schedListSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.schedList = base.TreeListCtrl(schedListPanel, style=wx.dataview.TL_CHECKBOX)
+        schedListSizer.Add(self.schedList, 1, wx.ALL|wx.EXPAND, 0)
+        schedListPanel.SetSizer(schedListSizer)
+        self.schedList.AssignImageList(self.schedImageList)
+        self.schedList.Bind(wx.EVT_CHAR, self.OnScheduleChar)
+        self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_CONTEXT_MENU, self.OnScheduleContextMenu)
+        self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_ACTIVATED, self.OnScheduleTreeActivated)
+        self.schedList.Bind(wx.dataview.EVT_TREELIST_SELECTION_CHANGED, self.OnScheduleTreeSelectionChanged)
+        self.schedList.Bind(wx.dataview.EVT_TREELIST_ITEM_CHECKED, self.OnScheduleTreeItemChecked)
+        
+        infoPanel = wx.Panel(self.splitter2)
+        infoPanelSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.infoSchedButton = wx.Button(infoPanel, style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
+        self.infoSchedButton.Bind(wx.EVT_BUTTON, self.OnScheduleItemEdit)
+        self.infoSchedButton.SetBitmap(wx.Bitmap())
+        self.infoSched = wx.TextCtrl(infoPanel, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.infoSched.SetFont(self.infoSchedFont)
+        self.infoSched.SetBackgroundColour(wx.Colour(60,60,60))
+        self.infoSched.SetForegroundColour(wx.Colour(250,250,250))
+        infoPanel.SetBackgroundColour(wx.Colour(60,60,60))
+        self.infoSchedButton.Hide()
+        infoPanelSizer.Add(self.infoSchedButton, 1, wx.ALL|wx.EXPAND, 0)
+        infoPanelSizer.Add(self.infoSched, 4, wx.ALL|wx.EXPAND, 5)
+        infoPanel.SetSizer(infoPanelSizer)
+        self.infoPanelSizer = infoPanelSizer
+        self.splitter2.SplitHorizontally(schedListPanel, infoPanel)
+        self.splitter2.SetSashGravity(0.8)
+
+        schedSizer.Add(self.splitter2, 1, wx.ALL|wx.EXPAND, 0)
+        schedPanel.SetSizer(schedSizer)
+        
+        self.schedList.SetForegroundColour(wx.Colour(30,30,30))
+        self.groupList.SetForegroundColour(wx.Colour(30,30,30))
+        
+        # the schedule manager panel/tab page
+        schedManagerPanel = wx.Panel(self.notebook)
+        schedManagerSizer = wx.BoxSizer(wx.VERTICAL)
+        schedManagerPanel.SetSizer(schedManagerSizer)
+
+        schedManagerHsizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.schedManagerBtns = {}
+        for label in ["Clear"]:
+            if label == "Clear":
+                schedManagerHsizer.AddStretchSpacer()
+            btn = wx.Button(schedManagerPanel, label=label, name=label, size=(-1, -1), style=wx.BU_EXACTFIT|wx.BU_NOTEXT)
+            self.schedBtns[label] = btn
+            img = wx.Image("icons/{0}.png".format(label.lower().replace(" ", "")))
+            img = img.Rescale(32,32, wx.IMAGE_QUALITY_HIGH)
+            bmp = wx.Bitmap(img)
+            btn.SetBitmap(bmp)
+            btn.Bind(wx.EVT_BUTTON, self.OnScheduleManagerToolbar)
+            schedManagerHsizer.Add(btn, 0, wx.ALL, 5)
+            self.schedManagerBtns[label] = btn
+            tooltip = wx.ToolTip(label)
+            btn.SetToolTip(tooltip)
+        schedManagerSizer.Add(schedManagerHsizer, 0, wx.ALL|wx.EXPAND, 0)
+
+        self.schedLog = base.BaseList(schedManagerPanel)
+        self.schedLog.Bind(wx.EVT_RIGHT_UP, self.OnScheduleManagerContextMenu)
+        self.schedLog.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self.OnScheduleManagerContextMenu)
+        self.schedLog.InsertColumn(0, "Group")
+        self.schedLog.InsertColumn(1, "Schedule")
+        self.schedLog.InsertColumn(2, "Message")
+        self.schedLog.InsertColumn(4, "Time")
+        self.schedLog.InsertColumn(5, "Date")
+        self.schedLog.InsertColumn(6, "#")
+        self.schedLog.setResizeColumn(3)
+        schedManagerSizer.Add(self.schedLog, 1, wx.ALL|wx.EXPAND, 5)
+
+        self.notebook.AddPage(schedPanel, "Schedules")
+        self.notebook.AddPage(schedManagerPanel, "Manager")
+
+        nbPanel.SetSizer(nbSizer)
+
+        self.splitter.SplitVertically(leftPanel, nbPanel)
+        self.splitter.SetSashGravity(0.2)       
+        
+        self.schedList.AppendColumn("Schedule")
+    
     def CutSelection(self):
     
         if self._currentSelectionType == "group":
