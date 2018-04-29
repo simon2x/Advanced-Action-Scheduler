@@ -28,21 +28,18 @@ class FindPosition(wx.Frame):
     def __init__(self, parent):
 
         wx.Frame.__init__(self,
-                          parent=None,
+                          parent,
                           style=wx.NO_BORDER)
         
         self.SetTitle("Absolute Position Finder")
         self.absolutePos = None                 
         
-        # self.SetSize((25, 25))
         panel = wx.Panel(self)
-
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self._position = wx.StaticText(panel, label="(0,0)", )
-        sizer.Add(self._position, 1, wx.ALL|wx.EXPAND|wx.ALIGN_CENTRE)
-
         panel.SetSizer(sizer)
-
+        self._position = wx.StaticText(panel, label="(0,0)")
+        sizer.Add(self._position, 1, wx.ALL|wx.EXPAND|wx.ALIGN_CENTRE)
+        
         self._position.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
 
         panel.Bind(wx.EVT_KEY_UP, self.OnKeyUp)
@@ -64,26 +61,29 @@ class FindPosition(wx.Frame):
         
         self._position.SetForegroundColour("white")
         self.SetBackgroundColour("blue")
-        
+                    
     def GetValue(self):
         print(self.absolutePos)
         return self.absolutePos
     
     def OnLeftUp(self, event):
+        self.timer.Stop()
         x, y = wx.GetMousePosition()
         self.absolutePos = (x,y)
         self.Close()
     
-    def OnKeyUp(self, event):
+    def OnKeyUp(self, event):        
         key = event.GetKeyCode()
         print(key)
         if key == wx.WXK_ESCAPE:
+            self.timer.Stop()
             self.Close()
         if key == wx.WXK_RETURN:
-            self.Close()
+            self.OnLeftUp(event=None)
 
     def OnRightUp(self, event):
-        self.Destroy()
+        self.timer.Stop()
+        self.Close()
         
     def OnTimer(self, event):
         self.Raise()
@@ -92,7 +92,7 @@ class FindPosition(wx.Frame):
 
         text = "%d, %d" % (x, y)
         self._position.SetLabel(text)
-
+        
 class MouseClickAbsolute(wx.Dialog):
 
     def __init__(self, parent):
@@ -192,7 +192,7 @@ class MouseClickAbsolute(wx.Dialog):
         self.spinY.SetDigits(0)
         grid.Add(lblY, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
         grid.Add(self.spinY, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
-
+        
         grid.AddGrowableCol(1)
         
         hsizerBtns = wx.BoxSizer(wx.HORIZONTAL)
@@ -242,8 +242,15 @@ class MouseClickAbsolute(wx.Dialog):
         except Exception as e:
             print(e)
             
+        panel.Bind(wx.EVT_KEY_UP, lambda x: 1)
 
+    def EndModal(self, id):
+        if id == wx.ID_OK:
+            self.GetParent().SetSelectedScheduleItem("MouseClickAbsolute", self.GetValue())
+        self.Destroy()
+        
     def FindPosition(self): 
+        
         try:
             title, win_class = make_tuple(self.cboxWindow.GetValue())
             winman.SetForegroundWindow(title, win_class)
@@ -257,13 +264,14 @@ class MouseClickAbsolute(wx.Dialog):
                 logging.info("Got absolute position: %s" % str((x,y)))
                 self.spinX.SetValue(int(x))
                 self.spinY.SetValue(int(y))
-                event.Skip()
-            except:
-                pass
+            except Exception as e:
+                print(Exception)
                 
-            finder.Destroy()
+            finder.Hide()
+            self.Show()
             self.SetFocus()
-
+                    
+        self.Hide()
         finder.Bind(wx.EVT_CLOSE, on_finder_close)
         x, y = self.spinX.GetValue(), self.spinY.GetValue()
         finder.Show()
@@ -368,7 +376,7 @@ class MouseClickAbsolute(wx.Dialog):
         elif label == "Get Window Size":
             self.GetWindowSize()  
         elif label == "Ok":
-            self.EndModal(id)    
+            self.EndModal(id)
         elif label == "Refresh":
             self.RefreshWindowList()  
         elif label == "Reset Values":
@@ -457,7 +465,7 @@ class MouseClickAbsolute(wx.Dialog):
         kwargs = self.GetMatchKwargs()    
         handles = winman.GetHandles(progName, title, **kwargs)
         if not handles:
-            return
+            returne
             
         for handle in handles:
             try:
@@ -491,4 +499,3 @@ class MouseClickAbsolute(wx.Dialog):
                 return
             
         self.Raise()
-#        

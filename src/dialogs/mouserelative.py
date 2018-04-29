@@ -253,7 +253,11 @@ class MouseClickRelative(wx.Dialog):
         except Exception as e:
             print(e)
             
-
+    def EndModal(self, id):
+        if id == wx.ID_OK:
+            self.GetParent().SetSelectedScheduleItem("MouseClickRelative", self.GetValue())
+        self.Destroy()
+            
     def FindPosition(self): 
         try:
             title, win_class = make_tuple(self.cboxWindow.GetValue())
@@ -270,14 +274,15 @@ class MouseClickRelative(wx.Dialog):
                 logging.info("Got relative position: %s" % str((x,y)))
                 self.spinX.SetValue(float(x))
                 self.spinY.SetValue(float(y))
-                event.Skip()
             except Exception as e:
                 print(e)
                 
-            finder.Destroy()
+            finder.Hide()
+            self.Show()
             self.SetFocus()
-        finder.Bind(wx.EVT_CLOSE, on_finder_close)
-        
+            
+        self.Hide()
+        finder.Bind(wx.EVT_CLOSE, on_finder_close)        
         x1 = self.spinOffsetX.GetValue()
         y1 = self.spinOffsetY.GetValue()
         w = self.spinW.GetValue()
