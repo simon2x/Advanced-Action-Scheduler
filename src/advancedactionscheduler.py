@@ -1101,7 +1101,6 @@ class Main(wx.Frame):
         self.cboxFunctions = wx.ComboBox(schedPanel, style=wx.CB_READONLY, choices=FUNCTIONS, size=(-1, -1))
         self.cboxFunctions.SetSelection(0)
         self.cboxFunctions.Disable()
-        # self.cboxFunctions.Bind(wx.EVT_COMBOBOX, self.OnComboboxFunction)
 
         self.btnAddFunction = wx.Button(schedPanel, label="Add Action", name="Add Action", size=(-1, -1))
         img = wx.Image("icons/add.png")
