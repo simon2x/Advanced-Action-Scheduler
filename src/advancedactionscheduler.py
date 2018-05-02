@@ -1818,49 +1818,24 @@ class Main(wx.Frame):
         except Exception as e:
             print(e)
         
-    def OnComboboxFunction(self, event=None):
-        """ selecting a combobox option automatically raises a corresponding dialog """
-
+    def OnAddAction(self, event=None):
+        """Opens the selected action dialog"""
         if not self.scheduleSelection.IsOk():
             return
             
         index = self.cboxFunctions.GetSelection()
         if index == -1:
             return
-        label = self.cboxFunctions.GetStringSelection()
-        logging.info("OnComboboxFunction event: %s" % label)
-        logging.debug(index)        
-
-        dlg = self.GetDialog(label)
-        ret = dlg.ShowModal()
-        if ret == wx.ID_CANCEL:
-            return
-        self.SaveStateToUndoStack()
-        self.ClearRedoStack()
-
-        value = label + DELIMITER + dlg.GetValue()
-        newItem = self.schedList.AppendItem(self.scheduleSelection, value)
-        self.schedList.SetItemImage(newItem, self.imageListIndex(label))
-        
-        schedSelIdx = self.schedList.GetItemIndex(self.scheduleSelection)
-        idx = self.schedList.GetItemIndex(newItem)
-        groupSel = self.groupList.GetSelection()
+        name = self.cboxFunctions.GetStringSelection()
+        logging.info("OnAddAction event: %s" % name)
+        logging.debug(index)
        
-        n = 0
-        itm = self.schedList.GetFirstItem()
-        while itm != newItem and itm.IsOk():
-            n += 1
-            itm = self.schedList.GetNextItem(itm)
-            
-        self._data[groupSel]["schedules"].insert(n, (idx, {'columns': {"0": value}, 
-                                              'expanded': False, 
-                                              'selected': True, 
-                                              'checked': 1}))
-        
-        self.schedList.Select(newItem)
-        self.schedList.CheckItem(newItem)
-        self.schedList.Expand(newItem)
-        self.schedList.SetFocus()
+        dlg = self.GetDialog(name, appendResult=True)
+        # did user cancel adding action?
+        if dlg.ShowModal() == wx.ID_CANCEL:
+            return
+              
+        self.AppendToSelectedScheduleItem(name, dlg.GetValue())
     
     def OnGroupChar(self, event):
         key = event.GetKeyCode()
