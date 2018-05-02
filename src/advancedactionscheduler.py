@@ -2178,6 +2178,25 @@ class Main(wx.Frame):
         menu.Bind(wx.EVT_MENU, self.OnScheduleToolBar)
         self.PopupMenu(menu)
         
+    def OnScheduleManagerContextMenu(self, event):
+        menu = wx.Menu()
+        subMenu = wx.Menu()
+        if self.cboxFunctions.IsEnabled():
+            for label in FUNCTIONS:
+                item = subMenu.Append(wx.ID_ANY, label)
+            
+        for label in ["Clear"]:
+            if not label:
+                menu.AppendSeparator()
+                continue
+                
+            item = menu.Append(wx.ID_ANY, label)        
+            # if not self.schedManagerBtns[label].IsEnabled():
+                # item.Enable(False)
+                # continue
+        menu.Bind(wx.EVT_MENU, self.OnScheduleManagerToolbar)
+        self.PopupMenu(menu)    
+        
     def OnScheduleItemEdit(self, event=None):
         selection = self.schedList.GetSelection()
         if not selection.IsOk():
@@ -2228,25 +2247,6 @@ class Main(wx.Frame):
         # updated information
         self.UpdateScheduleInfo()    
 
-    def OnScheduleManagerContextMenu(self, event):
-        menu = wx.Menu()
-        subMenu = wx.Menu()
-        if self.cboxFunctions.IsEnabled():
-            for label in FUNCTIONS:
-                item = subMenu.Append(wx.ID_ANY, label)
-            
-        for label in ["Clear"]:
-            if not label:
-                menu.AppendSeparator()
-                continue
-                
-            item = menu.Append(wx.ID_ANY, label)        
-            # if not self.schedManagerBtns[label].IsEnabled():
-                # item.Enable(False)
-                # continue
-        menu.Bind(wx.EVT_MENU, self.OnScheduleManagerToolbar)
-        self.PopupMenu(menu)    
-        
     def OnScheduleManagerToolbar(self, event):
         try:
             e = event.GetEventObject()
