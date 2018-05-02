@@ -95,13 +95,15 @@ class FindPosition(wx.Frame):
         
 class MouseClickAbsolute(wx.Dialog):
 
-    def __init__(self, parent):
+    def __init__(self, parent, appendResult):
 
         wx.Dialog.__init__(self,
                            parent,
                            title="Mouse Click Absolute")
 
-        self.resetValue = None 
+        self._name = "MouseClickAbsolute"
+        self._appendResult = appendResult
+        self.resetValue = None         
         
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -218,7 +220,6 @@ class MouseClickAbsolute(wx.Dialog):
         sboxSizer.Add(hsizerBtns, 0, wx.ALL|wx.EXPAND, 5)
         sboxSizer.Add(hsizerBtns2, 0, wx.ALL|wx.EXPAND, 5)
         
-        #-----
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         hsizer.AddStretchSpacer()
         btnCancel = wx.Button(panel, label="Cancel", id=wx.ID_CANCEL)
@@ -237,7 +238,7 @@ class MouseClickAbsolute(wx.Dialog):
         sizer.Fit(self)
         
         try:
-            icon = wx.Icon("images/mouseclickabsolute.png")
+            icon = wx.Icon("images/{0}.png".format(self._name.lower()))
             self.SetIcon(icon)
         except Exception as e:
             print(e)
@@ -246,7 +247,10 @@ class MouseClickAbsolute(wx.Dialog):
 
     def EndModal(self, id):
         if id == wx.ID_OK:
-            self.GetParent().SetSelectedScheduleItem("MouseClickAbsolute", self.GetValue())
+            if self._appendResult is True:
+                self.GetParent().AppendToSelectedScheduleItem(self._name, self.GetValue())
+            else:
+                self.GetParent().EditSelectedScheduleItem(self._name, self.GetValue())
         self.Destroy()
         
     def FindPosition(self): 
