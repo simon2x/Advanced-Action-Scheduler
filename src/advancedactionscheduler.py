@@ -1020,7 +1020,7 @@ class Main(wx.Frame):
         self.splitter = wx.SplitterWindow(self)
 
         leftPanel = wx.Panel(self.splitter)
-        leftPanel.SetBackgroundColour("DARKGREY")
+        # leftPanel.SetBackgroundColour("DARKGREY")
         leftSizer = wx.BoxSizer(wx.VERTICAL)
         
         hSizerGroup = wx.WrapSizer(wx.HORIZONTAL)
