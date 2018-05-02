@@ -1340,6 +1340,20 @@ class Main(wx.Frame):
         self.UpdateScheduleInfo()
         self.UpdateGroupImageList()
         
+    def EditSelectedScheduleItem(self, name, value):
+        selection = self.schedList.GetSelection()
+        if not selection.IsOk():
+            return
+        self.SaveStateToUndoStack()
+        self.ClearRedoStack()
+        
+        value = name + DELIMITER + value        
+        self.schedList.SetItemText(selection, 0, value)
+        
+        self.UpdateSelectedItemInData()
+        self.UpdateScheduleInfo()         
+        self.schedList.SetFocus()
+    
     def EnableScheduleManager(self):
         self.CancelPowerAlerts()
         
