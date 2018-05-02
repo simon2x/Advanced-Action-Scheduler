@@ -793,6 +793,35 @@ class Main(wx.Frame):
             except:
                 pass
        
+    def AppendToSelectedScheduleItem(self, name, value):
+        if not self.scheduleSelection.IsOk():
+            return
+            
+        self.SaveStateToUndoStack()
+        self.ClearRedoStack()
+        value = name + DELIMITER + value
+        newItem = self.schedList.AppendItem(self.scheduleSelection, value)
+        self.schedList.SetItemImage(newItem, self.imageListIndex(name))
+        
+        # reflect changes in application data
+        idx = self.schedList.GetItemIndex(newItem)
+        groupSel = self.groupList.GetSelection()
+        n = 0
+        item = self.schedList.GetFirstItem()
+        while item != newItem and item.IsOk():
+            n += 1
+            item = self.schedList.GetNextItem(item)
+            
+        self._data[groupSel]["schedules"].insert(n, (idx, {'columns': {"0": value}, 
+                                                           'expanded': False, 
+                                                           'selected': True, 
+                                                           'checked': 1}))
+        
+        self.schedList.Select(newItem)
+        self.schedList.CheckItem(newItem)
+        self.schedList.Expand(newItem)
+        self.schedList.SetFocus()           
+       
     def AppendSchedules(self):
         if self._clipboard["toplevel"] is False:
             return
