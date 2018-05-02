@@ -3004,7 +3004,20 @@ class Main(wx.Frame):
                 except:
                     pass
             item = self.schedList.GetNextItem(item)
-      
+            
+    def UpdateSelectedItemInData(self):
+        """Updates application data for the currently selected schedule item"""
+        schedSel = self.scheduleSelection
+        if not schedSel.IsOk():
+            return
+        idx = self.schedList.GetItemIndex(schedSel)
+        groupSel = self.groupSelection
+        for n, (j, k) in enumerate(self._data[groupSel]["schedules"]):
+            if not j == idx:
+                continue 
+            self._data[groupSel]["schedules"][n][1]["columns"]["0"] = self.schedList.GetItemText(schedSel)
+            break
+    
     def UpdateSettingsDict(self, data):
         self._appConfig.update(data)
         self.SaveDataToJSON(self.configPath, self._appConfig)
