@@ -2205,18 +2205,19 @@ class Main(wx.Frame):
         self.PopupMenu(menu)
         
     def OnScheduleItemEdit(self, event=None):
-        selection = self.schedList.GetSelection()
-        if not selection.IsOk():
+        """Handler for editing schedule item"""
+        schedSel = self.scheduleSelection
+        if not schedSel.IsOk():
             return
          
-        itemText = self.schedList.GetItemText(selection, 0)
+        itemText = self.schedList.GetItemText(schedSel, 0)
         name, params = itemText.split(DELIMITER)
         params = make_tuple(params)
         params = {x:y for x,y in params}
         params["name"] = name
         
         # is item top level? i.e. a schedule
-        if self.schedList.GetItemParent(selection) == self.schedList.GetRootItem():
+        if self.schedList.GetItemParent(schedSel) == self.schedList.GetRootItem():
             schedNames = [s for s in self.GetScheduleNames() if not s == name]
             dlg = dialogs.schedule.AddSchedule(self, blacklist=schedNames)
             dlg.SetScheduleName(name)
@@ -2226,33 +2227,25 @@ class Main(wx.Frame):
             self.SaveStateToUndoStack()    
             newName, value = dlg.GetValue()
             value = newName + DELIMITER + value
-            self.schedList.SetItemText(selection, 0, value)
+            self.schedList.SetItemText(schedSel, 0, value)
             self.SaveScheduleTreeToData() 
             self.ClearRedoStack()
         else:
             dlg = self.GetDialog(name)
             dlg.SetValue(params)
-            if dlg.ShowModal() != wx.ID_OK:
-                return    
+            res = dlg.ShowModal()
+            if res != wx.ID_OK:
+                return  
             self.SaveStateToUndoStack()
             value = dlg.GetValue()
             value = name + DELIMITER + value
-            self.schedList.SetItemText(selection, 0, value)
+            self.schedList.SetItemText(schedSel, 0, value)
             self.SaveScheduleTreeToData() 
             self.ClearRedoStack()
                 
-        idx = self.schedList.GetItemIndex(selection)
-        groupSel = self.groupList.GetSelection()
-        for n, (j, k) in enumerate(self._data[groupSel]["schedules"]):
-            if not j == idx:
-                continue 
-            self._data[groupSel]["schedules"][n][1]["columns"]["0"] = value
-            break
-          
-        self.schedList.SetFocus()
-
-        # updated information
-        self.UpdateScheduleInfo()    
+        self.UpdateSelectedItemInData()
+        self.UpdateScheduleInfo()
+        self.schedList.SetFocus()        
 
     def OnScheduleManagerContextMenu(self, event):
         menu = wx.Menu()
