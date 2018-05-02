@@ -2267,6 +2267,7 @@ class Main(wx.Frame):
             name = e.GetLabel(id)
 
         if name == "Add Action":
+            self.OnAddAction()
         elif name == "Add Schedule":
             self.ShowAddScheduleDialog()
         elif name == "Copy":
