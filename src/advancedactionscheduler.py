@@ -1412,7 +1412,15 @@ class Main(wx.Frame):
                  "currentSelectionType": self._currentSelectionType}
         return deepcopy(state)
     
-    def GetDialog(self, label, value=None):
+    def GetDialog(self, label, value=None, appendResult=False):
+        """
+        Returns a dialog which matches the given label i.e. action.
+        
+               value: if editing an action, we set the dialog to the current values
+        appendResult: this is passed to dialogs, as a workaround, where we can't EndModal
+                      correctly so we tell the dialog to append the result or edit the
+                      selected action
+        """
 
         if label == "CloseWindow":
             dlg = dialogs.window.WindowDialog(self, title="Close Window")
@@ -1429,9 +1437,9 @@ class Main(wx.Frame):
         elif label == "SwitchWindow":
             dlg = dialogs.window.WindowDialog(self, title="Switch Window")
         elif label == "MouseClickAbsolute":
-            dlg = dialogs.mouseabsolute.MouseClickAbsolute(self)
+            dlg = dialogs.mouseabsolute.MouseClickAbsolute(self, appendResult=appendResult)
         elif label == "MouseClickRelative":
-            dlg = dialogs.mouserelative.MouseClickRelative(self)
+            dlg = dialogs.mouserelative.MouseClickRelative(self, appendResult=appendResult)
         elif label == "NewProcess":
             dlg = dialogs.process.NewProcess(self)
             dlg.SetHistoryList(self._appConfig["newProcessPresets"])
