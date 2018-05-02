@@ -104,7 +104,10 @@ class MouseClickAbsolute(wx.Dialog):
         self._name = "MouseClickAbsolute"
         self._appendResult = appendResult
         self.resetValue = None
+        
+        self.CreateUI()
 
+    def CreateUI(self):
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
 

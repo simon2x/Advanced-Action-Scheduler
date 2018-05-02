@@ -118,6 +118,9 @@ class MouseClickRelative(wx.Dialog):
         self._appendResult = appendResult
         self.resetValue = None
 
+        self.CreateUI()
+
+    def CreateUI(self):
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
