@@ -68,8 +68,11 @@ path, filename = os.path.split(full_path)
 os.chdir(path)
 
 #----- logging -----#
-logging.basicConfig(level=logging.INFO)
+# LOG_LEVEL = logging.INFO
+LOG_LEVEL = logging.DEBUG
+logging.basicConfig(level=LOG_LEVEL)
 logger = logging.getLogger(__name__)
+logger.setLevel(LOG_LEVEL)
 
 # create file handler which logs even debug messages
 #fh = logging.FileHandler('ssc.log')
