@@ -1,7 +1,7 @@
 *.pyc
 .spyproject/codestyle.ini
 .spyproject/workspace.ini
-*.ini
+.ini
 *.xcf
 advancedactionscheduler/test.py
 advancedactionscheduler/schedules.json
