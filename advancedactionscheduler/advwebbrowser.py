@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 This module is based on python `webbrowser`.
 https://docs.python.org/2/library/webbrowser.html#module-webbrowser
 
-A few modifications made by Simon Wu (with Advanced Action Scheduler in mind). 
+A few modifications made by Simon Wu (with Advanced Action Scheduler in mind).
 - removed Grails browser support
 - removed background option
 - remove try order. browser must be registered for get to work
@@ -35,31 +35,39 @@ TODO:
     - incognito/private mode for those browsers which can support this feature
 """
 
+import logging
 from collections import OrderedDict
 import os
-import shlex
 import shutil
 import sys
 import subprocess
 
+
 __all__ = ["Error", "get", "register"]
-_browsers = {} # Dictionary of available browser controllers
+_browsers = {}  # Dictionary of available browser controllers
+
 
 class Error(Exception):
     pass
-    
+
+
 def deregister(browser):
     try:
         del _browsers[browser.lower()]
     except KeyError:
         raise Error("no browser registered by %s" % browser)
 
+
 def deregister_browsers():
-    _browsers = {}  
-    
+    _browsers = {}
+    logging.info(_browsers)
+
+
 def register(name, klass):
     """Register a browser connector and, optionally, connection."""
     _browsers[name.lower()] = klass(name=name)
+    logging.info(_browsers)
+
 
 def get(browser):
     """Return a browser launcher instance appropriate for the environment."""
@@ -67,10 +75,9 @@ def get(browser):
         command = _browsers[browser.lower()]
     except KeyError:
         raise Error("no browser registered by %s" % browser)
-        
+
     return command
 
-# General parent classes
 
 class BaseBrowser(object):
     """Parent class for all browsers. Do not use directly."""
@@ -155,7 +162,8 @@ class Browser(BaseBrowser):
             # use autoraise argument only for remote invocation
             autoraise = int(autoraise)
             opt = self.raise_opts[autoraise]
-            if opt: raise_opt = [opt]
+            if opt:
+                raise_opt = [opt]
         cmdline = [self.name] + raise_opt + args
         if remote or self.background:
             inout = subprocess.DEVNULL
@@ -164,7 +172,7 @@ class Browser(BaseBrowser):
             inout = None
         p = subprocess.Popen(cmdline, close_fds=False, stdin=inout,
                              stdout=(self.redirect_stdout and inout or None),
-                             stderr=inout, start_new_session=True)                  
+                             stderr=inout, start_new_session=True)
         if remote:
             # wait at most five seconds. If the subprocess is not finished, the
             # remote invocation has (hopefully) started a new instance.
@@ -242,6 +250,7 @@ class Chrome(Browser):
     remote_action_newwin = "--new-window"
     remote_action_newtab = ""
     background = True
+
 
 Chromium = Chrome
 
@@ -329,6 +338,7 @@ class Konqueror(BaseBrowser):
 # These are the right tests because all these Unix browsers require either
 # a console terminal or an X display to run.
 
+
 def register_X_browsers():
 
     # use xdg-open if around
@@ -379,11 +389,12 @@ def register_X_browsers():
     # Opera, quite popular
     if shutil.which("opera"):
         register("opera", Opera)
-        
+
+
 # Prefer X browsers if present
 if os.environ.get("DISPLAY"):
     register_X_browsers()
-        
+
 _klasses = {"Firefox": Mozilla,
             "Chrome/Chromium": Chrome,
             "Opera": Opera,
@@ -392,10 +403,10 @@ _klasses = {"Firefox": Mozilla,
             "Konqueror": Konqueror,
             "Epiphany": Epiphany,
             "Netscape": Netscape,
-            "Generic": BackgroundBrowser, 
+            "Generic": BackgroundBrowser,
             "Console": GenericBrowser}
-            
+
 klasses = OrderedDict()
-for b in ["Generic", "Firefox","Chrome/Chromium","Opera","Mozilla","Brave",
-          "Konqueror","Epiphany","Console"]:
+for b in ["Generic", "Firefox", "Chrome/Chromium", "Opera", "Mozilla", "Brave",
+          "Konqueror", "Epiphany", "Console"]:
     klasses[b] = _klasses[b]

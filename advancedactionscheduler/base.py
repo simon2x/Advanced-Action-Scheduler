@@ -2,20 +2,22 @@
 """
 @author Simon Wu <swprojects@runbox.com>
 
-Copyright (c) 2018 by Simon Wu <Advanced Action Scheduler> 
+Copyright (c) 2018 by Simon Wu <Advanced Action Scheduler>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version. 
+(at your option) any later version.
 """
 
+import logging
 import platform
 import wx
 import wx.dataview
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin, CheckListCtrlMixin
 
 PLATFORM = platform.system()
+
 
 class TreeListCtrl(wx.dataview.TreeListCtrl):
 
@@ -33,11 +35,11 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
         if not style:
             style = wx.dataview.TL_CHECKBOX
         wx.dataview.TreeListCtrl.__init__(self, parent, style=style, **kwargs)
-        
+
     def AppendItemToRoot(self, value):
         item = self.AppendItem(self.GetRootItem(), value)
-        return item 
-        
+        return item
+
     def DeleteAllItems(self):
         if PLATFORM == "Windows":
             super(TreeListCtrl, self).DeleteAllItems()
@@ -47,7 +49,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             while item.IsOk():
                 self.DeleteItem(item)
                 item = self.GetFirstItem()
-        
+
     def GetItemDepth(self, item):
         """  backwards """
         depth = 0
@@ -55,25 +57,25 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             depth += 1
             item = self.GetItemParent(item)
         return depth - 1
-        
+
     def GetIndexByOrder(self, item):
         """ iterate through all items until we reach the item """
         if not item.IsOk():
             return None
-        
-        n = 0 
+
+        n = 0
         itemIter = self.GetFirstItem()
         if not itemIter.IsOk():
             return None
- 
+
         while (itemIter != item):
             itemIter = self.GetNextItem(itemIter)
             n += 1
             if not itemIter.IsOk():
                 break
-        
+
         return n
-        
+
     def GetItemIndex(self, item):
         """ hacky way of getting the item index """
         selection = item
@@ -81,35 +83,33 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
         lastItem = item
         if not item.IsOk():
             return -1
-          
-        columnCount = self.GetColumnCount()
+
         row = 0
-        depth = 0
         idx = "0"
-        
+
         root = self.GetRootItem()
         items = []
         while item.IsOk():
-            
+
             # first top level item
             if lastItem == item:
                 idx = "0"
                 row += 1
-            
+
             # top level item
             elif self.GetItemParent(item) == root:
                 idx = str(row)
-                row += 1   
-                
+                row += 1
+
             # first child of previous item
             elif item == self.GetFirstChild(lastItem):
                 # print(self.GetItemText(item, 0))
                 idx += ",0"
-                
+
             # sibling of previous item
             elif item == self.GetNextSibling(lastItem):
                 idx = idx.split(",")
-                next = int(idx[-1]) + 1 # ...and increment last
+                next = int(idx[-1]) + 1  # ...and increment last
                 idx = idx[0:-1]
                 idx.append(str(next))
                 idx = ",".join(idx)
@@ -122,18 +122,18 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
                 del idx[-1]
                 idx.append(str(next))
                 idx = ",".join(idx)
-            
+
             else:
                 for itm, itmIdx in items:
                     if self.GetNextSibling(itm) != item:
                         continue
                     idx = itmIdx.split(",")
-                    next = int(idx[-1]) + 1 # ...and increment last
+                    next = int(idx[-1]) + 1  # ...and increment last
                     idx = idx[0:-1]
                     idx.append(str(next))
                     idx = ",".join(idx)
                     break
-                        
+
             if item == selection:
                 break
             lastItem = item
@@ -141,41 +141,40 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             item = self.GetNextItem(item)
 
         return idx
-    
+
     def GetLastChild(self, item):
         child = self.GetFirstChild(item)
         while child.IsOk():
             child = self.GetNextSibling(child)
         return child
-        
+
     def GetLastSibling(self, item):
         while self.GetNextSibling(item).IsOk():
             item = self.GetNextSibling(item)
         return item
-        
+
     def GetPreviousSibling(self, item):
         parent = self.GetItemParent(item)
         sib = self.GetNextItem(parent)
         if item == sib:
             return -1
-        
+
         while self.GetNextSibling(sib) != item:
             sib = self.GetNextSibling(sib)
-            
+
         return sib
-        
+
     def GetSubTree(self, item):
         """ return the sub tree of schedule item """
 
         # we stop when item is a sibling
         selectedDepth = self.GetItemDepth(item)
-        nextSib = self.GetNextSibling(item)
-            
+
         data = []
         columnCount = self.GetColumnCount()
         depth = selectedDepth
         idx = "0"
-        
+
         firstItem = item
         while item.IsOk():
 
@@ -192,7 +191,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             # depth unchanged, item is the next sibling of previous item
             elif d == depth:
                 idx = idx.split(",")
-                next = int(idx[-1]) + 1 # ...and increment last
+                next = int(idx[-1]) + 1  # ...and increment last
                 idx = idx[0:-1]
                 idx.append(str(next))
                 idx = ",".join(idx)
@@ -221,12 +220,12 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             item = self.GetNextItem(item)
 
         return data
-    
+
     def GetTopLevelParent(self, item):
         while self.GetItemParent(item) != self.GetRootItem():
             item = self.GetItemParent(item)
         return item
-     
+
     def GetTree(self):
         data = []
         item = self.GetFirstItem()
@@ -234,34 +233,33 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
         lastItem = item
         if not item.IsOk():
             return data
-          
+
         columnCount = self.GetColumnCount()
         row = 0
-        depth = 0
         idx = "0"
-        
+
         root = self.GetRootItem()
         while item.IsOk():
-            
+
             # first top level item
             if lastItem == item:
                 idx = "0"
                 row += 1
-            
+
             # top level item
             elif self.GetItemParent(item) == root:
                 idx = str(row)
-                row += 1   
-                
+                row += 1
+
             # first child of previous item
             elif item == self.GetFirstChild(lastItem):
                 # print(self.GetItemText(item, 0))
                 idx += ",0"
-                
+
             # sibling of previous item
             elif item == self.GetNextSibling(lastItem):
                 idx = idx.split(",")
-                next = int(idx[-1]) + 1 # ...and increment last
+                next = int(idx[-1]) + 1  # ...and increment last
                 idx = idx[0:-1]
                 idx.append(str(next))
                 idx = ",".join(idx)
@@ -274,18 +272,17 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
                 del idx[-1]
                 idx.append(str(next))
                 idx = ",".join(idx)
-            
+
             else:
                 for itm, itmIdx in items:
                     if self.GetNextSibling(itm) != item:
                         continue
                     idx = itmIdx.split(",")
-                    next = int(idx[-1]) + 1 # ...and increment last
+                    next = int(idx[-1]) + 1  # ...and increment last
                     idx = idx[0:-1]
                     idx.append(str(next))
                     idx = ",".join(idx)
                     break
-                
 
             idxData = {}
             idxData["columns"] = {str(c): self.GetItemText(item, c) for c in range(columnCount)}
@@ -321,8 +318,8 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             for c in range(1, len(columns)):
                 try:
                     self.SetItemText(items[idx], str(c), columns[c])
-                except:
-                    pass
+                except Exception as e:
+                    logging.debug(e)
 
             items[idx] = item
 
@@ -341,7 +338,7 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
 
         for item in expandedItems:
             self.Expand(item)
-            
+
     def InsertSubTree(self, previous, data):
         """ insert sub tree after previous item """
 
@@ -357,16 +354,16 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             if "," not in idx:
                 try:
                     # this ensures top level items pasted in correct order
-                    previous = items[str(int(idx)-1)]
-                except:
-                    pass
-                    
+                    previous = items[str(int(idx) - 1)]
+                except Exception as e:
+                    logging.debug(e)
+
                 if previous == -1:
                     item = self.PrependItem(self.GetItemParent(self.GetSelection()), columns["0"])
                 elif not previous.IsOk():
                     if self.GetSelection().IsOk():
                         item = self.AppendItem(self.GetSelection(), columns["0"])
-                    else:    
+                    else:
                         item = self.AppendItem(self.GetRootItem(), columns["0"])
                 else:
                     item = self.InsertItem(self.GetItemParent(previous), previous, columns["0"])
@@ -378,8 +375,8 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             for c in range(1, len(columns)):
                 try:
                     self.SetItemText(items[idx], str(c), columns[c])
-                except:
-                    pass
+                except Exception as e:
+                    logging.debug(e)
 
             items[idx] = item
 
@@ -398,32 +395,29 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
 
         for item in expandedItems:
             self.Expand(item)
-    
+
     def IsTopLevel(self, item):
         return self.GetItemParent(item) == self.GetRootItem()
-        
+
     def SelectItemByOrder(self, n):
         """ step through until we reach the nth item """
         # print("SelectItemByOrder", n)
         if n is None:
             return
-        assert n >= 0, "Must be greater/equal to 0" 
-        
+        assert n >= 0, "Must be greater/equal to 0"
+
         count = 0
         itemIter = self.GetFirstItem()
-        # if not itemIter.IsOk():
-            # return None
-        # print(count, n)
         while n != count:
             itemIter = self.GetNextItem(itemIter)
             count += 1
-        
+
         self.Select(itemIter)
-        
+
     def SetTree(self, data):
         """ set the treelist """
         self.DeleteAllItems()
-        
+
         if not data:
             return
 
@@ -443,8 +437,8 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
             for c in range(1, len(columns)):
                 try:
                     self.SetItemText(items[idx], str(c), columns[c])
-                except:
-                    pass
+                except Exception as e:
+                    logging.debug(e)
 
             items[idx] = item
 
@@ -458,12 +452,13 @@ class TreeListCtrl(wx.dataview.TreeListCtrl):
                 self.Select(item)
             expanded = idxData["expanded"]
             if expanded is True:
-                print( expanded )
+                logging.debug(expanded)
                 expandedItems.append(item)
             items[idx] = item
 
         for item in expandedItems:
             self.Expand(item)
+
 
 class ToolTip(wx.ToolTip):
 
@@ -476,6 +471,7 @@ class ToolTip(wx.ToolTip):
 
         self.Enable(True)
         # self.SetDelay
+
 
 class CheckList(wx.ListCtrl, ListCtrlAutoWidthMixin, CheckListCtrlMixin):
 
@@ -496,19 +492,20 @@ class CheckList(wx.ListCtrl, ListCtrlAutoWidthMixin, CheckListCtrlMixin):
             item = self.GetNextSelected(item)
             self.Select(self.GetNextSelected(item), on=0)
 
+
 class BaseList(wx.ListCtrl, ListCtrlAutoWidthMixin):
 
     def __init__(self, parent, style=wx.LC_REPORT|wx.LC_HRULES|wx.LC_VRULES|wx.LC_SINGLE_SEL):
 
         wx.ListCtrl.__init__(self, parent, style=style)
         ListCtrlAutoWidthMixin.__init__(self)
-    
+
     def DeleteSelected(self):
         selected = self.GetFirstSelected()
         while selected != -1:
             self.DeleteItem(selected)
             selected = self.GetFirstSelected()
-            
+
     def DeselectAll(self):
         first = self.GetFirstSelected()
         if first == -1:
@@ -519,63 +516,63 @@ class BaseList(wx.ListCtrl, ListCtrlAutoWidthMixin):
         while self.GetNextSelected(item) != -1:
             item = self.GetNextSelected(item)
             self.Select(self.GetNextSelected(item), on=0)
-      
+
     def MoveSelectedItemsDown(self):
         items = []
-        selected = self.GetFirstSelected()   
+        selected = self.GetFirstSelected()
         while selected != -1:
             items.append(selected)
             selected = self.GetNextSelected(selected)
-        
-        if items == [self.GetItemCount()-1]:
+
+        if items == [self.GetItemCount() - 1]:
             return
-         
-        limit = self.GetItemCount()-1
-        rowBlockStart = None # consecutive selected rows
+
+        rowBlockStart = None  # consecutive selected rows
         for row in items:
-            if row+1 in items:
+            if row + 1 in items:
                 if rowBlockStart is None:
                     rowBlockStart = row
                 continue
-            if row == self.GetItemCount()-1:
+            if row == self.GetItemCount() - 1:
                 return
-            
+
             itemText = []
             if rowBlockStart:
                 for col in range(0, self.GetColumnCount()):
-                    itemText.append(self.GetItemText(row+1, col))
-                self.DeleteItem(row+1)
+                    itemText.append(self.GetItemText(row + 1, col))
+                self.DeleteItem(row + 1)
                 new = self.InsertItem(rowBlockStart, itemText[0])
                 rowBlockStart = None
             else:
                 for col in range(0, self.GetColumnCount()):
                     itemText.append(self.GetItemText(row, col))
                 self.DeleteItem(row)
-                new = self.InsertItem(row+1, itemText[0])
+                new = self.InsertItem(row + 1, itemText[0])
                 self.Select(new)
-            
+
             for col in range(0, self.GetColumnCount()):
                 self.SetItem(new, col, itemText[col])
-                
+
     def MoveSelectedItemsUp(self):
         items = []
-        selected = self.GetFirstSelected()   
+        selected = self.GetFirstSelected()
         while selected != -1:
             items.append(selected)
             selected = self.GetNextSelected(selected)
-        
+
         if items == [0]:
             return
-            
+
         limit = 0
-        for row in items:            
+        for row in items:
             if row == limit:
                 limit += 1
                 continue
-            text = self.GetItemText(row)    
+            text = self.GetItemText(row)
             self.DeleteItem(row)
-            new = self.InsertItem(row-1, text)
+            new = self.InsertItem(row - 1, text)
             self.Select(new)
+
 
 class InputDialog(wx.Dialog):
 
@@ -612,7 +609,7 @@ class InputDialog(wx.Dialog):
         sizer.Add(hsizer2, 0, wx.ALL|wx.ALIGN_RIGHT, 5)
         panel.SetSizer(sizer)
 
-        #idx events binding
+        # idx events binding
         self.input.Bind(wx.EVT_idx_UP, self.OnidxUp)
 
     def OnidxUp(self, event):
