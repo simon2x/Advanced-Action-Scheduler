@@ -216,6 +216,10 @@ class Main(wx.Frame):
         self.UpdateTitlebar()
 
     @property
+    def enableTool(self):
+        return self.toolbar.EnableTool
+
+    @property
     def infoSchedFont(self):
         return wx.Font(8, wx.FONTFAMILY_MODERN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False)
 
@@ -1421,12 +1425,12 @@ class Main(wx.Frame):
         for item, data in self._data.items():
             if self.groupSelection != item:
                 continue
-            self.toolbar.EnableTool(self._ids["Remove Group"], True)
+            self.enableTool(self._ids["Remove Group"], True)
             self.SetScheduleTree(data["schedules"])
             self.schedBtns["Add Schedule"].Enable()
             break
 
-        self.toolbar.EnableTool(self._ids["Remove Group"], False)
+        self.enableTool(self._ids["Remove Group"], False)
         self.schedBtns["Add Schedule"].Disable()
         self.UpdateScheduleToolbar()
         self.UpdateScheduleInfo()
@@ -2389,7 +2393,7 @@ class Main(wx.Frame):
             if not self.groupList.GetNextSibling(selection).IsOk():
                 self.groupBtns["Down"].Disable()
 
-        self.toolbar.EnableTool(wx.ID_REMOVE, state)
+        self.enableTool(wx.ID_REMOVE, state)
 
     def UpdateScheduleInfo(self):
         if not self.scheduleSelection.IsOk():
@@ -2510,7 +2514,6 @@ class Main(wx.Frame):
         unsaved = ""
         if self.commandState != 0:
             unsaved = "*"
-
         try:
             _, name = os.path.split(self._appConfig["currentFile"])
             self.SetTitle("{0}{1} - {2}".format(unsaved, name, __title__))
@@ -2518,30 +2521,31 @@ class Main(wx.Frame):
             self.SetTitle("{0}New File.json - {1}".format(unsaved, __title__))
 
     def UpdateToolbar(self):
+        """Set toolbar tools state to current clipboard status"""
         if self._currentSelectionType:
-            self.toolbar.EnableTool(wx.ID_CUT, True)
-            self.toolbar.EnableTool(wx.ID_COPY, True)
+            self.enableTool(wx.ID_CUT, True)
+            self.enableTool(wx.ID_COPY, True)
         elif not self.groupList.GetSelection().IsOk():
-            self.toolbar.EnableTool(wx.ID_CUT, False)
-            self.toolbar.EnableTool(wx.ID_COPY, False)
+            self.enableTool(wx.ID_CUT, False)
+            self.enableTool(wx.ID_COPY, False)
 
         if self._clipboard:
-            self.toolbar.EnableTool(wx.ID_PASTE, True)
+            self.enableTool(wx.ID_PASTE, True)
         else:
-            self.toolbar.EnableTool(wx.ID_PASTE, False)
+            self.enableTool(wx.ID_PASTE, False)
 
         if self._undoStack:
-            self.toolbar.EnableTool(wx.ID_UNDO, True)
+            self.enableTool(wx.ID_UNDO, True)
         else:
-            self.toolbar.EnableTool(wx.ID_UNDO, False)
+            self.enableTool(wx.ID_UNDO, False)
 
         if self._redoStack:
-            self.toolbar.EnableTool(wx.ID_REDO, True)
+            self.enableTool(wx.ID_REDO, True)
         else:
-            self.toolbar.EnableTool(wx.ID_REDO, False)
+            self.enableTool(wx.ID_REDO, False)
 
     def UpdateToolbarSize(self):
-
+        """Dynamically resize toolbar icons based on frame size"""
         if not self.toolbar:
             return
         sizeChoices = [16, 32, 48, 64, 128, 256]
@@ -2573,13 +2577,14 @@ class Main(wx.Frame):
         self.toolbar.Realize()
 
     def UpdateTrayIcon(self):
+        """Set or remove tray icon based on config setting"""
         if self._appConfig["showTrayIcon"] is True:
             if not self.taskBarIcon:
                 self.CreateTrayIcon()
-        else:
-            if self.taskBarIcon:
-                self.taskBarIcon.RemoveTray()
-                self.taskBarIcon = None
+            return
+        if self.taskBarIcon:
+            self.taskBarIcon.RemoveTray()
+            self.taskBarIcon = None
 
 
 if __name__ == "__main__":
