@@ -171,7 +171,7 @@ class Main(wx.Frame):
 
     @property
     def appPath(self):
-        return appPath 
+        return appPath
 
     @property
     def imagePath(self):
