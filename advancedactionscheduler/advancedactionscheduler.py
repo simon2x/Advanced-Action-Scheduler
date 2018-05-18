@@ -217,6 +217,7 @@ class Main(wx.Frame):
 
     @property
     def enableTool(self):
+        """Enable or disable a toolbar tool"""
         return self.toolbar.EnableTool
 
     @property
@@ -1126,7 +1127,7 @@ class Main(wx.Frame):
 
     def MoveGroupItemUp(self):
         # valid item selection?
-        selection = self.groupList.GetSelection()
+        selection = self.groupSelection
         if not selection.IsOk():
             return
 
@@ -1169,7 +1170,7 @@ class Main(wx.Frame):
         self.schedList.DeleteItem(selection)
 
         # need to reflect these changes in self._data
-        groupSel = self.GetGroupListIndex(self.groupList.GetSelection())
+        groupSel = self.GetGroupListIndex(self.groupSelection)
         groupScheds = self._data[groupSel]["schedules"]
 
         baseIdxSplitLen = len(baseIdx.split(",")) - 1
@@ -1224,7 +1225,7 @@ class Main(wx.Frame):
         self.schedList.DeleteItem(previous)
 
         # need to reflect these changes in self._data
-        groupSel = self.GetGroupListIndex(self.groupList.GetSelection())
+        groupSel = self.GetGroupListIndex(self.groupSelection)
         groupScheds = self._data[groupSel]["schedules"]
 
         baseIdxSplitLen = len(baseIdx.split(",")) - 1
@@ -1337,7 +1338,7 @@ class Main(wx.Frame):
         pastes = []
         if self._clipboard and self._clipboard["toplevel"] is True:
             pastes = ["Paste As New Group"]
-            if self.groupList.GetSelection().IsOk():
+            if self.groupSelection.IsOk():
                 pastes.extend(["Paste Before", "Paste After", "Paste Into Group"])
             for label in pastes:
                 item = subMenu.Append(wx.ID_ANY, label)
@@ -1347,7 +1348,7 @@ class Main(wx.Frame):
                 menu.AppendSeparator()
                 continue
             if label == "Add Group":
-                if self.groupList.GetSelection().IsOk():
+                if self.groupSelection.IsOk():
                     item = menu.Append(wx.ID_ANY, "Cut")
                     item = menu.Append(wx.ID_ANY, "Copy")
                 if self._clipboard and pastes != []:
@@ -1368,7 +1369,7 @@ class Main(wx.Frame):
         self.UpdateGroupImageList()
 
     def OnGroupItemEdit(self, event=None):
-        selection = self.groupList.GetSelection()
+        selection = self.groupSelection
         if not selection.IsOk():
             return
 
@@ -1408,7 +1409,7 @@ class Main(wx.Frame):
 
     def OnGroupItemKeyDown(self, event):
         key = event.GetKeyCode()
-        index = self.groupList.GetSelection()
+        index = self.groupSelection
         if key == wx.WXK_SPACE:
             self.groupList.CheckItem(index)
 
@@ -2374,7 +2375,7 @@ class Main(wx.Frame):
             item = self.groupList.GetNextItem(item)
 
     def UpdateGroupToolbar(self):
-        selection = self.groupList.GetSelection()
+        selection = self.groupSelection
         state = True
         if not selection.IsOk():
             state = False
@@ -2525,7 +2526,7 @@ class Main(wx.Frame):
         if self._currentSelectionType:
             self.enableTool(wx.ID_CUT, True)
             self.enableTool(wx.ID_COPY, True)
-        elif not self.groupList.GetSelection().IsOk():
+        elif not self.groupSelection.IsOk():
             self.enableTool(wx.ID_CUT, False)
             self.enableTool(wx.ID_COPY, False)
 
