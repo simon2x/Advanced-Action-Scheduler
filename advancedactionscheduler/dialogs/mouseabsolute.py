@@ -12,7 +12,6 @@ the Free Software Foundation; either version 2 of the License, or
 
 import logging
 import platform
-import sys
 import wx
 import wx.lib.agw.floatspin as floatspin
 from ast import literal_eval as make_tuple
@@ -22,6 +21,7 @@ if PLATFORM == "Windows":
     from win import windowmanager as winman
 elif PLATFORM == "Linux":
     from linux import windowmanager as winman
+
 
 class FindPosition(wx.Frame):
 
@@ -53,7 +53,7 @@ class FindPosition(wx.Frame):
         # this is important, otherwise the captionless dialog is always maximised
         self.SetMaxSize((90, 60))
 
-        self.Move(wx.GetMousePosition()-(45, 30))
+        self.Move(wx.GetMousePosition() - (45, 30))
 
         self.timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
@@ -69,7 +69,7 @@ class FindPosition(wx.Frame):
     def OnLeftUp(self, event):
         self.timer.Stop()
         x, y = wx.GetMousePosition()
-        self.absolutePos = (x,y)
+        self.absolutePos = (x, y)
         self.Close()
 
     def OnKeyUp(self, event):
@@ -88,10 +88,11 @@ class FindPosition(wx.Frame):
     def OnTimer(self, event):
         self.Raise()
         x, y = wx.GetMousePosition()
-        self.Move(wx.GetMousePosition()-(45, 30))
+        self.Move(wx.GetMousePosition() - (45, 30))
 
         text = "%d, %d" % (x, y)
         self._position.SetLabel(text)
+
 
 class MouseClickAbsolute(wx.Dialog):
 
@@ -104,7 +105,7 @@ class MouseClickAbsolute(wx.Dialog):
         self._name = "MouseClickAbsolute"
         self._appendResult = appendResult
         self.resetValue = None
-        
+
         self.CreateUI()
 
     def CreateUI(self):
@@ -113,7 +114,7 @@ class MouseClickAbsolute(wx.Dialog):
 
         sbox = wx.StaticBox(panel, label="")
         sboxSizer = wx.StaticBoxSizer(sbox, wx.VERTICAL)
-        grid = wx.GridBagSizer(5,5)
+        grid = wx.GridBagSizer(5, 5)
 
         row = 0
 
@@ -124,9 +125,9 @@ class MouseClickAbsolute(wx.Dialog):
         btnRefresh = wx.Button(panel, label="Refresh")
         btnRefresh.Bind(wx.EVT_BUTTON, self.OnButton)
 
-        grid.Add(lblFunction, pos=(row,0), flag=wx.ALL|wx.EXPAND|wx.ALIGN_BOTTOM, border=5)
-        grid.Add(self.cboxWindow, pos=(row,1), span=(0,2), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(btnRefresh, pos=(row,3), flag=wx.ALL|wx.EXPAND)
+        grid.Add(lblFunction, pos=(row, 0), flag=wx.ALL|wx.EXPAND|wx.ALIGN_BOTTOM, border=5)
+        grid.Add(self.cboxWindow, pos=(row, 1), span=(0, 2), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(btnRefresh, pos=(row, 3), flag=wx.ALL|wx.EXPAND)
 
         row += 1
         lblMatch = wx.StaticText(panel, label="Condition:")
@@ -135,68 +136,68 @@ class MouseClickAbsolute(wx.Dialog):
                    "Match Window Title Only"]
         self.cboxMatch = wx.ComboBox(panel, choices=choices, style=wx.CB_READONLY)
         self.cboxMatch.SetSelection(0)
-        grid.Add(lblMatch, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
-        grid.Add(self.cboxMatch, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(lblMatch, pos=(row, 0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
+        grid.Add(self.cboxMatch, pos=(row, 1), flag=wx.ALL|wx.EXPAND, border=5)
 
         row += 1
         cboxMatchesLabel = wx.StaticText(panel, label="Matches:")
         self.cboxMatches = floatspin.FloatSpin(panel, min_val=0)
         self.cboxMatches.SetDigits(0)
         cboxMatchesLabel2 = wx.StaticText(panel, label="If 0: Execute Action On All Matches")
-        grid.Add(cboxMatchesLabel, pos=(row,0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
-        grid.Add(self.cboxMatches, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(cboxMatchesLabel2, pos=(row,2), flag=wx.ALL|wx.ALIGN_CENTRE|wx.ALIGN_LEFT, border=5)
+        grid.Add(cboxMatchesLabel, pos=(row, 0), flag=wx.ALL|wx.ALIGN_CENTRE, border=5)
+        grid.Add(self.cboxMatches, pos=(row, 1), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(cboxMatchesLabel2, pos=(row, 2), flag=wx.ALL|wx.ALIGN_CENTRE|wx.ALIGN_LEFT, border=5)
 
         row += 1
         self.chkMatchTitleCase = wx.CheckBox(panel, label="Match Case (Title)")
         self.chkMatchTitle = wx.CheckBox(panel, label="Match Whole Title")
         self.chkMatchTitleCase.SetValue(True)
         self.chkMatchTitle.SetValue(True)
-        grid.Add(self.chkMatchTitleCase, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(self.chkMatchTitle, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(self.chkMatchTitleCase, pos=(row, 1), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(self.chkMatchTitle, pos=(row, 2), flag=wx.ALL|wx.EXPAND, border=5)
 
         row += 1
         self.chkResize = wx.CheckBox(panel, label="Resize Window")
         self.chkResize.SetValue(True)
-        grid.Add(self.chkResize, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(self.chkResize, pos=(row, 1), flag=wx.ALL|wx.EXPAND, border=5)
 
         row += 1
         lblOffsetX = wx.StaticText(panel, label="Offset (x):")
         self.spinOffsetX = wx.SpinCtrl(panel, min=-10000, max=10000)
-        grid.Add(lblOffsetX, pos=(row,1), flag=wx.ALL|wx.EXPAND|wx.ALIGN_BOTTOM, border=5)
-        grid.Add(self.spinOffsetX, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(lblOffsetX, pos=(row, 1), flag=wx.ALL|wx.EXPAND|wx.ALIGN_BOTTOM, border=5)
+        grid.Add(self.spinOffsetX, pos=(row, 2), flag=wx.ALL|wx.EXPAND, border=5)
 
         row += 1
         lblOffsetY = wx.StaticText(panel, label="Offset (y):")
         self.spinOffsetY = wx.SpinCtrl(panel, min=-10000, max=10000)
-        grid.Add(lblOffsetY, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(self.spinOffsetY, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(lblOffsetY, pos=(row, 1), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(self.spinOffsetY, pos=(row, 2), flag=wx.ALL|wx.EXPAND, border=5)
 
         row += 1
         lblOffsetX = wx.StaticText(panel, label="Width (w):")
         self.spinW = wx.SpinCtrl(panel, min=0, max=10000)
-        grid.Add(lblOffsetX, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(self.spinW, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(lblOffsetX, pos=(row, ), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(self.spinW, pos=(row, 2), flag=wx.ALL|wx.EXPAND, border=5)
 
         row += 1
         lblOffsetY = wx.StaticText(panel, label="Height (h):")
         self.spinH = wx.SpinCtrl(panel, min=0, max=10000)
-        grid.Add(lblOffsetY, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(self.spinH, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(lblOffsetY, pos=(row, 1), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(self.spinH, pos=(row, 2), flag=wx.ALL|wx.EXPAND, border=5)
 
         row += 1
         lblX = wx.StaticText(panel, label="x:")
         self.spinX = floatspin.FloatSpin(panel, min_val=-10000)
         self.spinX.SetDigits(0)
-        grid.Add(lblX, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(self.spinX, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(lblX, pos=(row, 1), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(self.spinX, pos=(row, 2), flag=wx.ALL|wx.EXPAND, border=5)
 
         row += 1
         lblY = wx.StaticText(panel, label="y:")
         self.spinY = floatspin.FloatSpin(panel, min_val=-10000)
         self.spinY.SetDigits(0)
-        grid.Add(lblY, pos=(row,1), flag=wx.ALL|wx.EXPAND, border=5)
-        grid.Add(self.spinY, pos=(row,2), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(lblY, pos=(row, 1), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(self.spinY, pos=(row, 2), flag=wx.ALL|wx.EXPAND, border=5)
 
         grid.AddGrowableCol(1)
 
@@ -233,7 +234,7 @@ class MouseClickAbsolute(wx.Dialog):
         hsizer.Add(btnCancel, 0, wx.ALL|wx.EXPAND, 5)
         hsizer.Add(self.btnAdd, 0, wx.ALL|wx.EXPAND, 5)
 
-        #add to main sizer
+        # add to main sizer
         sizer.Add(sboxSizer, 0, wx.ALL|wx.EXPAND, 5)
         sizer.Add(hsizer, 0, wx.ALL|wx.EXPAND, 5)
 
@@ -244,7 +245,7 @@ class MouseClickAbsolute(wx.Dialog):
             icon = wx.Icon("images/{0}.png".format(self._name.lower()))
             self.SetIcon(icon)
         except Exception as e:
-            print(e)
+            logging.info(e)
 
         panel.Bind(wx.EVT_KEY_UP, lambda x: 1)
 
@@ -261,18 +262,19 @@ class MouseClickAbsolute(wx.Dialog):
         try:
             title, win_class = make_tuple(self.cboxWindow.GetValue())
             winman.SetForegroundWindow(title, win_class)
-        except:
-            pass
+        except Exception as e:
+            logging.info(e)
 
         finder = FindPosition(self)
+
         def on_finder_close(event):
             try:
                 x, y = finder.GetValue()
-                logging.info("Got absolute position: %s" % str((x,y)))
+                logging.info("Got absolute position: %s" % str((x, y)))
                 self.spinX.SetValue(int(x))
                 self.spinY.SetValue(int(y))
             except Exception as e:
-                print(Exception)
+                logging.info(e)
 
             finder.Hide()
             self.Show()
@@ -280,7 +282,6 @@ class MouseClickAbsolute(wx.Dialog):
 
         self.Hide()
         finder.Bind(wx.EVT_CLOSE, on_finder_close)
-        x, y = self.spinX.GetValue(), self.spinY.GetValue()
         finder.Show()
         finder.SetFocus()
 
@@ -314,8 +315,6 @@ class MouseClickAbsolute(wx.Dialog):
         if not rect:
             return
         x1, y1, x2, y2 = rect
-        w = x2 - x1
-        h = y2 - y1
 
         self.spinOffsetX.SetValue(x1)
         self.spinOffsetY.SetValue(y1)
@@ -324,7 +323,8 @@ class MouseClickAbsolute(wx.Dialog):
     def GetWindowRect(self):
         try:
             progName, title = make_tuple(self.cboxWindow.GetValue())
-        except:
+        except Exception as e:
+            logging.info(e)
             return
 
         kwargs = {
@@ -416,24 +416,25 @@ class MouseClickAbsolute(wx.Dialog):
             self.resetValue = data
 
         for arg, func, default in (
-            ["window", self.cboxWindow.SetValue, ""],
-            ["matchcondition", self.cboxMatch.SetSelection, True],
-            ["matchcase", self.chkMatchTitleCase.SetValue, True],
-            ["matchstring", self.chkMatchTitle.SetValue, True],
-            ["matches", self.cboxMatches.SetValue, 0],
-            ["resize", self.chkResize.SetValue, True],
-            ["offsetx", self.spinOffsetX.SetValue, 0],
-            ["offsety", self.spinOffsetY.SetValue, 0],
-            ["width", self.spinW.SetValue, 0],
-            ["height", self.spinH.SetValue, 0],
-            ["x", self.spinX.SetValue, 0],
-            ["y", self.spinY.SetValue, 0]):
+                ["window", self.cboxWindow.SetValue, ""],
+                ["matchcondition", self.cboxMatch.SetSelection, True],
+                ["matchcase", self.chkMatchTitleCase.SetValue, True],
+                ["matchstring", self.chkMatchTitle.SetValue, True],
+                ["matches", self.cboxMatches.SetValue, 0],
+                ["resize", self.chkResize.SetValue, True],
+                ["offsetx", self.spinOffsetX.SetValue, 0],
+                ["offsety", self.spinOffsetY.SetValue, 0],
+                ["width", self.spinW.SetValue, 0],
+                ["height", self.spinH.SetValue, 0],
+                ["x", self.spinX.SetValue, 0],
+                ["y", self.spinY.SetValue, 0]):
 
             try:
                 func(data[arg])
             except Exception as e:
-                print(e)
+                logging.info(e)
                 func(default)
+                return
 
     def SetWindowPos(self):
         x1 = self.spinOffsetX.GetValue()
@@ -441,7 +442,8 @@ class MouseClickAbsolute(wx.Dialog):
 
         try:
             progName, title = make_tuple(self.cboxWindow.GetValue())
-        except:
+        except Exception as e:
+            logging.info(e)
             return
         kwargs = self.GetMatchKwargs()
         handles = winman.GetHandles(progName, title, **kwargs)
@@ -452,7 +454,7 @@ class MouseClickAbsolute(wx.Dialog):
             try:
                 winman.MoveWindow(handle, x1, y1, None, None)
             except Exception as e:
-                print(e)
+                logging.info(e)
                 return
 
         self.Raise()
@@ -462,36 +464,34 @@ class MouseClickAbsolute(wx.Dialog):
         y1 = self.spinOffsetY.GetValue()
         w = self.spinW.GetValue()
         h = self.spinH.GetValue()
-        x2 = x1 + w
-        y2 = y1 + h
 
         try:
             progName, title = make_tuple(self.cboxWindow.GetValue())
-        except:
+        except Exception as e:
+            logging.info(e)
             return
         kwargs = self.GetMatchKwargs()
         handles = winman.GetHandles(progName, title, **kwargs)
         if not handles:
-            returne
+            return
 
         for handle in handles:
             try:
                 winman.MoveWindow(handle, x1, y1, w, h)
             except Exception as e:
-                print(e)
+                logging.info(e)
                 return
 
         self.Raise()
 
     def SetWindowSize(self):
-        x1 = self.spinOffsetX.GetValue()
-        y1 = self.spinOffsetY.GetValue()
         w = self.spinW.GetValue()
         h = self.spinH.GetValue()
 
         try:
             progName, title = make_tuple(self.cboxWindow.GetValue())
-        except:
+        except Exception as e:
+            logging.info(e)
             return
         kwargs = self.GetMatchKwargs()
         handles = winman.GetHandles(progName, title, **kwargs)
@@ -502,7 +502,7 @@ class MouseClickAbsolute(wx.Dialog):
             try:
                 winman.SetWindowSize(handle, w, h)
             except Exception as e:
-                print(e)
+                logging.info(e)
                 return
 
         self.Raise()
