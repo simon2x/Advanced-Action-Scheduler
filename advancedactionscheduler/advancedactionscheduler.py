@@ -1156,7 +1156,7 @@ class Main(wx.Frame):
 
     def MoveScheduleItemDown(self):
         # valid item selection?
-        selection = self.schedSelection
+        selection = self.scheduleSelection
         if not selection.IsOk():
             return
 
@@ -1213,7 +1213,7 @@ class Main(wx.Frame):
         """ move item up by moving the previous item down """
 
         # valid item selection?
-        selection = self.schedSelection
+        selection = self.scheduleSelection
         if not selection.IsOk():
             return
         baseIdx = self.schedList.GetItemIndex(selection)
@@ -1657,7 +1657,7 @@ class Main(wx.Frame):
             item = menu.Append(wx.ID_ANY, label)
 
             if label == "Add Schedule":
-                if self.schedSelection.IsOk():
+                if self.scheduleSelection.IsOk():
                     menu.AppendSeparator()
                     item = menu.Append(wx.ID_ANY, "Cut")
                     item = menu.Append(wx.ID_ANY, "Copy")
@@ -2130,7 +2130,7 @@ class Main(wx.Frame):
 
     def SetStatusBar(self, event=None):
         """ update status bar when selecting a tree item on sequence"""
-        selection = self.schedSelection
+        selection = self.scheduleSelection
         status = self.schedList.GetItemText(selection)
         self.GetTopLevelParent().SetStatusText(status)
 
