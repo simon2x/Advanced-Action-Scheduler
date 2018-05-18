@@ -106,8 +106,7 @@ class GenericBrowser(BaseBrowser):
         self.basename = os.path.basename(self.name)
 
     def open(self, url, new=0, autoraise=True):
-        cmdline = [self.name] + [arg.replace("%s", url)
-                                 for arg in self.args]
+        cmdline = [self.name] + [arg.replace("%s", url) for arg in self.args]
         try:
             if sys.platform[:3] == 'win':
                 p = subprocess.Popen(cmdline)
@@ -119,18 +118,15 @@ class GenericBrowser(BaseBrowser):
 
 
 class BackgroundBrowser(GenericBrowser):
-    """Class for all browsers which are to be started in the
-       background."""
+    """Class for all browsers which are to be started in the background."""
 
     def open(self, url, new=0, autoraise=True):
-        cmdline = [self.name] + [arg.replace("%s", url)
-                                 for arg in self.args]
+        cmdline = [self.name] + [arg.replace("%s", url) for arg in self.args]
         try:
             if sys.platform[:3] == 'win':
                 p = subprocess.Popen(cmdline)
             else:
-                p = subprocess.Popen(cmdline, close_fds=True,
-                                     start_new_session=True)
+                p = subprocess.Popen(cmdline, close_fds=True, start_new_session=True)
             return (p.poll() is None)
         except OSError:
             return False
@@ -228,8 +224,8 @@ class Netscape(Browser):
     background = True
 
 
-class Galeon(Browser):
-    """Launcher class for Galeon/Epiphany browsers."""
+class Epiphany(Browser):
+    """Launcher class for Epiphany browsers."""
 
     raise_opts = ["-noraise", ""]
     remote_args = ['%action', '%s']
@@ -337,82 +333,56 @@ def register_X_browsers():
 
     # use xdg-open if around
     if shutil.which("xdg-open"):
-        register("xdg-open", None, BackgroundBrowser("xdg-open"))
+        register("xdg-open", BackgroundBrowser)
 
     # The default GNOME3 browser
     if "GNOME_DESKTOP_SESSION_ID" in os.environ and shutil.which("gvfs-open"):
-        register("gvfs-open", None, BackgroundBrowser("gvfs-open"))
+        register("gvfs-open", BackgroundBrowser)
 
     # The default GNOME browser
     if "GNOME_DESKTOP_SESSION_ID" in os.environ and shutil.which("gnome-open"):
-        register("gnome-open", None, BackgroundBrowser("gnome-open"))
+        register("gnome-open", BackgroundBrowser)
 
     # The default KDE browser
     if "KDE_FULL_SESSION" in os.environ and shutil.which("kfmclient"):
-        register("kfmclient", Konqueror, Konqueror("kfmclient"))
+        register("kfmclient", BackgroundBrowser)
 
     if shutil.which("x-www-browser"):
-        register("x-www-browser", None, BackgroundBrowser("x-www-browser"))
+        register("x-www-browser", BackgroundBrowser)
 
     # The Mozilla browsers
     for browser in ("firefox", "iceweasel", "iceape", "seamonkey"):
         if shutil.which(browser):
-            register(browser, None, Mozilla(browser))
+            register(browser, Mozilla)
 
     # The Netscape and old Mozilla browsers
-    for browser in ("mozilla-firefox",
-                    "mozilla-firebird", "firebird",
+    for browser in ("mozilla-firefox", "mozilla-firebird", "firebird",
                     "mozilla", "netscape"):
         if shutil.which(browser):
-            register(browser, None, Netscape(browser))
+            register(browser, Netscape)
 
     # Konqueror/kfm, the KDE browser.
     if shutil.which("kfm"):
         register("kfm", Konqueror, Konqueror("kfm"))
     elif shutil.which("konqueror"):
-        register("konqueror", Konqueror, Konqueror("konqueror"))
+        register("konqueror", Konqueror)
 
-    # Gnome's Galeon and Epiphany
-    for browser in ("galeon", "epiphany"):
-        if shutil.which(browser):
-            register(browser, None, Galeon(browser))
-
-    # Skipstone, another Gtk/Mozilla based browser
-    if shutil.which("skipstone"):
-        register("skipstone", None, BackgroundBrowser("skipstone"))
+    # GnomeWeb a.k.a. Epiphany
+    if shutil.which("epiphany"):
+        register("epiphany", Epiphany)
 
     # Google Chrome/Chromium browsers
     for browser in ("google-chrome", "chrome", "chromium", "chromium-browser"):
         if shutil.which(browser):
-            register(browser, None, Chrome(browser))
+            register(browser, Chrome)
 
     # Opera, quite popular
     if shutil.which("opera"):
-        register("opera", None, Opera("opera"))
-
-    # Next, Mosaic -- old but still in use.
-    if shutil.which("mosaic"):
-        register("mosaic", None, BackgroundBrowser("mosaic"))
-
+        register("opera", Opera)
+        
 # Prefer X browsers if present
 if os.environ.get("DISPLAY"):
     register_X_browsers()
-
-# Also try console browsers
-if os.environ.get("TERM"):
-    if shutil.which("www-browser"):
-        register("www-browser", None, GenericBrowser("www-browser"))
-    # The Links/elinks browsers <http://artax.karlin.mff.cuni.cz/~mikulas/links/>
-    if shutil.which("links"):
-        register("links", None, GenericBrowser("links"))
-    if shutil.which("elinks"):
-        register("elinks", None, Elinks("elinks"))
-    # The Lynx browser <http://lynx.isc.org/>, <http://lynx.browser.org/>
-    if shutil.which("lynx"):
-        register("lynx", None, GenericBrowser("lynx"))
-    # The w3m browser <http://w3m.sourceforge.net/>
-    if shutil.which("w3m"):
-        register("w3m", None, GenericBrowser("w3m"))
         
 _klasses = {"Firefox": Mozilla,
             "Chrome/Chromium": Chrome,
@@ -420,13 +390,12 @@ _klasses = {"Firefox": Mozilla,
             "Mozilla": Mozilla,
             "Brave": Chrome,
             "Konqueror": Konqueror,
-            "Galeon": Galeon,
+            "Epiphany": Epiphany,
             "Netscape": Netscape,
-            "Elinks": Elinks,
             "Generic": BackgroundBrowser, 
             "Console": GenericBrowser}
             
 klasses = OrderedDict()
 for b in ["Generic", "Firefox","Chrome/Chromium","Opera","Mozilla","Brave",
-          "Konqueror","Galeon","Elinks","Console"]:
+          "Konqueror","Epiphany","Console"]:
     klasses[b] = _klasses[b]
