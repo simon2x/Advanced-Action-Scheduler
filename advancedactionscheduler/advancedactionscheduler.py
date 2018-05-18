@@ -1432,10 +1432,10 @@ class Main(wx.Frame):
         self.UpdateScheduleInfo()
 
     def OnGroupToolBar(self, event):
+        e = event.GetEventObject()
         try:
-            e = event.GetEventObject()
             name = e.GetName()
-        except Exception as e:
+        except AttributeError:
             id = event.GetId()
             name = e.GetLabel(id)
 
@@ -1734,10 +1734,10 @@ class Main(wx.Frame):
             self.schedLog.DeleteAllItems()
 
     def OnScheduleToolBar(self, event):
+        e = event.GetEventObject()
         try:
-            e = event.GetEventObject()
             name = e.GetName()
-        except Exception as e:
+        except AttributeError:
             id = event.GetId()
             name = e.GetLabel(id)
 
