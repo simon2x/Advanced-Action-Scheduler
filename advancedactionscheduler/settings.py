@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
 import wx
+from shared import FUNCTIONKEYS, RESERVEDHOTKEYS
 
 
 class SettingsFrame(wx.Frame):
@@ -235,4 +236,3 @@ class SettingsFrame(wx.Frame):
             except Exception as e:
                 # print(e)
                 func(default)
-

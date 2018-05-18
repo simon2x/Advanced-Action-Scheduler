@@ -31,15 +31,20 @@ import os.path
 import schedulemanager
 import wx.dataview
 import wx.adv
-from wx.lib.agw import hyperlink
-from userguide import UserGuideFrame
+
+from about import AboutDialog
 from settings import SettingsFrame
+from splashscreen import SplashScreen
+from taskbaricon import TaskBarIcon
+from tooltip import ToolTip
+from userguide import UserGuideFrame
+from version import __version__
 
 from ast import literal_eval as make_tuple
 from time import gmtime, strftime
 from copy import deepcopy
 
-__version__ = [0, 1, 0]
+
 __title__ = "Advanced Action Scheduler"
 
 PLATFORM = platform.system()
@@ -79,66 +84,7 @@ ch.setFormatter(formatter)
 logger.addHandler(fh)
 logger.addHandler(ch)
 
-DELIMITER = " ➡ "
-
-FUNCTIONKEYS = {
-    340: 'F1',
-    341: 'F2',
-    342: 'F3',
-    343: 'F4',
-    344: 'F5',
-    345: 'F6',
-    346: 'F7',
-    347: 'F8',
-    348: 'F9',
-    349: 'F10',
-    350: 'F11',
-    351: 'F12',
-    352: 'F13',
-    353: 'F14',
-    354: 'F15',
-    355: 'F16',
-    356: 'F17',
-    357: 'F18',
-    358: 'F19',
-    359: 'F20',
-    360: 'F21',
-    361: 'F22',
-    362: 'F23',
-    363: 'F24'
-}
-
-RESERVEDHOTKEYS = [
-    "CTRL+E",
-    "CTRL+I",
-    "CTRL+N",
-    "CTRL+O",
-    "CTRL+S",
-    "CTRL+SHIFT+S",
-    "CTRL+W",
-    "CTRL+T",
-    "CTRL+V",
-    "CTRL+C",
-    "CTRL+X",
-    "CTRL+A"
-]
-
-FUNCTIONS = [
-    "CloseWindow",
-    "Control",
-    "Delay",
-    # "KillProcess",
-    "IfWindowOpen",
-    "IfWindowNotOpen",
-    "MouseClickAbsolute",
-    "MouseClickRelative",
-    "NewProcess",
-    "OpenURL",
-    "Power",
-    "StopSchedule",
-    "StartSchedule",
-    "SwitchWindow"
-]
+from shared import DELIMITER, FUNCTIONS
 
 DEFAULTCONFIG = {
     "browserPresets": [],  # list of saved browsers
@@ -163,258 +109,6 @@ DEFAULTCONFIG = {
     "windowPos": False,  # the last window position
     "windowSize": False,  # the last window size
 }
-
-
-class AboutDialog(wx.Frame):
-
-    def __init__(self, parent):
-        wx.Frame.__init__(self,
-                          parent,
-                          style=wx.DEFAULT_FRAME_STYLE|wx.FRAME_NO_TASKBAR|wx.STAY_ON_TOP,
-                          title=__title__)
-
-        self.SetIcon(wx.Icon("icons/icon.png"))
-        panel = wx.Panel(self)
-        sizer = wx.BoxSizer(wx.VERTICAL)
-
-        sbox1 = wx.StaticBox(panel, label="")
-        sboxSizer1 = wx.StaticBoxSizer(sbox1, wx.HORIZONTAL)
-        grid = wx.GridSizer(cols=2)
-        grid.Add(wx.StaticText(panel, label="Author:"), 0, wx.ALL, 5)
-        link = hyperlink.HyperLinkCtrl(panel, label="www.sanawu.com", URL="www.sanawu.com")
-        grid.Add(link, 0, wx.ALL|wx.EXPAND, 5)
-        grid.Add(wx.StaticText(panel, label="Github:"), 0, wx.ALL, 5)
-        g = "https://github.com/swprojects/Advanced-Action-Scheduler"
-        link = hyperlink.HyperLinkCtrl(panel, label=g, URL=g)
-        grid.Add(link, 1, wx.ALL|wx.EXPAND, 5)
-        grid.Add(wx.StaticText(panel, label="Version:"), 0, wx.ALL, 5)
-        version = "v" + ".".join([str(x) for x in __version__])
-        grid.Add(wx.StaticText(panel, label=version), 0, wx.ALL, 5)
-
-        sboxSizer1.Add(grid, 1, wx.ALL|wx.EXPAND, 5)
-
-        sbox2 = wx.StaticBox(panel, label="License")
-        sboxSizer2 = wx.StaticBoxSizer(sbox2, wx.VERTICAL)
-
-        style = wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_CENTRE
-        licenseText = wx.TextCtrl(panel, style=style)
-        cwd = os.getcwd()
-        lpath = os.path.join(cwd, "LICENSE")
-        with open(lpath) as file:
-            for line in file:
-                licenseText.AppendText(line)
-        sboxSizer2.Add(licenseText, 1, wx.ALL|wx.EXPAND, 5)
-
-        sizer.Add(sboxSizer1, 0, wx.ALL|wx.EXPAND, 5)
-        sizer.Add(sboxSizer2, 1, wx.ALL|wx.EXPAND, 5)
-
-        panel.SetSizerAndFit(sizer)
-        self.Fit()
-        self.Centre()
-        w, h = self.GetSize()
-        self.SetSize(w, h * 2)
-        self.SetMinSize(self.GetSize())
-        self.SetMaxSize(self.GetSize())
-
-        self.Raise()
-        self.Show()
-
-        self.Bind(wx.EVT_CHAR_HOOK, self.OnChar)
-
-    def OnChar(self, event):
-        keycode = event.GetKeyCode()
-        if keycode == wx.WXK_ESCAPE:
-            self.Destroy()
-
-
-class SplashScreen(wx.adv.SplashScreen):
-
-    def __init__(self, timeout=800):
-        splash_style = wx.adv.SPLASH_CENTRE_ON_SCREEN|wx.adv.SPLASH_TIMEOUT
-        bmp = wx.Bitmap("splash.png")
-        wx.adv.SplashScreen.__init__(self, bmp, splash_style, timeout, None)
-
-
-class TaskBarIcon(wx.adv.TaskBarIcon):
-
-    def __init__(self, parent):
-        wx.adv.TaskBarIcon.__init__(self)
-
-        self.leftClickCount = 0
-        self.isWaiting = False
-
-        self.parent = parent
-        self.parent.taskBarIcon = self
-
-        self.iconNormal = wx.Icon(wx.Bitmap("icons/iconnormal.png"))
-        self.iconRunning = wx.Icon(wx.Bitmap("icons/iconrunning.png"))
-
-        self.tooltip = "{0} {1}".format(__title__, __version__)
-        self.SetTrayIcon(running=False)
-        self.trayMenu = self.CreateTrayMenu()
-        self.Bind(wx.adv.EVT_TASKBAR_LEFT_UP, self.OnTrayLeft)
-        self.Bind(wx.adv.EVT_TASKBAR_RIGHT_UP, self.OnTrayRight)
-
-    @property
-    def appConfig(self):
-        return self.parent.GetAppConfig()
-
-    def CreateMenuItem(self, trayMenu, label, func):
-        item = wx.MenuItem(trayMenu, -1, label)
-        trayMenu.Bind(wx.EVT_MENU, func, id=item.GetId())
-        trayMenu.Append(item)
-        return item
-
-    def CreateTrayMenu(self):
-        trayMenu = wx.Menu()
-        self.CreateMenuItem(trayMenu, "Advanced Action Scheduler", self.ShowMainWindow)
-        self.CreateMenuItem(trayMenu, "Settings", self.OnSettings)
-        self.CreateMenuItem(trayMenu, "About", self.OnAbout)
-        trayMenu.AppendSeparator()
-        self.CreateMenuItem(trayMenu, "Exit", self.parent.OnClose)
-        return trayMenu
-
-    def OnAbout(self, event):
-        self.parent.ShowAboutDialog()
-
-    def OnSettings(self, event):
-        self.parent.ShowSettingsDialog()
-
-    def DoTrayAction(self, action):
-
-        # show/hide window
-        if action == 1:
-            if self.parent.IsShown():
-                self.parent.Hide()
-            else:
-                self.parent.Show()
-                self.parent.Raise()
-
-        # toggle schedule manager
-        elif action == 2:
-            self.parent.ToggleScheduleManager()
-
-        # show menu
-        elif action == 3:
-            self.PopupMenu(self.trayMenu)
-
-    def IsDouble(self):
-
-        if self.leftClickCount == 1:
-            self.DoTrayAction(self.appConfig["onTrayIconLeft"])
-
-        else:
-            self.DoTrayAction(self.appConfig["onTrayIconLeftDouble"])
-
-        self.leftClickCount = 0
-        self.isWaiting = False
-
-    def OnTrayLeft(self, event=None, double=False):
-        """
-        This is a bit of a hacky way of wx.adv.taskBarIcon registering
-        single and double click separately.
-
-        Binding EVT_TASKBAR_LEFT_UP and EVT_TASKBAR_LEFT_DCLICK
-        and double clicking would raise EVT_TASKBAR_LEFT_DCLICK
-        once and EVT_TASKBAR_LEFT_UP twice.
-
-        So instead, I just bind EVT_TASKBAR_LEFT_UP and catch
-        and increment left click count. If more than one within
-        a short period of time, we assume double click behaviour.
-        """
-
-        self.leftClickCount += 1
-        if self.isWaiting:
-            return
-        self.isWaiting = True
-        wx.CallLater(200, self.IsDouble)
-
-    def OnTrayLeftDouble(self, event):
-        self.isDouble = True
-        self.OnTrayLeft(double=True)
-        self.isDouble = False
-
-    def OnTrayRight(self, event):
-        self.PopupMenu(self.trayMenu)
-
-    def RemoveTray(self, event=None):
-        self.RemoveIcon()
-        self.Destroy()
-
-    def SetTrayIcon(self, running):
-        if running:
-            self.SetIcon(self.iconRunning, self.tooltip)
-        else:
-            self.SetIcon(self.iconNormal, self.tooltip)
-
-    def ShowMainWindow(self, event=None):
-        self.parent.Show()
-        self.parent.Raise()
-        self.parent.SetFocus()
-
-
-class ToolTip(wx.Frame):
-
-    def __init__(self, parent):
-        style = wx.SIMPLE_BORDER|wx.STAY_ON_TOP|wx.FRAME_NO_TASKBAR
-        wx.Frame.__init__(self, parent=parent, style=style)
-
-        self.panel = panel = wx.Panel(self)
-        self.sizer = sizer = wx.BoxSizer(wx.VERTICAL)
-        self._message = wx.StaticText(panel, label="")
-        self._message.SetFont(self.font)
-
-        sizer.Add(self._message, 1, wx.ALL|wx.ALIGN_CENTRE, 5)
-        panel.SetSizerAndFit(sizer)
-        self.Fit()
-        self.Centre()
-        w, h = self.GetSize()
-        self.SetMinSize(self.GetSize())
-
-        self.timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
-
-        self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
-
-        self.SetBackgroundColour("yellow")
-
-    @property
-    def font(self):
-        return wx.Font(8, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False)
-
-    @property
-    def message(self):
-        return self._message
-
-    @message.setter
-    def message(self, value):
-        self.SetPosition(wx.GetMousePosition() + (25, 15))
-        self._message.SetLabel(value)
-        self.panel.Fit()
-        self.Fit()
-        self.Show()
-        # self.Raise()
-        self.trans = 70
-        self.coolDown = False
-        self.SetTransparent(self.trans)
-        self.timer.Start(100)
-
-    def OnLeftUp(self, event):
-        self.Hide()
-        self.timer.Stop()
-
-    def OnTimer(self, event):
-        if self.coolDown is True:
-            self.trans -= 5
-            if self.trans == 50:
-                self.Hide()
-                self.timer.Stop()
-        else:
-            self.trans += 10
-        self.SetTransparent(self.trans)
-
-        if self.trans == 250 and self.coolDown is False:
-            self.coolDown = True
 
 
 class Main(wx.Frame):
