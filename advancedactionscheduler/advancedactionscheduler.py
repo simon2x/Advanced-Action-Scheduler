@@ -31,7 +31,7 @@ import os.path
 import schedulemanager
 import wx.dataview
 import wx.adv
-
+import sys
 from about import AboutDialog
 from settings import SettingsFrame
 from splashscreen import SplashScreen
@@ -39,6 +39,7 @@ from taskbaricon import TaskBarIcon
 from tooltip import ToolTip
 from userguide import UserGuideFrame
 from version import __version__
+from shared import DELIMITER, FUNCTIONS
 
 from ast import literal_eval as make_tuple
 from time import gmtime, strftime
@@ -59,32 +60,24 @@ else:
         print("Not run with root privileges?")
         from dummykeyboard import keyboard
 
-# switch to applications directory
-full_path = os.path.realpath(__file__)
-path, filename = os.path.split(full_path)
-os.chdir(path)
+appPath = ""
+if __name__ != "__main__":
+    # this allows us to import relatively
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+    appPath = os.path.dirname(os.path.realpath(__file__)) + "/"
 
-# LOG_LEVEL = logging.INFO
-LOG_LEVEL = logging.DEBUG
-logging.basicConfig(level=LOG_LEVEL)
-logger = logging.getLogger(__name__)
-logger.setLevel(LOG_LEVEL)
+SYS_ARGS = {
+    "--verbose": 0,
+}
+# verbosity
+LOG_LEVELS = {
+    "1": 20,  # Info
+    "2": 10,  # Debug
+    "3": 30,  # Warning
+    "4": 40,  # Error
+    "5": 50,  # Critical
+}
 
-fh = logging.StreamHandler()
-fh.setLevel(logging.DEBUG)
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.ERROR)
-# create formatter and add it to the handlers
-
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-# add the handlers to the logger
-logger.addHandler(fh)
-logger.addHandler(ch)
-
-from shared import DELIMITER, FUNCTIONS
 
 DEFAULTCONFIG = {
     "browserPresets": [],  # list of saved browsers
@@ -175,6 +168,14 @@ class Main(wx.Frame):
         if value not in self._ids:
             self._ids[value] = wx.NewId()
         return self._ids[value]
+
+    @property
+    def appPath(self):
+        return appPath 
+
+    @property
+    def imagePath(self):
+        return appPath + "images/"
 
     @property
     def configPath(self):
@@ -400,7 +401,7 @@ class Main(wx.Frame):
         labels = ["group", "schedule", "groupchecked"]
         labels.extend(FUNCTIONS)
         for label in labels:
-            img = wx.Image("images/{0}.png".format(label.lower()))
+            img = wx.Image(self.imagePath + label.lower() + ".png")
             img.Rescale(32, 32, wx.IMAGE_QUALITY_HIGH)
             bmp = wx.Bitmap(img)
             self.imageList.Add(bmp)
@@ -975,7 +976,7 @@ class Main(wx.Frame):
         return groupNames
 
     def GetBitmapFromImage(self, name, size=None):
-        img = wx.Image("images/{0}.png".format(name.lower().replace(" ", "")))
+        img = wx.Image(self.imagePath + name.lower().replace(" ", "") + ".png")
         if size:
             w, h = size
             img = img.Rescale(w, h, wx.IMAGE_QUALITY_HIGH)
@@ -1155,7 +1156,7 @@ class Main(wx.Frame):
 
     def MoveScheduleItemDown(self):
         # valid item selection?
-        selection = self.schedList.GetSelection()
+        selection = self.schedSelection
         if not selection.IsOk():
             return
 
@@ -1212,7 +1213,7 @@ class Main(wx.Frame):
         """ move item up by moving the previous item down """
 
         # valid item selection?
-        selection = self.schedList.GetSelection()
+        selection = self.schedSelection
         if not selection.IsOk():
             return
         baseIdx = self.schedList.GetItemIndex(selection)
@@ -1656,7 +1657,7 @@ class Main(wx.Frame):
             item = menu.Append(wx.ID_ANY, label)
 
             if label == "Add Schedule":
-                if self.schedList.GetSelection().IsOk():
+                if self.schedSelection.IsOk():
                     menu.AppendSeparator()
                     item = menu.Append(wx.ID_ANY, "Cut")
                     item = menu.Append(wx.ID_ANY, "Copy")
@@ -2129,7 +2130,7 @@ class Main(wx.Frame):
 
     def SetStatusBar(self, event=None):
         """ update status bar when selecting a tree item on sequence"""
-        selection = self.schedList.GetSelection()
+        selection = self.schedSelection
         status = self.schedList.GetItemText(selection)
         self.GetTopLevelParent().SetStatusText(status)
 
@@ -2588,7 +2589,32 @@ class Main(wx.Frame):
             self.taskBarIcon = None
 
 
-if __name__ == "__main__":
+def process_sys_args():
+    res = {}
+    for arg in sys.argv[1:]:
+        if "=" not in arg:
+            continue
+        key, value = arg.split("=")[:2]
+        res[key.lower()] = value.lower()
+    return res
+
+
+def set_logging_level():
+    # Logging Configuration
+    try:
+        v = LOG_LEVELS[SYS_ARGS["--verbose"]]
+        logging.basicConfig(level=v)
+    except KeyError:
+        pass
+
+
+def main():
+    SYS_ARGS.update(process_sys_args())
+    set_logging_level()
     app = wx.App()
-    mainFrame = Main()
+    Main()
     app.MainLoop()
+
+
+if __name__ == '__main__':
+    main()
