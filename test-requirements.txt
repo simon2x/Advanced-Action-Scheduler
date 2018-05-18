@@ -1,0 +1,6 @@
+pytest
+coveralls
+flake8
+pytest-pep8
+pytest-cov
+pytest-xvfb
