@@ -31,14 +31,21 @@ import os.path
 import schedulemanager
 import wx.dataview
 import wx.adv
-from wx.lib.agw import hyperlink
+import sys
+from about import AboutDialog
+from settings import SettingsFrame
+from splashscreen import SplashScreen
+from taskbaricon import TaskBarIcon
+from tooltip import ToolTip
 from userguide import UserGuideFrame
+from version import __version__
+from shared import DELIMITER, FUNCTIONS
 
 from ast import literal_eval as make_tuple
 from time import gmtime, strftime
 from copy import deepcopy
 
-__version__ = [0, 1, 0]
+
 __title__ = "Advanced Action Scheduler"
 
 PLATFORM = platform.system()
@@ -53,91 +60,24 @@ else:
         print("Not run with root privileges?")
         from dummykeyboard import keyboard
 
-# switch to applications directory
-full_path = os.path.realpath(__file__)
-path, filename = os.path.split(full_path)
-os.chdir(path)
+appPath = ""
+if __name__ != "__main__":
+    # this allows us to import relatively
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+    appPath = os.path.dirname(os.path.realpath(__file__)) + "/"
 
-# LOG_LEVEL = logging.INFO
-LOG_LEVEL = logging.DEBUG
-logging.basicConfig(level=LOG_LEVEL)
-logger = logging.getLogger(__name__)
-logger.setLevel(LOG_LEVEL)
-
-fh = logging.StreamHandler()
-fh.setLevel(logging.DEBUG)
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.ERROR)
-# create formatter and add it to the handlers
-
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-# add the handlers to the logger
-logger.addHandler(fh)
-logger.addHandler(ch)
-
-DELIMITER = " ➡ "
-
-FUNCTIONKEYS = {
-    340: 'F1',
-    341: 'F2',
-    342: 'F3',
-    343: 'F4',
-    344: 'F5',
-    345: 'F6',
-    346: 'F7',
-    347: 'F8',
-    348: 'F9',
-    349: 'F10',
-    350: 'F11',
-    351: 'F12',
-    352: 'F13',
-    353: 'F14',
-    354: 'F15',
-    355: 'F16',
-    356: 'F17',
-    357: 'F18',
-    358: 'F19',
-    359: 'F20',
-    360: 'F21',
-    361: 'F22',
-    362: 'F23',
-    363: 'F24'
+SYS_ARGS = {
+    "--verbose": 0,
+}
+# verbosity
+LOG_LEVELS = {
+    "1": 20,  # Info
+    "2": 10,  # Debug
+    "3": 30,  # Warning
+    "4": 40,  # Error
+    "5": 50,  # Critical
 }
 
-RESERVEDHOTKEYS = [
-    "CTRL+E",
-    "CTRL+I",
-    "CTRL+N",
-    "CTRL+O",
-    "CTRL+S",
-    "CTRL+SHIFT+S",
-    "CTRL+W",
-    "CTRL+T",
-    "CTRL+V",
-    "CTRL+C",
-    "CTRL+X",
-    "CTRL+A"
-]
-
-FUNCTIONS = [
-    "CloseWindow",
-    "Control",
-    "Delay",
-    # "KillProcess",
-    "IfWindowOpen",
-    "IfWindowNotOpen",
-    "MouseClickAbsolute",
-    "MouseClickRelative",
-    "NewProcess",
-    "OpenURL",
-    "Power",
-    "StopSchedule",
-    "StartSchedule",
-    "SwitchWindow"
-]
 
 DEFAULTCONFIG = {
     "browserPresets": [],  # list of saved browsers
@@ -162,471 +102,6 @@ DEFAULTCONFIG = {
     "windowPos": False,  # the last window position
     "windowSize": False,  # the last window size
 }
-
-
-class AboutDialog(wx.Frame):
-
-    def __init__(self, parent):
-        wx.Frame.__init__(self,
-                          parent,
-                          style=wx.DEFAULT_FRAME_STYLE|wx.FRAME_NO_TASKBAR|wx.STAY_ON_TOP,
-                          title=__title__)
-
-        self.SetIcon(wx.Icon("icons/icon.png"))
-        panel = wx.Panel(self)
-        sizer = wx.BoxSizer(wx.VERTICAL)
-
-        sbox1 = wx.StaticBox(panel, label="")
-        sboxSizer1 = wx.StaticBoxSizer(sbox1, wx.HORIZONTAL)
-        grid = wx.GridSizer(cols=2)
-        grid.Add(wx.StaticText(panel, label="Author:"), 0, wx.ALL, 5)
-        link = hyperlink.HyperLinkCtrl(panel, label="www.sanawu.com", URL="www.sanawu.com")
-        grid.Add(link, 0, wx.ALL|wx.EXPAND, 5)
-        grid.Add(wx.StaticText(panel, label="Github:"), 0, wx.ALL, 5)
-        g = "https://github.com/swprojects/Advanced-Action-Scheduler"
-        link = hyperlink.HyperLinkCtrl(panel, label=g, URL=g)
-        grid.Add(link, 1, wx.ALL|wx.EXPAND, 5)
-        grid.Add(wx.StaticText(panel, label="Version:"), 0, wx.ALL, 5)
-        version = "v" + ".".join([str(x) for x in __version__])
-        grid.Add(wx.StaticText(panel, label=version), 0, wx.ALL, 5)
-
-        sboxSizer1.Add(grid, 1, wx.ALL|wx.EXPAND, 5)
-
-        sbox2 = wx.StaticBox(panel, label="License")
-        sboxSizer2 = wx.StaticBoxSizer(sbox2, wx.VERTICAL)
-
-        style = wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_CENTRE
-        licenseText = wx.TextCtrl(panel, style=style)
-        cwd = os.getcwd()
-        lpath = os.path.join(cwd, "LICENSE")
-        with open(lpath) as file:
-            for line in file:
-                licenseText.AppendText(line)
-        sboxSizer2.Add(licenseText, 1, wx.ALL|wx.EXPAND, 5)
-
-        sizer.Add(sboxSizer1, 0, wx.ALL|wx.EXPAND, 5)
-        sizer.Add(sboxSizer2, 1, wx.ALL|wx.EXPAND, 5)
-
-        panel.SetSizerAndFit(sizer)
-        self.Fit()
-        self.Centre()
-        w, h = self.GetSize()
-        self.SetSize(w, h * 2)
-        self.SetMinSize(self.GetSize())
-        self.SetMaxSize(self.GetSize())
-
-        self.Raise()
-        self.Show()
-
-        self.Bind(wx.EVT_CHAR_HOOK, self.OnChar)
-
-    def OnChar(self, event):
-        keycode = event.GetKeyCode()
-        if keycode == wx.WXK_ESCAPE:
-            self.Destroy()
-
-
-class SettingsFrame(wx.Frame):
-
-    def __init__(self, parent):
-
-        self._title = "Settings"
-
-        wx.Frame.__init__(self,
-                          parent=parent,
-                          style=wx.DEFAULT_FRAME_STYLE|wx.FRAME_NO_TASKBAR|wx.STAY_ON_TOP,
-                          title=self._title)
-
-        self.SetIcon(wx.Icon("icons/icon.png"))
-        panel = wx.Panel(self)
-        sizer = wx.BoxSizer(wx.VERTICAL)
-
-        sbox = wx.StaticBox(panel, label="")
-        sboxSizer = wx.StaticBoxSizer(sbox, wx.HORIZONTAL)
-        gridBag = wx.GridBagSizer(5, 5)
-
-        row = 0
-        self.chkShowTray = wx.CheckBox(panel, label="Show Tray Icon")
-        gridBag.Add(self.chkShowTray, pos=(row, 0), flag=wx.ALL, border=5)
-
-        row += 1
-        self.chkShowSplash = wx.CheckBox(panel, label="Show Splash Screen")
-        gridBag.Add(self.chkShowSplash, pos=(row, 0), flag=wx.ALL, border=5)
-
-        row += 1
-        lblTrayLeft = wx.StaticText(panel, label="On Tray Icon Left Click")
-        trayChoices = ["Do Nothing", "Show/Hide Main Window", "Enable/Disable Schedule Manager",
-                       "Show Tray Menu"]
-        self.cboxTrayLeft = wx.ComboBox(panel, choices=trayChoices, style=wx.CB_READONLY)
-        gridBag.Add(lblTrayLeft, pos=(row, 0), flag=wx.ALL, border=5)
-        gridBag.Add(self.cboxTrayLeft, pos=(row, 1), flag=wx.ALL, border=5)
-
-        row += 1
-        lblTrayLeft = wx.StaticText(panel, label="On Tray Icon Left Double Click")
-        self.cboxTrayLeftDouble = wx.ComboBox(panel, choices=trayChoices, style=wx.CB_READONLY)
-        gridBag.Add(lblTrayLeft, pos=(row, 0), flag=wx.ALL, border=5)
-        gridBag.Add(self.cboxTrayLeftDouble, pos=(row, 1), flag=wx.ALL, border=5)
-
-        row += 1
-        lblToolbarSize = wx.StaticText(panel, label="Maximum Toolbar Icon Size")
-        choices = ["16", "32", "48", "64", "128", "256"]
-        self.cboxToolbarSize = wx.ComboBox(panel, choices=choices, style=wx.CB_READONLY)
-        gridBag.Add(lblToolbarSize, pos=(row, 0), flag=wx.ALL, border=5)
-        gridBag.Add(self.cboxToolbarSize, pos=(row, 1), flag=wx.ALL, border=5)
-
-        row += 1
-        self.chkLoadLastFile = wx.CheckBox(panel, label="Load Last Opened File")
-        gridBag.Add(self.chkLoadLastFile, pos=(row, 0), flag=wx.ALL, border=5)
-
-        row += 1
-        self.chkRecentFiles = wx.CheckBox(panel, label="Remember Recently Opened Files")
-        gridBag.Add(self.chkRecentFiles, pos=(row, 0), flag=wx.ALL, border=5)
-
-        row += 1
-        lbl = "Automatically Switch To Schedules Tab On Group Selection"
-        self.chkGroupSelectionSwitch = wx.CheckBox(panel, label=lbl)
-        gridBag.Add(self.chkGroupSelectionSwitch, pos=(row, 0), flag=wx.ALL, border=5)
-
-        row += 1
-        self.chkSchedMgrSwitch = wx.CheckBox(panel, label="Automatically Switch To Manager Tab On Enable")
-        gridBag.Add(self.chkSchedMgrSwitch, pos=(row, 0), flag=wx.ALL, border=5)
-
-        row += 1
-        lblSchedMgrLogCount = wx.StaticText(panel, label="Schedule Manager Log Count")
-        self.schedMgrLogCount = wx.SpinCtrl(panel, min=-1, max=1000)
-        gridBag.Add(lblSchedMgrLogCount, pos=(row, 0), flag=wx.ALL, border=5)
-        gridBag.Add(self.schedMgrLogCount, pos=(row, 1), flag=wx.ALL, border=5)
-
-        row += 1
-        lbl = wx.StaticText(panel, label="Maximum Undo History")
-        self.maxUndoCount = wx.SpinCtrl(panel, min=0, max=1000)
-        gridBag.Add(lbl, pos=(row, 0), flag=wx.ALL, border=5)
-        gridBag.Add(self.maxUndoCount, pos=(row, 1), flag=wx.ALL, border=5)
-
-        row += 1
-        lblSchedMgrHotkey = wx.StaticText(panel, label="Toggle Schedule Manager Hotkey")
-        self.schedMgrHotkey = wx.TextCtrl(panel)
-        # self.schedMgrHotkey.Bind(wx.EVT_TEXT, self.OnHotkeyText)
-        self.schedMgrHotkey.Bind(wx.EVT_CHAR_HOOK, self.OnHotkeyEdit)
-        gridBag.Add(lblSchedMgrHotkey, pos=(row, 0), flag=wx.ALL, border=5)
-        gridBag.Add(self.schedMgrHotkey, pos=(row, 1), flag=wx.ALL, border=5)
-
-        hSizer = wx.BoxSizer(wx.HORIZONTAL)
-        btn = wx.Button(panel, label="Cancel", id=wx.ID_CANCEL)
-        btn.Bind(wx.EVT_BUTTON, self.OnButton)
-        hSizer.Add(btn, flag=wx.ALL, border=5)
-        btn = wx.Button(panel, label="Ok", id=wx.ID_OK)
-        btn.Bind(wx.EVT_BUTTON, self.OnButton)
-        hSizer.Add(btn, flag=wx.ALL, border=5)
-
-        sboxSizer.Add(gridBag, 1, wx.ALL|wx.EXPAND, 5)
-        sizer.Add(sboxSizer, 1, wx.ALL|wx.EXPAND, 5)
-        sizer.Add(hSizer, 0, wx.ALL|wx.ALIGN_RIGHT, 5)
-        panel.SetSizer(sizer)
-        sizer.Fit(self)
-
-        self.SetMinSize(self.GetSize())
-        self.SetMaxSize(self.GetSize())
-
-        self.SetDefaults()
-
-        self.Bind(wx.EVT_CHAR_HOOK, self.OnChar)
-
-    def GetValue(self):
-        data = {}
-        data["groupSelectionSwitchTab"] = self.chkGroupSelectionSwitch.GetValue()
-        data["showTrayIcon"] = self.chkShowTray.GetValue()
-        data["showSplashScreen"] = self.chkShowSplash.GetValue()
-        data["onTrayIconLeft"] = self.cboxTrayLeft.GetSelection()
-        data["onTrayIconLeftDouble"] = self.cboxTrayLeftDouble.GetSelection()
-        data["toolbarSize"] = self.cboxToolbarSize.GetValue()
-        data["loadLastFile"] = self.chkLoadLastFile.GetValue()
-        data["keepFileList"] = self.chkRecentFiles.GetValue()
-        data["schedManagerSwitchTab"] = self.chkSchedMgrSwitch.GetValue()
-        data["schedManagerLogCount"] = self.schedMgrLogCount.GetValue()
-        data["maxUndoCount"] = self.maxUndoCount.GetValue()
-        data["toggleSchedManHotkey"] = self.schedMgrHotkey.GetValue().upper()
-        return data
-
-    def OnButton(self, event):
-        e = event.GetEventObject()
-        id = e.GetId()
-        if id == wx.ID_CANCEL:
-            self.Destroy()
-        elif id == wx.ID_OK:
-            self.GetParent().UpdateSettingsDict(self.GetValue())
-            self.Destroy()
-
-    def OnChar(self, event):
-        keycode = event.GetKeyCode()
-        if keycode == wx.WXK_ESCAPE:
-            self.Destroy()
-
-    def OnHotkeyEdit(self, event):
-        keycode = event.GetKeyCode()
-
-        if keycode == wx.WXK_ESCAPE:
-            self.schedMgrHotkey.SetValue("")
-            return
-        elif keycode == wx.WXK_RETURN:
-            self.schedMgrHotkey.SetValue("")
-            return
-
-        if keycode in [wx.WXK_SHIFT, wx.WXK_RAW_CONTROL, wx.WXK_ALT]:
-            return
-
-        char = "%c" % keycode
-        if keycode == wx.WXK_NONE:
-            return
-        if keycode == wx.WXK_SPACE:
-            char = "SPACE"
-        elif not char.isalnum():
-            return
-
-        if keycode in FUNCTIONKEYS:
-            char = FUNCTIONKEYS[keycode]
-
-        hotkey = []
-        if event.CmdDown():
-            hotkey.append("CTRL")
-        if event.AltDown():
-            hotkey.append("ALT")
-        if event.ShiftDown():
-            hotkey.append("SHIFT")
-        hotkey.append(char)
-
-        hotkey = "+".join(hotkey)
-        if hotkey in RESERVEDHOTKEYS:
-            return
-
-        # combination of two or more keys?
-        # but we allow function key as a standalone hotkey without combination
-        if "+" not in hotkey and hotkey not in FUNCTIONKEYS.values():
-            return
-        self.schedMgrHotkey.SetValue(hotkey)
-
-    def SetDefaults(self):
-        self.cboxTrayLeft.SetSelection(0)
-        self.cboxTrayLeftDouble.SetSelection(0)
-        self.chkShowSplash.SetValue(True)
-        self.cboxToolbarSize.SetValue("48")
-        self.chkShowTray.SetValue(True)
-        self.chkLoadLastFile.SetValue(True)
-        self.chkRecentFiles.SetValue(True)
-        self.chkSchedMgrSwitch.SetValue(True)
-        self.schedMgrLogCount.SetValue(100)
-        self.schedMgrHotkey.SetValue("")
-
-    def SetValue(self, data):
-        for arg, func, default in (
-                ["toolbarSize", self.cboxToolbarSize.SetValue, "48"],
-                ["showSplashScreen", self.chkShowSplash.SetValue, True],
-                ["showTrayIcon", self.chkShowTray.SetValue, True],
-                ["onTrayIconLeft", self.cboxTrayLeft.SetSelection, 0],
-                ["onTrayIconLeftDouble", self.cboxTrayLeftDouble.SetSelection, 0],
-                ["loadLastFile", self.chkLoadLastFile.SetValue, False],
-                ["keepFileList", self.chkRecentFiles.SetValue, True],
-                ["schedManagerSwitchTab", self.chkSchedMgrSwitch.SetValue, True],
-                ["groupSelectionSwitchTab", self.chkGroupSelectionSwitch.SetValue, True],
-                ["schedManagerLogCount", self.schedMgrLogCount.SetValue, 100],
-                ["maxUndoCount", self.maxUndoCount.SetValue, 20],
-                ["toggleSchedManHotkey", self.schedMgrHotkey.SetValue, ""]):
-
-            try:
-                func(data[arg])
-            except Exception as e:
-                # print(e)
-                func(default)
-
-
-class SplashScreen(wx.adv.SplashScreen):
-
-    def __init__(self, timeout=800):
-        splash_style = wx.adv.SPLASH_CENTRE_ON_SCREEN|wx.adv.SPLASH_TIMEOUT
-        bmp = wx.Bitmap("splash.png")
-        wx.adv.SplashScreen.__init__(self, bmp, splash_style, timeout, None)
-
-
-class TaskBarIcon(wx.adv.TaskBarIcon):
-
-    def __init__(self, parent):
-        wx.adv.TaskBarIcon.__init__(self)
-
-        self.leftClickCount = 0
-        self.isWaiting = False
-
-        self.parent = parent
-        self.parent.taskBarIcon = self
-
-        self.iconNormal = wx.Icon(wx.Bitmap("icons/iconnormal.png"))
-        self.iconRunning = wx.Icon(wx.Bitmap("icons/iconrunning.png"))
-
-        self.tooltip = "{0} {1}".format(__title__, __version__)
-        self.SetTrayIcon(running=False)
-        self.trayMenu = self.CreateTrayMenu()
-        self.Bind(wx.adv.EVT_TASKBAR_LEFT_UP, self.OnTrayLeft)
-        self.Bind(wx.adv.EVT_TASKBAR_RIGHT_UP, self.OnTrayRight)
-
-    @property
-    def appConfig(self):
-        return self.parent.GetAppConfig()
-
-    def CreateMenuItem(self, trayMenu, label, func):
-        item = wx.MenuItem(trayMenu, -1, label)
-        trayMenu.Bind(wx.EVT_MENU, func, id=item.GetId())
-        trayMenu.Append(item)
-        return item
-
-    def CreateTrayMenu(self):
-        trayMenu = wx.Menu()
-        self.CreateMenuItem(trayMenu, "Advanced Action Scheduler", self.ShowMainWindow)
-        self.CreateMenuItem(trayMenu, "Settings", self.OnSettings)
-        self.CreateMenuItem(trayMenu, "About", self.OnAbout)
-        trayMenu.AppendSeparator()
-        self.CreateMenuItem(trayMenu, "Exit", self.parent.OnClose)
-        return trayMenu
-
-    def OnAbout(self, event):
-        self.parent.ShowAboutDialog()
-
-    def OnSettings(self, event):
-        self.parent.ShowSettingsDialog()
-
-    def DoTrayAction(self, action):
-
-        # show/hide window
-        if action == 1:
-            if self.parent.IsShown():
-                self.parent.Hide()
-            else:
-                self.parent.Show()
-                self.parent.Raise()
-
-        # toggle schedule manager
-        elif action == 2:
-            self.parent.ToggleScheduleManager()
-
-        # show menu
-        elif action == 3:
-            self.PopupMenu(self.trayMenu)
-
-    def IsDouble(self):
-
-        if self.leftClickCount == 1:
-            self.DoTrayAction(self.appConfig["onTrayIconLeft"])
-
-        else:
-            self.DoTrayAction(self.appConfig["onTrayIconLeftDouble"])
-
-        self.leftClickCount = 0
-        self.isWaiting = False
-
-    def OnTrayLeft(self, event=None, double=False):
-        """
-        This is a bit of a hacky way of wx.adv.taskBarIcon registering
-        single and double click separately.
-
-        Binding EVT_TASKBAR_LEFT_UP and EVT_TASKBAR_LEFT_DCLICK
-        and double clicking would raise EVT_TASKBAR_LEFT_DCLICK
-        once and EVT_TASKBAR_LEFT_UP twice.
-
-        So instead, I just bind EVT_TASKBAR_LEFT_UP and catch
-        and increment left click count. If more than one within
-        a short period of time, we assume double click behaviour.
-        """
-
-        self.leftClickCount += 1
-        if self.isWaiting:
-            return
-        self.isWaiting = True
-        wx.CallLater(200, self.IsDouble)
-
-    def OnTrayLeftDouble(self, event):
-        self.isDouble = True
-        self.OnTrayLeft(double=True)
-        self.isDouble = False
-
-    def OnTrayRight(self, event):
-        self.PopupMenu(self.trayMenu)
-
-    def RemoveTray(self, event=None):
-        self.RemoveIcon()
-        self.Destroy()
-
-    def SetTrayIcon(self, running):
-        if running:
-            self.SetIcon(self.iconRunning, self.tooltip)
-        else:
-            self.SetIcon(self.iconNormal, self.tooltip)
-
-    def ShowMainWindow(self, event=None):
-        self.parent.Show()
-        self.parent.Raise()
-        self.parent.SetFocus()
-
-
-class ToolTip(wx.Frame):
-
-    def __init__(self, parent):
-        style = wx.SIMPLE_BORDER|wx.STAY_ON_TOP|wx.FRAME_NO_TASKBAR
-        wx.Frame.__init__(self, parent=parent, style=style)
-
-        self.panel = panel = wx.Panel(self)
-        self.sizer = sizer = wx.BoxSizer(wx.VERTICAL)
-        self._message = wx.StaticText(panel, label="")
-        self._message.SetFont(self.font)
-
-        sizer.Add(self._message, 1, wx.ALL|wx.ALIGN_CENTRE, 5)
-        panel.SetSizerAndFit(sizer)
-        self.Fit()
-        self.Centre()
-        w, h = self.GetSize()
-        self.SetMinSize(self.GetSize())
-
-        self.timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
-
-        self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
-
-        self.SetBackgroundColour("yellow")
-
-    @property
-    def font(self):
-        return wx.Font(8, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False)
-
-    @property
-    def message(self):
-        return self._message
-
-    @message.setter
-    def message(self, value):
-        self.SetPosition(wx.GetMousePosition() + (25, 15))
-        self._message.SetLabel(value)
-        self.panel.Fit()
-        self.Fit()
-        self.Show()
-        # self.Raise()
-        self.trans = 70
-        self.coolDown = False
-        self.SetTransparent(self.trans)
-        self.timer.Start(100)
-
-    def OnLeftUp(self, event):
-        self.Hide()
-        self.timer.Stop()
-
-    def OnTimer(self, event):
-        if self.coolDown is True:
-            self.trans -= 5
-            if self.trans == 50:
-                self.Hide()
-                self.timer.Stop()
-        else:
-            self.trans += 10
-        self.SetTransparent(self.trans)
-
-        if self.trans == 250 and self.coolDown is False:
-            self.coolDown = True
 
 
 class Main(wx.Frame):
@@ -695,6 +170,14 @@ class Main(wx.Frame):
         return self._ids[value]
 
     @property
+    def appPath(self):
+        return appPath
+
+    @property
+    def imagePath(self):
+        return appPath + "images/"
+
+    @property
     def configPath(self):
         sp = wx.StandardPaths.Get()
         path = sp.GetUserConfigDir()
@@ -732,6 +215,11 @@ class Main(wx.Frame):
     def commandState(self, value):
         self._commandState = value
         self.UpdateTitlebar()
+
+    @property
+    def enableTool(self):
+        """Enable or disable a toolbar tool"""
+        return self.toolbar.EnableTool
 
     @property
     def infoSchedFont(self):
@@ -913,7 +401,7 @@ class Main(wx.Frame):
         labels = ["group", "schedule", "groupchecked"]
         labels.extend(FUNCTIONS)
         for label in labels:
-            img = wx.Image("images/{0}.png".format(label.lower()))
+            img = wx.Image(self.imagePath + label.lower() + ".png")
             img.Rescale(32, 32, wx.IMAGE_QUALITY_HIGH)
             bmp = wx.Bitmap(img)
             self.imageList.Add(bmp)
@@ -1488,7 +976,7 @@ class Main(wx.Frame):
         return groupNames
 
     def GetBitmapFromImage(self, name, size=None):
-        img = wx.Image("images/{0}.png".format(name.lower().replace(" ", "")))
+        img = wx.Image(self.imagePath + name.lower().replace(" ", "") + ".png")
         if size:
             w, h = size
             img = img.Rescale(w, h, wx.IMAGE_QUALITY_HIGH)
@@ -1640,7 +1128,7 @@ class Main(wx.Frame):
 
     def MoveGroupItemUp(self):
         # valid item selection?
-        selection = self.groupList.GetSelection()
+        selection = self.groupSelection
         if not selection.IsOk():
             return
 
@@ -1668,7 +1156,7 @@ class Main(wx.Frame):
 
     def MoveScheduleItemDown(self):
         # valid item selection?
-        selection = self.schedList.GetSelection()
+        selection = self.scheduleSelection
         if not selection.IsOk():
             return
 
@@ -1683,7 +1171,7 @@ class Main(wx.Frame):
         self.schedList.DeleteItem(selection)
 
         # need to reflect these changes in self._data
-        groupSel = self.GetGroupListIndex(self.groupList.GetSelection())
+        groupSel = self.GetGroupListIndex(self.groupSelection)
         groupScheds = self._data[groupSel]["schedules"]
 
         baseIdxSplitLen = len(baseIdx.split(",")) - 1
@@ -1725,7 +1213,7 @@ class Main(wx.Frame):
         """ move item up by moving the previous item down """
 
         # valid item selection?
-        selection = self.schedList.GetSelection()
+        selection = self.scheduleSelection
         if not selection.IsOk():
             return
         baseIdx = self.schedList.GetItemIndex(selection)
@@ -1738,7 +1226,7 @@ class Main(wx.Frame):
         self.schedList.DeleteItem(previous)
 
         # need to reflect these changes in self._data
-        groupSel = self.GetGroupListIndex(self.groupList.GetSelection())
+        groupSel = self.GetGroupListIndex(self.groupSelection)
         groupScheds = self._data[groupSel]["schedules"]
 
         baseIdxSplitLen = len(baseIdx.split(",")) - 1
@@ -1851,7 +1339,7 @@ class Main(wx.Frame):
         pastes = []
         if self._clipboard and self._clipboard["toplevel"] is True:
             pastes = ["Paste As New Group"]
-            if self.groupList.GetSelection().IsOk():
+            if self.groupSelection.IsOk():
                 pastes.extend(["Paste Before", "Paste After", "Paste Into Group"])
             for label in pastes:
                 item = subMenu.Append(wx.ID_ANY, label)
@@ -1861,7 +1349,7 @@ class Main(wx.Frame):
                 menu.AppendSeparator()
                 continue
             if label == "Add Group":
-                if self.groupList.GetSelection().IsOk():
+                if self.groupSelection.IsOk():
                     item = menu.Append(wx.ID_ANY, "Cut")
                     item = menu.Append(wx.ID_ANY, "Copy")
                 if self._clipboard and pastes != []:
@@ -1882,7 +1370,7 @@ class Main(wx.Frame):
         self.UpdateGroupImageList()
 
     def OnGroupItemEdit(self, event=None):
-        selection = self.groupList.GetSelection()
+        selection = self.groupSelection
         if not selection.IsOk():
             return
 
@@ -1922,7 +1410,7 @@ class Main(wx.Frame):
 
     def OnGroupItemKeyDown(self, event):
         key = event.GetKeyCode()
-        index = self.groupList.GetSelection()
+        index = self.groupSelection
         if key == wx.WXK_SPACE:
             self.groupList.CheckItem(index)
 
@@ -1939,21 +1427,21 @@ class Main(wx.Frame):
         for item, data in self._data.items():
             if self.groupSelection != item:
                 continue
-            self.toolbar.EnableTool(self._ids["Remove Group"], True)
+            self.enableTool(self._ids["Remove Group"], True)
             self.SetScheduleTree(data["schedules"])
             self.schedBtns["Add Schedule"].Enable()
             break
 
-        self.toolbar.EnableTool(self._ids["Remove Group"], False)
+        self.enableTool(self._ids["Remove Group"], False)
         self.schedBtns["Add Schedule"].Disable()
         self.UpdateScheduleToolbar()
         self.UpdateScheduleInfo()
 
     def OnGroupToolBar(self, event):
+        e = event.GetEventObject()
         try:
-            e = event.GetEventObject()
             name = e.GetName()
-        except Exception as e:
+        except AttributeError:
             id = event.GetId()
             name = e.GetLabel(id)
 
@@ -2169,7 +1657,7 @@ class Main(wx.Frame):
             item = menu.Append(wx.ID_ANY, label)
 
             if label == "Add Schedule":
-                if self.schedList.GetSelection().IsOk():
+                if self.scheduleSelection.IsOk():
                     menu.AppendSeparator()
                     item = menu.Append(wx.ID_ANY, "Cut")
                     item = menu.Append(wx.ID_ANY, "Copy")
@@ -2252,10 +1740,10 @@ class Main(wx.Frame):
             self.schedLog.DeleteAllItems()
 
     def OnScheduleToolBar(self, event):
+        e = event.GetEventObject()
         try:
-            e = event.GetEventObject()
             name = e.GetName()
-        except Exception as e:
+        except AttributeError:
             id = event.GetId()
             name = e.GetLabel(id)
 
@@ -2642,7 +2130,7 @@ class Main(wx.Frame):
 
     def SetStatusBar(self, event=None):
         """ update status bar when selecting a tree item on sequence"""
-        selection = self.schedList.GetSelection()
+        selection = self.scheduleSelection
         status = self.schedList.GetItemText(selection)
         self.GetTopLevelParent().SetStatusText(status)
 
@@ -2888,7 +2376,7 @@ class Main(wx.Frame):
             item = self.groupList.GetNextItem(item)
 
     def UpdateGroupToolbar(self):
-        selection = self.groupList.GetSelection()
+        selection = self.groupSelection
         state = True
         if not selection.IsOk():
             state = False
@@ -2907,7 +2395,7 @@ class Main(wx.Frame):
             if not self.groupList.GetNextSibling(selection).IsOk():
                 self.groupBtns["Down"].Disable()
 
-        self.toolbar.EnableTool(wx.ID_REMOVE, state)
+        self.enableTool(wx.ID_REMOVE, state)
 
     def UpdateScheduleInfo(self):
         if not self.scheduleSelection.IsOk():
@@ -3028,7 +2516,6 @@ class Main(wx.Frame):
         unsaved = ""
         if self.commandState != 0:
             unsaved = "*"
-
         try:
             _, name = os.path.split(self._appConfig["currentFile"])
             self.SetTitle("{0}{1} - {2}".format(unsaved, name, __title__))
@@ -3036,30 +2523,31 @@ class Main(wx.Frame):
             self.SetTitle("{0}New File.json - {1}".format(unsaved, __title__))
 
     def UpdateToolbar(self):
+        """Set toolbar tools state to current clipboard status"""
         if self._currentSelectionType:
-            self.toolbar.EnableTool(wx.ID_CUT, True)
-            self.toolbar.EnableTool(wx.ID_COPY, True)
-        elif not self.groupList.GetSelection().IsOk():
-            self.toolbar.EnableTool(wx.ID_CUT, False)
-            self.toolbar.EnableTool(wx.ID_COPY, False)
+            self.enableTool(wx.ID_CUT, True)
+            self.enableTool(wx.ID_COPY, True)
+        elif not self.groupSelection.IsOk():
+            self.enableTool(wx.ID_CUT, False)
+            self.enableTool(wx.ID_COPY, False)
 
         if self._clipboard:
-            self.toolbar.EnableTool(wx.ID_PASTE, True)
+            self.enableTool(wx.ID_PASTE, True)
         else:
-            self.toolbar.EnableTool(wx.ID_PASTE, False)
+            self.enableTool(wx.ID_PASTE, False)
 
         if self._undoStack:
-            self.toolbar.EnableTool(wx.ID_UNDO, True)
+            self.enableTool(wx.ID_UNDO, True)
         else:
-            self.toolbar.EnableTool(wx.ID_UNDO, False)
+            self.enableTool(wx.ID_UNDO, False)
 
         if self._redoStack:
-            self.toolbar.EnableTool(wx.ID_REDO, True)
+            self.enableTool(wx.ID_REDO, True)
         else:
-            self.toolbar.EnableTool(wx.ID_REDO, False)
+            self.enableTool(wx.ID_REDO, False)
 
     def UpdateToolbarSize(self):
-
+        """Dynamically resize toolbar icons based on frame size"""
         if not self.toolbar:
             return
         sizeChoices = [16, 32, 48, 64, 128, 256]
@@ -3091,16 +2579,42 @@ class Main(wx.Frame):
         self.toolbar.Realize()
 
     def UpdateTrayIcon(self):
+        """Set or remove tray icon based on config setting"""
         if self._appConfig["showTrayIcon"] is True:
             if not self.taskBarIcon:
                 self.CreateTrayIcon()
-        else:
-            if self.taskBarIcon:
-                self.taskBarIcon.RemoveTray()
-                self.taskBarIcon = None
+            return
+        if self.taskBarIcon:
+            self.taskBarIcon.RemoveTray()
+            self.taskBarIcon = None
 
 
-if __name__ == "__main__":
+def process_sys_args():
+    res = {}
+    for arg in sys.argv[1:]:
+        if "=" not in arg:
+            continue
+        key, value = arg.split("=")[:2]
+        res[key.lower()] = value.lower()
+    return res
+
+
+def set_logging_level():
+    # Logging Configuration
+    try:
+        v = LOG_LEVELS[SYS_ARGS["--verbose"]]
+        logging.basicConfig(level=v)
+    except KeyError:
+        pass
+
+
+def main():
+    SYS_ARGS.update(process_sys_args())
+    set_logging_level()
     app = wx.App()
-    mainFrame = Main()
+    Main()
     app.MainLoop()
+
+
+if __name__ == '__main__':
+    main()

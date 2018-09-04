@@ -176,7 +176,7 @@ class MouseClickAbsolute(wx.Dialog):
         row += 1
         lblOffsetX = wx.StaticText(panel, label="Width (w):")
         self.spinW = wx.SpinCtrl(panel, min=0, max=10000)
-        grid.Add(lblOffsetX, pos=(row, ), flag=wx.ALL|wx.EXPAND, border=5)
+        grid.Add(lblOffsetX, pos=(row, 1), flag=wx.ALL|wx.EXPAND, border=5)
         grid.Add(self.spinW, pos=(row, 2), flag=wx.ALL|wx.EXPAND, border=5)
 
         row += 1
