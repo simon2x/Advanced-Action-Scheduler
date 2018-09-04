@@ -57,7 +57,7 @@ setup(
     # Dependent packages (distributions)
     install_requires=install_requires,
     
-    license="GPLv3",
+    license="GPLv2",
     
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
