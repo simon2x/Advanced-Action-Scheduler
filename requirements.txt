@@ -2,3 +2,4 @@ wxPython
 apscheduler
 keyboard
 requests
+psutil
