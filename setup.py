@@ -1,12 +1,15 @@
 from codecs import open
-from os import path, system
+from os import path
+import sys
 from setuptools import setup, find_packages
 import setuptools.command.build_py
 from advancedactionscheduler.version import __version__
 
 def on_windows():
-    """Returns True if OS is Windows."""
-    return os.name == "nt"
+    return sys.platform == "win32"
+    
+def on_linux():
+    return sys.platform == "linux"
 
 try:
     here = path.abspath(path.dirname(__file__))
@@ -19,9 +22,20 @@ except FileNotFoundError:
     readme = ""
     history = ""
 
-test_requirements = [
-    # TODO: put package test requirements here
-]
+install_requires = ["apscheduler", "psutil"]
+
+if on_windows():
+    extras_requires = ["wxPython", "pypiwin32"]
+    install_requires.extend(extras_requires)
+    found_packages=find_packages(exclude=['docs', 'resources', 'snap', 'tests*', 'linux'])
+elif on_linux():
+    extras_requires = ["wxpython-installer"]
+    install_requires.extend(extras_requires)
+    found_packages=find_packages(exclude=['docs', 'resources', 'snap', 'tests*', 'win'])
+else:
+    raise Exception("Advanced Action Scheduler does not support your platform: %s" % sys.platform)
+    
+test_requirements = []
 
 setup(
     name='advanced-action-scheduler',
@@ -38,12 +52,10 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(exclude=['docs', 'resources', 'snap', 'tests*']),
+    packages=found_packages,
 
     # Dependent packages (distributions)
-    install_requires=[
-        "apscheduler",
-    ],
+    install_requires=install_requires,
     
     license="GPLv3",
     
