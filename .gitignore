@@ -12,3 +12,4 @@ advancedactionscheduler/dist/
 .pytest_cache/*
 .tox
 advanced_action_scheduler.egg-info
+advancedactionscheduler/aaa.json
