@@ -45,11 +45,8 @@ class AboutDialog(wx.Frame):
         sbox1 = wx.StaticBox(panel, label="")
         sboxSizer1 = wx.StaticBoxSizer(sbox1, wx.HORIZONTAL)
         grid = wx.GridSizer(cols=2)
-        grid.Add(wx.StaticText(panel, label="Author:"), 0, wx.ALL, 5)
-        link = hyperlink.HyperLinkCtrl(panel, label="www.sanawu.com", URL="www.sanawu.com")
-        grid.Add(link, 0, wx.ALL|wx.EXPAND, 5)
-        grid.Add(wx.StaticText(panel, label="Github:"), 0, wx.ALL, 5)
-        g = "https://github.com/swprojects/Advanced-Action-Scheduler"
+        grid.Add(wx.StaticText(panel, label="Homepage:"), 0, wx.ALL, 5)
+        g = "https://gitlab.com/swprojects/Advanced-Action-Scheduler"
         link = hyperlink.HyperLinkCtrl(panel, label=g, URL=g)
         grid.Add(link, 1, wx.ALL|wx.EXPAND, 5)
         grid.Add(wx.StaticText(panel, label="Version:"), 0, wx.ALL, 5)
